@@ -38,3 +38,25 @@ python -m unittest discover -s tests -v
 
 Todas as fixtures são geradas sinteticamente durante os testes. Elas cobrem JSON, HTML, Unicode, anexos presentes e ausentes, anonimização, extensões inesperadas e ZIPs maliciosos; nenhuma mensagem ou documento real é versionado.
 
+## Instagram Graph API (Business Discovery)
+
+Para coletar as informações **públicas disponibilizadas pela API** de uma conta
+profissional, como `maysanchess`, configure um token válido e o ID numérico da sua
+própria conta profissional conectada a uma Página do Facebook:
+
+```bash
+export INSTAGRAM_ACCESS_TOKEN='seu-token'
+export INSTAGRAM_USER_ID='id-numerico-da-sua-conta'
+python -m instagram_archive.graph_api maysanchess --output maysanchess.json
+```
+
+O coletor usa Business Discovery, pagina as mídias e salva perfil, biografia,
+site, contagens públicas, URLs e metadados das publicações que a API autorizar.
+O limite padrão é 500 mídias e pode ser alterado com `--max-media`. Para fixar
+ou atualizar a versão da API, use `INSTAGRAM_GRAPH_API_VERSION` (por exemplo,
+`v26.0`). O token é enviado no cabeçalho de autorização e nunca é salvo no JSON.
+
+Essa integração não acessa mensagens diretas, e-mail, telefone, dados apagados,
+informações privadas nem contas pessoais. A Meta exige as permissões e a revisão
+de aplicativo aplicáveis; sem credenciais válidas não é possível executar a
+coleta real. Respeite a autorização do titular e os termos da plataforma.

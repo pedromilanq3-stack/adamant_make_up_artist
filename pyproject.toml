@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 
 [project.scripts]
 instagram-export-search = "instagram_archive.web:main"
+instagram-business-discovery = "instagram_archive.graph_api:main"
 
 [tool.setuptools.packages.find]
 include = ["instagram_archive*"]
@@ -19,4 +20,3 @@ instagram_archive = ["templates/*.html", "static/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

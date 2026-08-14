@@ -48,6 +48,18 @@ class ImporterTests(unittest.TestCase):
             self.assertFalse(attachment.exists)
             self.assertEqual(attachment.original_path, "media/ausente.pdf")
 
+    def test_search_includes_bounded_chronological_context(self) -> None:
+        payload = {"participants": [{"name": "Mayara"}], "messages": [
+            {"sender_name": "Mayara", "timestamp_ms": 3000, "content": "depois"},
+            {"sender_name": "Eu", "timestamp_ms": 1000, "content": "antes"},
+            {"sender_name": "Mayara", "timestamp_ms": 2000, "content": "termo central"},
+        ]}
+        path = self.keep(make_zip({"messages/inbox/conversa/message_1.json": json.dumps(payload)}))
+        with InstagramArchive(path) as archive:
+            result = search(archive.conversations, keyword="termo", context=20)[0]
+            self.assertEqual([message.text for message in result.before], ["antes"])
+            self.assertEqual([message.text for message in result.after], ["depois"])
+
     def test_html_export(self) -> None:
         page = '<html><body><div class="pam"><div>Maria</div><div>Olá do HTML</div><div>Jan 02, 2024 03:04 PM</div></div></body></html>'
         path = self.keep(make_zip({"messages/inbox/maria/message_1.html": page}))
@@ -72,4 +84,3 @@ class ImporterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

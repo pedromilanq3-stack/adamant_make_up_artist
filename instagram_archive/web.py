@@ -56,10 +56,23 @@ class Handler(BaseHTTPRequestHandler):
             def day(key: str) -> date | None:
                 try: return date.fromisoformat(query.get(key, [""])[0])
                 except ValueError: return None
-            results = search(archive.conversations, query.get("name", [""])[0], query.get("keyword", [""])[0], day("start"), day("end"))
+            try:
+                context = int(query.get("context", ["0"])[0])
+            except ValueError:
+                context = 0
+            results = search(archive.conversations, query.get("name", [""])[0], query.get("keyword", [""])[0], day("start"), day("end"), context)
+            hide = "anon" in query
+
+            def render_message(message, css_class: str) -> str:
+                text = anonymize(message.text) if hide else message.text
+                return (f'<div class="{css_class}"><strong>{html.escape(message.sender)}</strong> '
+                        f'<time>{message.sent_at:%d/%m/%Y %H:%M}</time><p>{html.escape(text)}</p></div>')
+
             cards = "".join(
                 f'<article><header>{html.escape(r.conversation.title)} · {html.escape(r.message.sender)}</header>'
-                f'<time>{r.message.sent_at:%d/%m/%Y %H:%M}</time><p>{html.escape(anonymize(r.message.text) if "anon" in query else r.message.text)}</p>'
+                f'{"".join(render_message(message, "context") for message in r.before)}'
+                f'{render_message(r.message, "match")}'
+                f'{"".join(render_message(message, "context") for message in r.after)}'
                 f'<small>{len(r.message.attachments)} anexo(s)</small></article>' for r in results)
             self._page(self._search_form() + f"<h2>{len(results)} resultado(s)</h2>" + (cards or '<p class="empty">Nada encontrado na exportação. Conteúdo ausente não pode ser recuperado dos servidores do Instagram.</p>'))
             return
@@ -119,7 +132,9 @@ class Handler(BaseHTTPRequestHandler):
     def _search_form() -> str:
         return '''<section><span class="eyebrow">Exportação pronta</span><h1>Pesquisar conversas</h1><form class="filters" action="/search" method="get">
         <label>Usuário ou nome exibido<input name="name" placeholder="ex.: maria"></label><label>Palavra-chave<input name="keyword" placeholder="ex.: reunião"></label>
-        <label>Data inicial<input type="date" name="start"></label><label>Data final<input type="date" name="end"></label><label class="check"><input type="checkbox" name="anon" value="1" checked> Anonimizar CPF, telefone, e-mail e endereço</label><button>Pesquisar localmente</button></form>
+        <label>Data inicial<input type="date" name="start"></label><label>Data final<input type="date" name="end"></label>
+        <label>Contexto por resultado<select name="context"><option value="0">Somente a mensagem</option><option value="1" selected>1 antes e 1 depois</option><option value="3">3 antes e 3 depois</option><option value="5">5 antes e 5 depois</option></select></label>
+        <label class="check"><input type="checkbox" name="anon" value="1" checked> Anonimizar CPF, telefone, e-mail e endereço</label><button>Pesquisar localmente</button></form>
         <p class="notice">Resultados ausentes não podem ser recuperados dos servidores do Instagram.</p><form action="/delete" method="post"><button class="danger">Eliminar índice local e temporários</button></form></section>'''
 
 

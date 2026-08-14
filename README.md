@@ -17,6 +17,7 @@ Abra `http://127.0.0.1:8765`. O servidor escuta apenas no dispositivo local.
 ## Escopo e privacidade
 
 - Pesquisa por nome de usuário/nome exibido, intervalo de datas e palavras-chave.
+- Exibe, quando solicitado, até cinco mensagens anteriores e posteriores a cada ocorrência para preservar o contexto da conversa.
 - Não pesquisa CPF, telefone, endereço nem bancos de dados externos.
 - Não solicita nem persiste senha, cookies, token, código 2FA ou qualquer credencial.
 - Não acessa contas e não ajuda a contornar controles da Meta ou descobrir dados privados de terceiros.
@@ -37,4 +38,3 @@ python -m unittest discover -s tests -v
 ```
 
 Todas as fixtures são geradas sinteticamente durante os testes. Elas cobrem JSON, HTML, Unicode, anexos presentes e ausentes, anonimização, extensões inesperadas e ZIPs maliciosos; nenhuma mensagem ou documento real é versionado.
-

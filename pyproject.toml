@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instagram-export-search"
+version = "1.0.0"
+description = "Pesquisa local e segura em exportações oficiais do Instagram"
+requires-python = ">=3.11"
+
+[project.scripts]
+instagram-export-search = "instagram_archive.web:main"
+
+[tool.setuptools.packages.find]
+include = ["instagram_archive*"]
+
+[tool.setuptools.package-data]
+instagram_archive = ["templates/*.html", "static/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

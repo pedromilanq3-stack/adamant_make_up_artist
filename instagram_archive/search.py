@@ -12,23 +12,38 @@ from .models import Conversation, Message
 class SearchResult:
     conversation: Conversation
     message: Message
+    before: tuple[Message, ...] = ()
+    after: tuple[Message, ...] = ()
 
 
 def search(conversations: Iterable[Conversation], name: str = "", keyword: str = "",
-           start: date | None = None, end: date | None = None) -> list[SearchResult]:
+           start: date | None = None, end: date | None = None,
+           context: int = 0) -> list[SearchResult]:
+    """Find matching messages and, optionally, their local conversation context.
+
+    Context is selected from the same exported conversation only. It is deliberately
+    capped so a malformed request cannot cause an unexpectedly large rendered page.
+    """
     name, keyword = name.casefold().strip(), keyword.casefold().strip()
+    context = max(0, min(context, 5))
     results: list[SearchResult] = []
     for conversation in conversations:
         names = " ".join((conversation.title, *conversation.participants)).casefold()
         if name and name not in names:
             continue
-        for message in conversation.messages:
+        ordered = sorted(conversation.messages, key=lambda message: message.sent_at)
+        for index, message in enumerate(ordered):
             day = message.sent_at.date()
             if start and day < start or end and day > end:
                 continue
             if keyword and keyword not in message.text.casefold():
                 continue
-            results.append(SearchResult(conversation, message))
+            results.append(SearchResult(
+                conversation,
+                message,
+                tuple(ordered[max(0, index - context):index]),
+                tuple(ordered[index + 1:index + context + 1]),
+            ))
     return sorted(results, key=lambda result: result.message.sent_at, reverse=True)
 
 
@@ -42,4 +57,3 @@ def anonymize(text: str) -> str:
     for pattern, replacement in patterns:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE if "(?i)" not in pattern else 0)
     return text
-

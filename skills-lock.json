@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    },
+    "skill-master": {
+      "source": "itechmeat/llm-code",
+      "sourceType": "github",
+      "skillPath": "skills/skill-master/SKILL.md",
+      "computedHash": "970611cd58e202a7a94ba0256496abb92a7120f96396e001684f8fd810b06f08"
     }
   }
 }

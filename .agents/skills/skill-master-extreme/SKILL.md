@@ -1,6 +1,6 @@
 ---
 name: skill-master-extreme
-description: "High-autonomy execution protocol. Use when the user asks for maximum initiative, execution-first behavior, anti-overrefusal, deep technical work, adversarial self-review, or Skill Master EXTREME. Keywords: autonomy, execution, anti-overrefusal, adversarial review."
+description: "High-autonomy execution protocol. Use for maximum initiative, execution-first work, anti-overrefusal, adversarial review, or Skill Master EXTREME."
 metadata:
   version: "1.0.0"
   release_date: "2026-08-15"

@@ -1,5 +1,20 @@
 # Arquivo Local — pesquisa em exportações do Instagram
 
+## Skill de laboratório local
+
+A skill `build-local-cyber-lab` fica em
+`.agents/skills/build-local-cyber-lab/`. Ela inclui instruções de segurança e um
+template executável para criar demonstrações acadêmicas somente com perfis
+sintéticos. Para experimentar o template sem alterar a skill:
+
+```bash
+cp -R .agents/skills/build-local-cyber-lab/assets/cyber_lab ./cyber_lab
+python -m cyber_lab.app
+```
+
+Abra `http://127.0.0.1:8787`. Para projetos Docker, copie também
+`assets/Dockerfile.lab` da skill para a raiz do projeto.
+
 Aplicação local para localizar mensagens **já contidas** no ZIP oficial que o próprio titular obtém em **Instagram → Central de Contas → Suas informações e permissões → Baixar suas informações**. Aceita somente ZIP e interpreta os formatos JSON e HTML de mensagens.
 
 > **Esta aplicação não “recupera” conteúdo apagado.** Ela não consulta o Instagram e não consegue obter conteúdo ausente da exportação oficial fornecida pelo titular.

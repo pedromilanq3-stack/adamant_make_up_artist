@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cyber Lab · Perfil fictício</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header><strong>CYBER<span>LAB</span></strong><em>● somente localhost</em></header>
+  <main>
+    <section class="warning"><b>AMBIENTE FICTÍCIO</b> Não conectado ao Instagram ou a qualquer conta real.</section>
+    <section class="profile">
+      <div class="avatar">MS</div>
+      <div><small>PERFIL DE TESTE</small><h1>@maysanchess_demo</h1><p>Conta sintética criada exclusivamente para o laboratório acadêmico.</p></div>
+    </section>
+    <section class="lab">
+      <div><p class="eyebrow">PAINEL DE CENÁRIOS</p><h2>Simule. Detecte. Corrija.</h2><p>Execute demonstrações controladas e compare a falha com sua mitigação.</p></div>
+      <div class="buttons">
+        <button data-scenario="session">01 · Sessão insegura</button>
+        <button data-scenario="reset">02 · Reset de senha</button>
+        <button data-scenario="access">03 · Controle de acesso</button>
+      </div>
+    </section>
+    <section id="result" class="result" aria-live="polite" hidden>
+      <p class="eyebrow">EVIDÊNCIA LOCAL</p><h2 id="result-title"></h2>
+      <div class="comparison"><article><b>Versão vulnerável</b><p id="vulnerable"></p></article><article class="fixed"><b>Versão corrigida</b><p id="fixed"></p></article></div>
+      <pre id="event"></pre>
+    </section>
+  </main>
+  <footer>Uso educacional e autorizado · Nenhuma credencial real · Nenhuma conexão externa</footer>
+  <script src="/app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Local Cyber Lab"
+  short_description: "Create an ethical localhost cybersecurity teaching lab"
+  default_prompt: "Build or extend a safe local cybersecurity lab using a synthetic profile, automated tests, mitigations, and clear academic documentation."

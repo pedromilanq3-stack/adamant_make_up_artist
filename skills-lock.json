@@ -1,17 +1,58 @@
 {
   "version": 1,
   "skills": {
+    "academic-deep-research": {
+      "source": "kesslerio/academic-deep-research-clawhub-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "d2a95d6e1a1cffaec848dfa7ceb4d21a6719fc5acdda3eac303a4242bca5fec0"
+    },
+    "company-research": {
+      "source": "browserbase/skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/company-research/SKILL.md",
+      "computedHash": "f279f7193c00ee972ba31f1cc16503022cad920992ccae2b363df459811eb76c"
+    },
+    "deep-research": {
+      "source": "bytedance/deer-flow",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/public/deep-research/SKILL.md",
+      "computedHash": "c0477094cbe075d32f103eb7c39b139c9bc2e762f8537260a2330e50d2df45a0"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
     },
+    "osint-investigation": {
+      "source": "NousResearch/hermes-agent",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "optional-skills/research/osint-investigation/SKILL.md",
+      "computedHash": "1b2e12d2a9f0737592399ee89b176ba41e2e94d8784fad545174b4c8e033001d"
+    },
+    "research": {
+      "source": "mattpocock/skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/research/SKILL.md",
+      "computedHash": "bd3e2c6826671d82c86ed0da3dac3370ebcf63b0fe847f91bb444e1fb7dac21b"
+    },
     "skill-master": {
       "source": "itechmeat/llm-code",
       "sourceType": "github",
       "skillPath": "skills/skill-master/SKILL.md",
       "computedHash": "970611cd58e202a7a94ba0256496abb92a7120f96396e001684f8fd810b06f08"
+    },
+    "skill-scanner": {
+      "source": "getsentry/skills",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": "skills/skill-scanner/SKILL.md",
+      "computedHash": "df6885edbf5ac5469bda13ba66d5598d94c248f24b526239b4861287df9e3ec6"
     }
   }
 }

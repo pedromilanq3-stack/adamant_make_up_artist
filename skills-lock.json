@@ -47,6 +47,13 @@
       "skillPath": "skills/skill-master/SKILL.md",
       "computedHash": "970611cd58e202a7a94ba0256496abb92a7120f96396e001684f8fd810b06f08"
     },
+    "skill-master-extreme": {
+      "source": "pedromilanq3-stack/adamant_make_up_artist",
+      "ref": "main",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/skill-master-extreme/SKILL.md",
+      "computedHash": "f46ca53b7930e8035012d45db4b7b47a894ef703b9ff0486baa387f3a6acd177"
+    },
     "skill-scanner": {
       "source": "getsentry/skills",
       "ref": "main",

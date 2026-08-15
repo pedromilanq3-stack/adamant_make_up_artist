@@ -1,0 +1,139 @@
+name: Install Programming EXTREME skills
+
+on:
+  push:
+    branches:
+      - codex/install-programming-extreme-pack
+    paths:
+      - .github/workflows/install-programming-extreme-pack.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out installation branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/install-programming-extreme-pack
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Programming EXTREME skill pack
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npx -y skills add https://github.com/obra/superpowers --skill '*' -a codex --copy -y
+
+          npx -y skills add https://github.com/mattpocock/skills \
+            --skill improve-codebase-architecture \
+            --skill codebase-design \
+            --skill domain-modeling \
+            --skill diagnosing-bugs \
+            --skill code-review \
+            -a codex --copy -y
+
+          npx -y skills add https://github.com/vercel-labs/agent-skills \
+            --skill vercel-react-best-practices \
+            --skill vercel-composition-patterns \
+            -a codex --copy -y
+
+          npx -y skills add https://github.com/anthropics/skills \
+            --skill frontend-design \
+            --skill webapp-testing \
+            --skill mcp-builder \
+            -a codex --copy -y
+
+          npx -y skills add https://github.com/vercel-labs/agent-browser \
+            --skill agent-browser \
+            -a codex --copy -y
+
+          npx -y skills add https://github.com/supabase/agent-skills \
+            --skill supabase-postgres-best-practices \
+            -a codex --copy -y
+
+      - name: Verify skill entry points and lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected=(
+            brainstorming
+            dispatching-parallel-agents
+            executing-plans
+            finishing-a-development-branch
+            receiving-code-review
+            requesting-code-review
+            subagent-driven-development
+            systematic-debugging
+            test-driven-development
+            using-git-worktrees
+            using-superpowers
+            verification-before-completion
+            writing-plans
+            writing-skills
+            improve-codebase-architecture
+            codebase-design
+            domain-modeling
+            diagnosing-bugs
+            code-review
+            vercel-react-best-practices
+            vercel-composition-patterns
+            frontend-design
+            webapp-testing
+            mcp-builder
+            agent-browser
+            supabase-postgres-best-practices
+          )
+
+          for skill in "${expected[@]}"; do
+            test -f ".agents/skills/${skill}/SKILL.md"
+            echo "verified file: ${skill}"
+          done
+
+          node <<'NODE'
+          const fs = require('fs');
+          const lock = JSON.parse(fs.readFileSync('skills-lock.json', 'utf8'));
+          const expected = [
+            'brainstorming','dispatching-parallel-agents','executing-plans',
+            'finishing-a-development-branch','receiving-code-review',
+            'requesting-code-review','subagent-driven-development',
+            'systematic-debugging','test-driven-development','using-git-worktrees',
+            'using-superpowers','verification-before-completion','writing-plans',
+            'writing-skills','improve-codebase-architecture','codebase-design',
+            'domain-modeling','diagnosing-bugs','code-review',
+            'vercel-react-best-practices','vercel-composition-patterns',
+            'frontend-design','webapp-testing','mcp-builder','agent-browser',
+            'supabase-postgres-best-practices'
+          ];
+          for (const skill of expected) {
+            if (!lock.skills?.[skill]) throw new Error(`missing lock entry: ${skill}`);
+          }
+          console.log(`lock verified: ${expected.length} programming skills`);
+          NODE
+
+          test -f .agents/skills/find-skills/SKILL.md
+          test -f .agents/skills/skill-master/SKILL.md
+          test -f .agents/skills/skill-master-extreme/SKILL.md
+          echo "pre-existing skills preserved"
+
+      - name: Commit generated skill files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .agents/skills skills-lock.json
+          git commit -m "feat: install Programming EXTREME skill pack"
+          git push origin HEAD:codex/install-programming-extreme-pack

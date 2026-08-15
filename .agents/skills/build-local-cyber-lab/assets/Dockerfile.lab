@@ -1,0 +1,7 @@
+FROM python:3.12-alpine
+
+WORKDIR /app
+COPY cyber_lab ./cyber_lab
+ENV CYBER_LAB_HOST=0.0.0.0
+EXPOSE 8787
+CMD ["python", "-m", "cyber_lab.app"]

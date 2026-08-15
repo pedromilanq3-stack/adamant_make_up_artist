@@ -1,0 +1,68 @@
+name: Install investigation skills
+
+on:
+  push:
+    branches:
+      - codex/install-investigation-skills
+    paths:
+      - .github/workflows/install-investigation-skills.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out installation branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/install-investigation-skills
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install investigation skills for Codex
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx -y skills add https://github.com/NousResearch/hermes-agent --skill osint-investigation -a codex --copy -y
+          npx -y skills add https://github.com/bytedance/deer-flow --skill deep-research -a codex --copy -y
+          npx -y skills add https://github.com/browserbase/skills --skill company-research -a codex --copy -y
+          npx -y skills add https://github.com/mattpocock/skills --skill research -a codex --copy -y
+          npx -y skills add https://github.com/getsentry/skills --skill skill-scanner -a codex --copy -y
+          npx -y skills add https://github.com/kesslerio/academic-deep-research-clawhub-skill --skill academic-deep-research -a codex --copy -y
+
+      - name: Verify installed skill entry points
+        shell: bash
+        run: |
+          set -euo pipefail
+          for skill in \
+            osint-investigation \
+            deep-research \
+            company-research \
+            research \
+            skill-scanner \
+            academic-deep-research; do
+            test -f ".agents/skills/${skill}/SKILL.md"
+            echo "verified: ${skill}"
+          done
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('skills-lock.json','utf8')); const expected=['academic-deep-research','company-research','deep-research','osint-investigation','research','skill-scanner']; for (const s of expected) { if (!x.skills[s]) throw new Error('missing lock entry: '+s); } console.log('lock verified:', expected.join(', '));"
+
+      - name: Commit generated skill files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git status --porcelain)" ]; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .agents/skills skills-lock.json
+          git commit -m "feat: install investigation skill suite"
+          git push origin HEAD:codex/install-investigation-skills

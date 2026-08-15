@@ -36,6 +36,7 @@ jobs:
           npx -y skills add https://github.com/mattpocock/skills/tree/main/skills/engineering/research -a codex --copy -y
           npx -y skills add https://github.com/getsentry/skills/tree/main/skills/skill-scanner -a codex --copy -y
           npx -y skills add https://github.com/kesslerio/academic-deep-research-clawhub-skill -a codex --copy -y
+          npx -y skills add https://github.com/pedromilanq3-stack/adamant_make_up_artist/tree/main/.agents/skills/skill-master-extreme -a codex --copy -y
 
       - name: Verify installed skill entry points
         shell: bash
@@ -47,11 +48,12 @@ jobs:
             company-research \
             research \
             skill-scanner \
-            academic-deep-research; do
+            academic-deep-research \
+            skill-master-extreme; do
             test -f ".agents/skills/${skill}/SKILL.md"
             echo "verified: ${skill}"
           done
-          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('skills-lock.json','utf8')); const expected=['academic-deep-research','company-research','deep-research','osint-investigation','research','skill-scanner']; for (const s of expected) { if (!x.skills[s]) throw new Error('missing lock entry: '+s); } console.log('lock verified:', expected.join(', '));"
+          node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('skills-lock.json','utf8')); const expected=['academic-deep-research','company-research','deep-research','osint-investigation','research','skill-scanner','skill-master-extreme']; for (const s of expected) { if (!x.skills[s]) throw new Error('missing lock entry: '+s); } console.log('lock verified:', expected.join(', '));"
 
       - name: Commit generated skill files
         shell: bash

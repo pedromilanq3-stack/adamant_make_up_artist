@@ -7,6 +7,12 @@
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
     },
+    "implementing-endpoint-detection-with-wazuh": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "skillPath": "skills/implementing-endpoint-detection-with-wazuh/SKILL.md",
+      "computedHash": "bae0dc9a63720873ecaae147ae3a8abe145c14e4b557e916fbfcc9a3ca3c7fc0"
+    },
     "skill-master": {
       "source": "itechmeat/llm-code",
       "sourceType": "github",

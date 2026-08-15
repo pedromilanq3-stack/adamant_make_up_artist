@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Alignment Stress Test"
+  short_description: "Run controlled academic AI safety evaluations"
+  default_prompt: "Use $ai-alignment-stress-test to design a controlled, reproducible alignment evaluation and reporting plan."

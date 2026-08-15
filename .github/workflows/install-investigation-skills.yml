@@ -30,12 +30,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx -y skills add https://github.com/NousResearch/hermes-agent --skill osint-investigation -a codex --copy -y
-          npx -y skills add https://github.com/bytedance/deer-flow --skill deep-research -a codex --copy -y
-          npx -y skills add https://github.com/browserbase/skills --skill company-research -a codex --copy -y
-          npx -y skills add https://github.com/mattpocock/skills --skill research -a codex --copy -y
-          npx -y skills add https://github.com/getsentry/skills --skill skill-scanner -a codex --copy -y
-          npx -y skills add https://github.com/kesslerio/academic-deep-research-clawhub-skill --skill academic-deep-research -a codex --copy -y
+          npx -y skills add https://github.com/NousResearch/hermes-agent/tree/main/optional-skills/research/osint-investigation -a codex --copy -y
+          npx -y skills add https://github.com/bytedance/deer-flow/tree/main/skills/public/deep-research -a codex --copy -y
+          npx -y skills add https://github.com/browserbase/skills/tree/main/skills/company-research -a codex --copy -y
+          npx -y skills add https://github.com/mattpocock/skills/tree/main/skills/engineering/research -a codex --copy -y
+          npx -y skills add https://github.com/getsentry/skills/tree/main/skills/skill-scanner -a codex --copy -y
+          npx -y skills add https://github.com/kesslerio/academic-deep-research-clawhub-skill -a codex --copy -y
 
       - name: Verify installed skill entry points
         shell: bash

@@ -70,6 +70,7 @@ class Handler(BaseHTTPRequestHandler):
 
             cards = "".join(
                 f'<article><header>{html.escape(r.conversation.title)} · {html.escape(r.message.sender)}</header>'
+                f'<p class="evidence"><strong>Correspondência:</strong> {html.escape(", ".join(r.matched_in) or "filtros de data/texto")} · <strong>Origem:</strong> {html.escape(r.conversation.source)}</p>'
                 f'{"".join(render_message(message, "context") for message in r.before)}'
                 f'{render_message(r.message, "match")}'
                 f'{"".join(render_message(message, "context") for message in r.after)}'
@@ -123,19 +124,23 @@ class Handler(BaseHTTPRequestHandler):
     @staticmethod
     def _upload() -> str:
         return '''<section class="hero"><span class="eyebrow">100% local · sem login</span><h1>Encontre mensagens na sua exportação do Instagram</h1>
-        <p>Use somente o ZIP obtido em <strong>Instagram → Central de Contas → Suas informações e permissões → Baixar suas informações</strong>.</p>
+        <div class="start-here"><strong>Comece agora por aqui</strong><ol><li>No Instagram, abra <strong>Central de Contas → Suas informações e permissões → Baixar suas informações</strong>.</li><li>Solicite as mensagens em formato <strong>JSON</strong> e aguarde o Instagram preparar o arquivo.</li><li>Quando o download terminar, volte a esta página e toque em <strong>Escolher arquivo</strong>.</li><li>Selecione o arquivo <strong>.zip sem descompactá-lo</strong> e toque em <strong>Importar com segurança</strong>.</li></ol><p class="pydroid-note"><strong>Usando Pydroid 3?</strong> Abra e execute o arquivo <code>iniciar.py</code>. O comando <code>python -m ...</code> deve ser usado no Terminal, não digitado no editor Python.</p></div>
         <form action="/upload" method="post" enctype="multipart/form-data"><label>Exportação oficial (.zip)<input required type="file" name="archive" accept=".zip,application/zip"></label><button>Importar com segurança</button></form></section>
-        <aside><strong>Limite importante</strong><p>Esta ferramenta não recupera mensagens apagadas nem consulta servidores do Instagram. Ela só pesquisa conteúdo já presente no ZIP fornecido pelo próprio titular.</p></aside>
+        <aside><strong>Sobre os dados do seu celular</strong><p>Este site local não consegue entrar, navegar ou examinar seu celular sozinho. Ele analisa somente o arquivo que você selecionar acima, e esse ZIP contém dados do Instagram — não um inventário completo do aparelho.</p></aside>
+        <section class="device-help"><h2>Quer verificar o restante do aparelho?</h2><p>Faça isso pelas ferramentas oficiais do seu próprio celular. Não envie senha, PIN, token, código de verificação ou um backup completo a este programa.</p>
+        <div class="platforms"><div><h3>Android</h3><ol><li>Abra <strong>Configurações → Armazenamento</strong> para ver aplicativos e arquivos por categoria.</li><li>Use o app <strong>Files/Meus Arquivos</strong> para revisar Downloads, Imagens, Vídeos, Áudios e Documentos.</li><li>Em <strong>Configurações → Apps</strong>, confira os aplicativos instalados e as permissões concedidas.</li></ol></div>
+        <div><h3>iPhone</h3><ol><li>Abra <strong>Ajustes → Geral → Armazenamento do iPhone</strong> para ver aplicativos e uso do espaço.</li><li>Use os apps <strong>Arquivos</strong> e <strong>Fotos → Apagados</strong> para revisar conteúdo acessível.</li><li>Em <strong>Ajustes → Privacidade e Segurança</strong>, confira quais apps acessam fotos, contatos e localização.</li></ol></div></div></section>
+        <aside><strong>Limite importante</strong><p>O ZIP ainda sendo preparado não pode ser analisado: aguarde o download terminar. Nem esta ferramenta nem os menus do aparelho recuperam necessariamente dados já apagados. Evite aplicativos que prometem “recuperação total” ou pedem credenciais. Para uma perícia completa, preserve o aparelho e procure um profissional autorizado.</p></aside>
         <section><h2>Privacidade por padrão</h2><ul><li>Sem cookies, credenciais ou acesso à conta.</li><li>Arquivos temporários são apagados ao encerrar.</li><li>Nenhuma integração com GPT ou banco externo.</li></ul></section>'''
 
     @staticmethod
     def _search_form() -> str:
-        return '''<section><span class="eyebrow">Exportação pronta</span><h1>Pesquisar conversas</h1><form class="filters" action="/search" method="get">
-        <label>Usuário ou nome exibido<input name="name" placeholder="ex.: maria"></label><label>Palavra-chave<input name="keyword" placeholder="ex.: reunião"></label>
+        return '''<section><span class="eyebrow">Exportação pronta · análise local</span><h1>Pesquisar todos os vestígios da conversa</h1><p class="notice">Informe o @ atual ou antigo. A busca ignora @, acentos, pontos e diferenças entre maiúsculas e minúsculas, e verifica título, participantes, remetentes, texto, anexos e caminho do arquivo.</p><form class="filters" action="/search" method="get">
+        <label>@, usuário ou nome exibido<input name="name" placeholder="ex.: @usuario_antigo" autocomplete="off"></label><label>Palavra-chave opcional<input name="keyword" placeholder="ex.: reunião"></label>
         <label>Data inicial<input type="date" name="start"></label><label>Data final<input type="date" name="end"></label>
         <label>Contexto por resultado<select name="context"><option value="0">Somente a mensagem</option><option value="1" selected>1 antes e 1 depois</option><option value="3">3 antes e 3 depois</option><option value="5">5 antes e 5 depois</option></select></label>
         <label class="check"><input type="checkbox" name="anon" value="1" checked> Anonimizar CPF, telefone, e-mail e endereço</label><button>Pesquisar localmente</button></form>
-        <p class="notice">Resultados ausentes não podem ser recuperados dos servidores do Instagram.</p><form action="/delete" method="post"><button class="danger">Eliminar índice local e temporários</button></form></section>'''
+        <p class="notice"><strong>Leitura do resultado:</strong> “Correspondência” indica exatamente em qual campo o vestígio foi localizado, e “Origem” preserva o arquivo da exportação para conferência. Se a Meta substituiu o nome por “Instagram User” e o identificador não aparece em nenhum arquivo, esta ferramenta não consegue atribuir a conversa à conta.</p><form action="/delete" method="post"><button class="danger">Eliminar índice local e temporários</button></form></section>'''
 
 
 def main() -> None:

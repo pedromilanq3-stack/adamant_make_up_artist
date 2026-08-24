@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -103,6 +105,15 @@ class ImporterTests(unittest.TestCase):
         self.assertIn("Configurações → Armazenamento", page)
         self.assertIn("Armazenamento do iPhone", page)
         self.assertIn("senha, PIN, token", page)
+
+    def test_android_launcher_imports_without_starting_server(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-c", "import iniciar"],
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

@@ -48,6 +48,25 @@ O endereço `127.0.0.1` só abre no mesmo aparelho em que o programa está sendo
 executado. Se o ZIP foi baixado no celular, transfira-o para o computador antes do
 passo 4. Não é possível pesquisar enquanto o download ainda estiver incompleto.
 
+### Executar no Android com Pydroid 3
+
+O texto `python -m instagram_archive.web` é um **comando de terminal**, não código
+Python. Se ele for escrito na tela do editor do Pydroid, aparecerá `SyntaxError`.
+
+No Pydroid 3, faça assim:
+
+1. Baixe este projeto completo e descompacte **o projeto** em uma pasta. Não
+   descompacte o ZIP da exportação do Instagram.
+2. No Pydroid, abra o arquivo `iniciar.py` que está na pasta principal do projeto.
+3. Toque no botão de executar. Não escreva `python -m ...` dentro do arquivo.
+4. Mantenha o Pydroid aberto e, no navegador do mesmo celular, acesse
+   `http://127.0.0.1:8765`.
+5. Selecione o ZIP original da exportação do Instagram.
+
+Alternativamente, quem estiver usando o **Terminal** do Pydroid pode entrar na pasta
+do projeto e executar `python iniciar.py`. A mensagem `Abra
+http://127.0.0.1:8765` confirma que o servidor iniciou.
+
 ## Escopo e privacidade
 
 - Pesquisa investigativa por @ atual ou antigo em título, participantes, remetente,

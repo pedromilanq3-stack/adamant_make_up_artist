@@ -80,6 +80,23 @@ em `https://www.python.org/downloads/windows/`. Durante a instalação, habilite
 para adicionar Python ao `PATH`, conclua a instalação e feche/reabra o PowerShell.
 Depois confirme com `py --version` ou `python --version` e repita os comandos acima.
 
+Como alternativa, se o Windows possuir `winget`, instale uma versão compatível pelo
+PowerShell:
+
+```powershell
+winget install -e --id Python.Python.3.13
+```
+
+Aceite os termos apresentados pelo instalador, feche **todas** as janelas do
+PowerShell e abra uma nova. Então confirme:
+
+```powershell
+python --version
+```
+
+Se o comando ainda abrir a Microsoft Store, reinicie o Windows ou use o caminho do
+Python informado ao final da instalação. O servidor requer Python 3.11 ou posterior.
+
 O aviso sobre a Microsoft Store pode vir de um alias do Windows, e não deste projeto.
 Não é necessário desabilitar o alias se o comando `py` funcionar. Nunca publique nem
 envie uma captura contendo o valor real de `OPENAI_API_KEY`.

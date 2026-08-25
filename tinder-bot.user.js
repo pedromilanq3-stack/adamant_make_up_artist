@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.4.0
+// @version      1.4.1
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.4.0";
+  const SCRIPT_VERSION = "1.4.1";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -465,6 +465,14 @@
 
   function startAutomation() {
     if (state.running) return;
+    if (ui.mode.value === "ai" && !normalize(ui.aiCriteria.value)) {
+      setStatus("PARADO — informe os critérios para a IA");
+      return;
+    }
+    if (ui.mode.value === "ai" && !ui.aiConsent.checked) {
+      setStatus("PARADO — autorize o envio do texto para a API");
+      return;
+    }
     state.running = true;
     state.stopRequested = false;
     state.lastHandledFingerprint = null;
@@ -496,6 +504,13 @@
     ui.stop.disabled = !state.running;
   }
 
+  function updateModeUI() {
+    if (!ui.aiSettings) return;
+    const aiMode = ui.mode.value === "ai";
+    ui.aiSettings.hidden = !aiMode;
+    if (aiMode) setStatus(state.running ? "ATIVO — modo IA textual" : "PARADO — modo IA textual");
+  }
+
   function downloadLog(format) {
     const json = JSON.stringify(state.logs, null, 2);
     const text = format === "json" ? json : state.logs.map((entry) =>
@@ -520,7 +535,7 @@
     panel.innerHTML = `
       <style>
         #tinder-bot-panel{position:fixed;z-index:2147483647;right:16px;top:72px;width:300px;padding:14px;border-radius:14px;background:#17171c;color:#fff;box-shadow:0 8px 30px #0008;font:13px/1.35 system-ui,sans-serif;border:1px solid #ffffff25}
-        #tinder-bot-panel *{box-sizing:border-box}#tinder-bot-panel h2{font-size:16px;margin:0 0 10px;color:#ff4458}#tinder-bot-panel label{display:block;margin:7px 0}
+        #tinder-bot-panel *{box-sizing:border-box}#tinder-bot-panel [hidden]{display:none!important}#tinder-bot-panel h2{font-size:16px;margin:0 0 10px;color:#ff4458}#tinder-bot-panel label{display:block;margin:7px 0}
         #tinder-bot-panel input,#tinder-bot-panel select,#tinder-bot-panel textarea{width:100%;margin-top:3px;border:1px solid #ffffff35;border-radius:6px;padding:6px;background:#292930;color:#fff}
         #tinder-bot-panel .tb-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}#tinder-bot-panel button{border:0;border-radius:7px;padding:7px;cursor:pointer;font-weight:700}
         #tinder-bot-panel button:disabled{opacity:.45;cursor:not-allowed}#tinder-bot-panel .tb-start{background:#21d07a}#tinder-bot-panel .tb-stop{background:#ff4458;color:#fff}
@@ -530,8 +545,8 @@
       <h2>TinderBot <small>(local)</small></h2>
       <div class="tb-status">Status: <b data-ui="status">PARADO</b></div>
       <label>Modo<select data-ui="mode"><option value="filter">Perfis já filtrados pelo Tinder</option><option value="text">Regra por texto explícito</option><option value="ai">Sugestão da IA (somente texto)</option></select></label>
-      <label>Critérios para a IA<textarea data-ui="aiCriteria" rows="2" placeholder="Ex.: LIKE se a bio mencionar trilhas; caso contrário SKIP."></textarea></label>
-      <label class="tb-check"><input data-ui="aiConsent" type="checkbox"> Autorizar envio do texto visível à API</label>
+      <div data-ui="aiSettings" hidden><label>Critérios para a IA<textarea data-ui="aiCriteria" rows="2" placeholder="Ex.: LIKE se a bio mencionar trilhas; caso contrário SKIP."></textarea></label>
+      <label class="tb-check"><input data-ui="aiConsent" type="checkbox"> Autorizar envio do texto visível à API</label></div>
       <label class="tb-check"><input data-ui="dryRun" type="checkbox" checked> Dry Run (não clicar)</label>
       <label class="tb-check"><input data-ui="debug" type="checkbox"> DEBUG no console</label>
       <label>Limite máximo<input data-ui="limit" type="number" min="1" max="5000" value="${CONFIG.defaults.limit}"></label>
@@ -545,10 +560,12 @@
     ui.panel = panel;
     for (const element of panel.querySelectorAll("[data-ui]")) ui[element.dataset.ui] = element;
     ui.start.addEventListener("click", startAutomation);
+    ui.mode.addEventListener("change", updateModeUI);
     ui.stop.addEventListener("click", () => { writeLog("STOP", "Parada solicitada pelo usuário.", getCurrentProfile(), "Automação parada."); stopAutomation(); });
     panel.querySelector('[data-export="txt"]').addEventListener("click", () => downloadLog("txt"));
     panel.querySelector('[data-export="json"]').addEventListener("click", () => downloadLog("json"));
     updateUI();
+    updateModeUI();
   }
 
   function showPanel() {

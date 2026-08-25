@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.3.1
+// @version      1.3.2
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.3.1";
+  const SCRIPT_VERSION = "1.3.2";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -214,7 +214,11 @@
     if (!card) return null;
 
     const text = normalize(card.innerText);
-    const name = normalize(queryFirst(CONFIG.selectors.profileName, card)?.textContent) || getTextIdentity(card);
+    const main = document.querySelector("main") || document.querySelector('[role="main"]');
+    // Prioriza a linha textual nome+idade da região principal. Alguns layouts mantêm
+    // um h1 estático ou um card antigo no DOM durante a animação entre perfis.
+    const name = getTextIdentity(main) || getTextIdentity(card) ||
+      normalize(queryFirst(CONFIG.selectors.profileName, card)?.textContent);
     const semanticId = card.getAttribute("data-testid") || card.getAttribute("aria-label") || "card";
     // Nunca inclui src de imagem: a impressão usa somente texto/atributos do contêiner.
     const fingerprint = hash(`${semanticId}|${name}|${text.slice(0, 1200)}`);

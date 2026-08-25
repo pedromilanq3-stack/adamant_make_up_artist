@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.1.1
+// @version      1.2.0
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.1.1";
+  const SCRIPT_VERSION = "1.2.0";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -165,6 +165,17 @@
     return null;
   }
 
+  function getTextIdentity(root) {
+    if (!root) return null;
+    const lines = (root.innerText || "").split(/\n+/).map(normalize).filter(Boolean);
+    // O nome/idade do card atual costuma ser texto comum, não h1/h2. Isto identifica
+    // apenas o rótulo textual do perfil; não infere gênero nem examina a imagem.
+    return lines.find((line) =>
+      line.length >= 3 && line.length <= 100 &&
+      /\p{L}/u.test(line) && /(?:^|\s)\d{2}(?:\s|$)/u.test(line)
+    ) || null;
+  }
+
   /**
    * O Tinder nem sempre expõe um nó chamado "profile-card". Nessa variante, parte
    * dos botões de decisão e sobe até o primeiro contêiner que também contém o nome.
@@ -174,13 +185,15 @@
     const reject = findRejectButton();
     let container = lowestCommonAncestor(like, reject) || like?.parentElement || reject?.parentElement;
     while (container && container !== document.body) {
-      if (visible(container) && queryFirst(CONFIG.selectors.profileName, container)) return container;
+      if (visible(container) &&
+          (queryFirst(CONFIG.selectors.profileName, container) || getTextIdentity(container))) return container;
       container = container.parentElement;
     }
 
     // Último fallback: a região principal que contém um título visível e os controles.
     const main = document.querySelector("main") || document.querySelector('[role="main"]');
-    if (main && visible(main) && queryFirst(CONFIG.selectors.profileName, main) && (like || reject)) return main;
+    if (main && visible(main) &&
+        (queryFirst(CONFIG.selectors.profileName, main) || getTextIdentity(main)) && (like || reject)) return main;
     return null;
   }
 
@@ -195,12 +208,12 @@
       queryFirst(CONFIG.selectors.rejectButtons, candidate) ||
       semanticButtonFallback("like", candidate) || semanticButtonFallback("reject", candidate);
     const card = candidates.find((candidate) =>
-      queryFirst(CONFIG.selectors.profileName, candidate) && hasLocalControl(candidate)
+      (queryFirst(CONFIG.selectors.profileName, candidate) || getTextIdentity(candidate)) && hasLocalControl(candidate)
     ) || inferProfileContainer() || candidates.find(hasLocalControl) || candidates[0];
     if (!card) return null;
 
     const text = normalize(card.innerText);
-    const name = normalize(queryFirst(CONFIG.selectors.profileName, card)?.textContent);
+    const name = normalize(queryFirst(CONFIG.selectors.profileName, card)?.textContent) || getTextIdentity(card);
     const semanticId = card.getAttribute("data-testid") || card.getAttribute("aria-label") || "card";
     // Nunca inclui src de imagem: a impressão usa somente texto/atributos do contêiner.
     const fingerprint = hash(`${semanticId}|${name}|${text.slice(0, 1200)}`);

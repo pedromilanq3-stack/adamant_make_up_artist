@@ -45,6 +45,22 @@ class TinderAIServerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "OPENAI_API_KEY"):
             tinder_ai_server.request_openai({"text": "teste"}, "critério")
 
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch("tinder_ai_server.urllib.request.urlopen")
+    def test_generates_text_only_reply_draft(self, urlopen):
+        urlopen.return_value = FakeResponse(
+            {"output_text": '{"reply":"Também gosto de trilhas! Qual foi a última?","reason":"Pergunta aberta."}'}
+        )
+
+        result = tinder_ai_server.request_openai_reply(
+            "Pessoa: gosto de trilhas", "leve e curta"
+        )
+
+        self.assertIn("trilhas", result["reply"])
+        sent = json.loads(urlopen.call_args.args[0].data)
+        transmitted = json.loads(sent["input"])
+        self.assertEqual(set(transmitted), {"conversation", "requested_style"})
+
 
 if __name__ == "__main__":
     unittest.main()

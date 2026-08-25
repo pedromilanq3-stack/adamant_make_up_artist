@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.4.1
+// @version      1.5.0
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.4.1";
+  const SCRIPT_VERSION = "1.5.0";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -97,7 +97,13 @@
       ]
     },
     defaults: { limit: 50, minDelay: 1800, maxDelay: 3500 },
-    ai: { endpoint: "http://127.0.0.1:8767/decision", timeoutMs: 15000, maxTextLength: 4000 },
+    ai: {
+      decisionEndpoint: "http://127.0.0.1:8767/decision",
+      replyEndpoint: "http://127.0.0.1:8767/reply",
+      timeoutMs: 15000,
+      maxTextLength: 4000,
+      maxConversationLength: 6000
+    },
     structuralGamepad: { buttonCount: 5, rejectIndex: 1, likeIndex: 3 },
     nextProfileTimeout: 20000,
     debounceMs: 350,
@@ -295,7 +301,7 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), CONFIG.ai.timeoutMs);
     try {
-      const response = await fetch(CONFIG.ai.endpoint, {
+      const response = await fetch(CONFIG.ai.decisionEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -328,6 +334,56 @@
       return { action: "REJECT", confidence: "explicit", reason: `Texto explícito indica homem: “${explicit.evidence}”.` };
     }
     return { action: "SKIP", confidence: "explicit", reason: "Nenhuma informação textual explícita e confiável de gênero foi encontrada." };
+  }
+
+  function getVisibleConversationText() {
+    const main = document.querySelector("main") || document.querySelector('[role="main"]');
+    return (main?.innerText || "").trim().slice(-CONFIG.ai.maxConversationLength);
+  }
+
+  async function generateReplySuggestion() {
+    if (!location.pathname.includes("/app/messages")) {
+      setStatus("Abra uma conversa em Mensagens antes de gerar resposta");
+      return;
+    }
+    if (!ui.replyConsent.checked) {
+      setStatus("PARADO — autorize o envio da conversa textual");
+      return;
+    }
+    const conversation = getVisibleConversationText();
+    if (!conversation) {
+      setStatus("Nenhuma conversa textual visível");
+      return;
+    }
+    ui.generateReply.disabled = true;
+    setStatus("GERANDO sugestão de resposta");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CONFIG.ai.timeoutMs);
+    try {
+      const response = await fetch(CONFIG.ai.replyEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation, style: normalize(ui.replyStyle.value) }),
+        signal: controller.signal
+      });
+      if (!response.ok) throw new Error(`Servidor local respondeu HTTP ${response.status}`);
+      const result = await response.json();
+      ui.replyDraft.value = normalize(result.reply);
+      setStatus(ui.replyDraft.value ? "RESPOSTA sugerida — revise antes de copiar" : "IA não sugeriu resposta");
+      writeLog("REPLY_SUGGESTION", "Sugestão textual gerada; nunca enviada automaticamente.", null, result.reason || "OK");
+    } catch (error) {
+      ui.replyDraft.value = "";
+      setStatus(`ERRO ao gerar resposta — ${error.message || error}`);
+    } finally {
+      clearTimeout(timer);
+      ui.generateReply.disabled = false;
+    }
+  }
+
+  async function copyReplySuggestion() {
+    if (!normalize(ui.replyDraft.value)) return;
+    await navigator.clipboard.writeText(ui.replyDraft.value);
+    setStatus("Resposta copiada — cole e envie manualmente");
   }
 
   function safetyReason() {
@@ -534,7 +590,7 @@
     panel.id = "tinder-bot-panel";
     panel.innerHTML = `
       <style>
-        #tinder-bot-panel{position:fixed;z-index:2147483647;right:16px;top:72px;width:300px;padding:14px;border-radius:14px;background:#17171c;color:#fff;box-shadow:0 8px 30px #0008;font:13px/1.35 system-ui,sans-serif;border:1px solid #ffffff25}
+        #tinder-bot-panel{position:fixed;z-index:2147483647;right:16px;top:72px;width:300px;max-height:calc(100vh - 88px);overflow:auto;padding:14px;border-radius:14px;background:#17171c;color:#fff;box-shadow:0 8px 30px #0008;font:13px/1.35 system-ui,sans-serif;border:1px solid #ffffff25}
         #tinder-bot-panel *{box-sizing:border-box}#tinder-bot-panel [hidden]{display:none!important}#tinder-bot-panel h2{font-size:16px;margin:0 0 10px;color:#ff4458}#tinder-bot-panel label{display:block;margin:7px 0}
         #tinder-bot-panel input,#tinder-bot-panel select,#tinder-bot-panel textarea{width:100%;margin-top:3px;border:1px solid #ffffff35;border-radius:6px;padding:6px;background:#292930;color:#fff}
         #tinder-bot-panel .tb-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}#tinder-bot-panel button{border:0;border-radius:7px;padding:7px;cursor:pointer;font-weight:700}
@@ -549,6 +605,12 @@
       <label class="tb-check"><input data-ui="aiConsent" type="checkbox"> Autorizar envio do texto visível à API</label></div>
       <label class="tb-check"><input data-ui="dryRun" type="checkbox" checked> Dry Run (não clicar)</label>
       <label class="tb-check"><input data-ui="debug" type="checkbox"> DEBUG no console</label>
+      <details><summary>Assistente de respostas</summary>
+      <label>Estilo da resposta<input data-ui="replyStyle" placeholder="Ex.: leve, respeitosa e curta"></label>
+      <label class="tb-check"><input data-ui="replyConsent" type="checkbox"> Autorizar envio da conversa textual à API</label>
+      <div class="tb-row"><button data-ui="generateReply" type="button">Gerar resposta</button><button data-ui="copyReply" type="button">Copiar</button></div>
+      <label>Rascunho<textarea data-ui="replyDraft" rows="3" placeholder="A sugestão aparecerá aqui. Nada é enviado automaticamente."></textarea></label>
+      </details>
       <label>Limite máximo<input data-ui="limit" type="number" min="1" max="5000" value="${CONFIG.defaults.limit}"></label>
       <div class="tb-row"><label>Atraso mín. (ms)<input data-ui="minDelay" type="number" min="500" value="${CONFIG.defaults.minDelay}"></label><label>Atraso máx. (ms)<input data-ui="maxDelay" type="number" min="500" value="${CONFIG.defaults.maxDelay}"></label></div>
       <div class="tb-counts"><span>❤️ <b data-ui="likes">0</b></span><span>✕ <b data-ui="rejects">0</b></span><span>?</span><b data-ui="indeterminate">0</b><span>Total</span><b data-ui="total">0</b></div>
@@ -561,6 +623,8 @@
     for (const element of panel.querySelectorAll("[data-ui]")) ui[element.dataset.ui] = element;
     ui.start.addEventListener("click", startAutomation);
     ui.mode.addEventListener("change", updateModeUI);
+    ui.generateReply.addEventListener("click", generateReplySuggestion);
+    ui.copyReply.addEventListener("click", () => copyReplySuggestion().catch((error) => setStatus(`Falha ao copiar — ${error.message}`)));
     ui.stop.addEventListener("click", () => { writeLog("STOP", "Parada solicitada pelo usuário.", getCurrentProfile(), "Automação parada."); stopAutomation(); });
     panel.querySelector('[data-export="txt"]').addEventListener("click", () => downloadLog("txt"));
     panel.querySelector('[data-export="json"]').addEventListener("click", () => downloadLog("json"));

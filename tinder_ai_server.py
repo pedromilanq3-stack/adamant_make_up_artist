@@ -24,6 +24,23 @@ orientação sexual ou qualquer característica pela aparência, nome ou pistas 
 Não há imagens. Se os critérios não puderem ser aplicados com segurança, escolha SKIP.
 Responda apenas JSON: {"action":"LIKE|REJECT|SKIP","reason":"frase curta"}."""
 
+REPLY_SYSTEM_PROMPT = """Você sugere um rascunho de resposta para uma conversa de
+namoro usando SOMENTE o texto fornecido. Seja respeitoso, não pressione, não manipule,
+não invente fatos e não infira características sensíveis. Se não houver contexto
+suficiente ou houver pedido abusivo, retorne uma resposta vazia. Responda apenas JSON:
+{"reply":"rascunho curto","reason":"frase curta"}. Nunca afirme que enviou a mensagem."""
+
+
+def extract_output_text(result: dict) -> str:
+    if result.get("output_text"):
+        return str(result["output_text"])
+    chunks = []
+    for item in result.get("output", []):
+        for content in item.get("content", []):
+            if content.get("type") == "output_text":
+                chunks.append(content.get("text", ""))
+    return "".join(chunks)
+
 
 def request_openai(profile: dict, criteria: str) -> dict:
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -45,18 +62,39 @@ def request_openai(profile: dict, criteria: str) -> dict:
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         result = json.load(response)
-    output = result.get("output_text")
-    if not output:
-        chunks = []
-        for item in result.get("output", []):
-            for content in item.get("content", []):
-                if content.get("type") == "output_text":
-                    chunks.append(content.get("text", ""))
-        output = "".join(chunks)
+    output = extract_output_text(result)
     decision = json.loads(output)
     if decision.get("action") not in {"LIKE", "REJECT", "SKIP"}:
         raise ValueError("A API retornou uma ação inválida")
     return {"action": decision["action"], "reason": str(decision.get("reason", ""))[:500]}
+
+
+def request_openai_reply(conversation: str, style: str) -> dict:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY não configurada")
+    prompt = json.dumps(
+        {"conversation": conversation[-6000:], "requested_style": style[:500]},
+        ensure_ascii=False,
+    )
+    payload = json.dumps(
+        {"model": MODEL, "instructions": REPLY_SYSTEM_PROMPT, "input": prompt},
+        ensure_ascii=False,
+    ).encode()
+    request = urllib.request.Request(
+        OPENAI_URL,
+        data=payload,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        result = json.load(response)
+    output = extract_output_text(result)
+    suggestion = json.loads(output)
+    return {
+        "reply": str(suggestion.get("reply", ""))[:1000],
+        "reason": str(suggestion.get("reason", ""))[:500],
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -74,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path != "/decision":
+        if self.path not in {"/decision", "/reply"}:
             self.send_error(404)
             return
         try:
@@ -82,11 +120,17 @@ class Handler(BaseHTTPRequestHandler):
             if length <= 0 or length > MAX_BODY:
                 raise ValueError("Corpo vazio ou grande demais")
             body = json.loads(self.rfile.read(length))
-            profile = body.get("profile") or {}
-            if not isinstance(profile, dict) or not isinstance(profile.get("text", ""), str):
-                raise ValueError("Perfil inválido")
-            decision = request_openai(profile, str(body.get("criteria", ""))[:1000])
-            encoded = json.dumps(decision, ensure_ascii=False).encode()
+            if self.path == "/decision":
+                profile = body.get("profile") or {}
+                if not isinstance(profile, dict) or not isinstance(profile.get("text", ""), str):
+                    raise ValueError("Perfil inválido")
+                result = request_openai(profile, str(body.get("criteria", ""))[:1000])
+            else:
+                conversation = body.get("conversation", "")
+                if not isinstance(conversation, str) or not conversation.strip():
+                    raise ValueError("Conversa inválida")
+                result = request_openai_reply(conversation, str(body.get("style", "")))
+            encoded = json.dumps(result, ensure_ascii=False).encode()
             self.send_response(200)
             self._cors()
             self.send_header("Content-Type", "application/json; charset=utf-8")

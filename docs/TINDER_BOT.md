@@ -54,6 +54,36 @@ set OPENAI_API_KEY=sua-chave-da-api
 python tinder_ai_server.py
 ```
 
+### Windows informa “Python não foi encontrado”
+
+Primeiro teste o inicializador do Windows no PowerShell:
+
+```powershell
+py --version
+```
+
+Se ele mostrar uma versão, entre na pasta extraída do projeto e use `py` no lugar de
+`python`:
+
+```powershell
+cd "$HOME\Downloads\adamant_make_up_artist"
+$env:OPENAI_API_KEY="sua-chave-da-api"
+py tinder_ai_server.py
+```
+
+Ajuste o caminho do `cd` para a pasta onde estão **os dois arquivos**
+`tinder_ai_server.py` e `tinder-bot.user.js`. Não execute a partir de
+`C:\Users\pedro` se o projeto estiver em Downloads ou em outra pasta.
+
+Se `py --version` também falhar, instale Python 3 pelo instalador oficial para Windows
+em `https://www.python.org/downloads/windows/`. Durante a instalação, habilite a opção
+para adicionar Python ao `PATH`, conclua a instalação e feche/reabra o PowerShell.
+Depois confirme com `py --version` ou `python --version` e repita os comandos acima.
+
+O aviso sobre a Microsoft Store pode vir de um alias do Windows, e não deste projeto.
+Não é necessário desabilitar o alias se o comando `py` funcionar. Nunca publique nem
+envie uma captura contendo o valor real de `OPENAI_API_KEY`.
+
 Mantenha o terminal aberto. O servidor escuta exclusivamente em
 `http://127.0.0.1:8767`; depois, no painel, selecione **Sugestão da IA (somente
 texto)**, descreva seus critérios, marque **Autorizar envio do texto visível à API** e

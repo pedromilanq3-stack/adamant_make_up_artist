@@ -1,18 +1,19 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.5.1
+// @version      1.6.0
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      127.0.0.1
 // @run-at       document-idle
 // ==/UserScript==
 
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.5.1";
+  const SCRIPT_VERSION = "1.6.0";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -142,6 +143,33 @@
     }
     return null;
   };
+
+  function requestLocalJSON(url, { method = "GET", body = null } = {}) {
+    if (typeof GM_xmlhttpRequest === "function") {
+      return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method,
+          url,
+          headers: body ? { "Content-Type": "application/json" } : {},
+          data: body ? JSON.stringify(body) : undefined,
+          timeout: CONFIG.ai.timeoutMs,
+          onload: (response) => {
+            let data;
+            try { data = JSON.parse(response.responseText || "null"); }
+            catch { return reject(new Error("Servidor local retornou JSON inválido")); }
+            resolve({ ok: response.status >= 200 && response.status < 300, status: response.status, data });
+          },
+          ontimeout: () => reject(new Error("Tempo limite ao acessar o servidor local")),
+          onerror: () => reject(new Error("Não foi possível acessar 127.0.0.1:8767"))
+        });
+      });
+    }
+    return fetch(url, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined
+    }).then(async (response) => ({ ok: response.ok, status: response.status, data: await response.json() }));
+  }
 
   function visible(element) {
     if (!(element instanceof Element)) return false;
@@ -299,26 +327,20 @@
     if (!ui.aiConsent.checked) {
       return { action: "SKIP", confidence: "ai-text", reason: "Envio de texto à API não autorizado pelo usuário." };
     }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), CONFIG.ai.timeoutMs);
     try {
-      const response = await fetch(CONFIG.ai.decisionEndpoint, {
+      const response = await requestLocalJSON(CONFIG.ai.decisionEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           profile: { name: profile.name, text: profile.text.slice(0, CONFIG.ai.maxTextLength) },
           criteria: normalize(ui.aiCriteria.value)
-        }),
-        signal: controller.signal
+        }
       });
       if (!response.ok) throw new Error(`Servidor local respondeu HTTP ${response.status}`);
-      const decision = await response.json();
+      const decision = response.data;
       if (!["LIKE", "REJECT", "SKIP"].includes(decision.action)) throw new Error("Ação inválida recebida do servidor local");
       return { action: decision.action, confidence: "ai-text", reason: `Sugestão da IA: ${normalize(decision.reason) || "sem justificativa"}` };
     } catch (error) {
       return { action: "SKIP", confidence: "ai-text", reason: `IA indisponível; nenhum clique: ${error.message || error}` };
-    } finally {
-      clearTimeout(timer);
     }
   }
 
@@ -358,17 +380,13 @@
     }
     ui.generateReply.disabled = true;
     setStatus("GERANDO sugestão de resposta");
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), CONFIG.ai.timeoutMs);
     try {
-      const response = await fetch(CONFIG.ai.replyEndpoint, {
+      const response = await requestLocalJSON(CONFIG.ai.replyEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversation, style: normalize(ui.replyStyle.value) }),
-        signal: controller.signal
+        body: { conversation, style: normalize(ui.replyStyle.value) }
       });
       if (!response.ok) throw new Error(`Servidor local respondeu HTTP ${response.status}`);
-      const result = await response.json();
+      const result = response.data;
       ui.replyDraft.value = normalize(result.reply);
       setStatus(ui.replyDraft.value ? "RESPOSTA sugerida — revise antes de copiar" : "IA não sugeriu resposta");
       writeLog("REPLY_SUGGESTION", "Sugestão textual gerada; nunca enviada automaticamente.", null, result.reason || "OK");
@@ -376,7 +394,6 @@
       ui.replyDraft.value = "";
       setStatus(`ERRO ao gerar resposta — ${error.message || error}`);
     } finally {
-      clearTimeout(timer);
       ui.generateReply.disabled = false;
     }
   }
@@ -391,9 +408,9 @@
     ui.testAI.disabled = true;
     setStatus("TESTANDO servidor local da IA");
     try {
-      const response = await fetch(CONFIG.ai.healthEndpoint, { cache: "no-store" });
+      const response = await requestLocalJSON(CONFIG.ai.healthEndpoint);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const health = await response.json();
+      const health = response.data;
       setStatus(health.api_key_configured
         ? `IA LOCAL pronta — modelo ${health.model}`
         : "SERVIDOR ativo — falta configurar OPENAI_API_KEY");

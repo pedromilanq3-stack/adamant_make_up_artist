@@ -150,6 +150,25 @@ texto)**, descreva seus critérios, marque **Autorizar envio do texto visível �
 comece com Dry Run e limite 1. Sem consentimento, sem servidor ou diante de qualquer
 erro da API, a decisão é `SKIP` e nenhum clique ocorre.
 
+Se `/health` funcionar mas `/reply` ainda mostrar o erro genérico `OpenAI API
+respondeu HTTP 400`, provavelmente uma cópia antiga do servidor ainda está ocupando a
+porta 8767. Pare explicitamente o processo antigo e inicie o arquivo atualizado:
+
+```powershell
+$pid8767 = Get-NetTCPConnection -LocalPort 8767 -State Listen -ErrorAction SilentlyContinue |
+  Select-Object -First 1 -ExpandProperty OwningProcess
+if ($pid8767) { Stop-Process -Id $pid8767 -Force }
+Set-Location "$HOME\TinderBot"
+python .\tinder_ai_server.py
+```
+
+Em outro PowerShell, execute
+`Invoke-RestMethod http://127.0.0.1:8767/health`. A versão atual deve exibir
+`server_version` igual a `1.6.2` e `openai_endpoint` igual a
+`/v1/chat/completions`. Se esses campos não aparecerem, o processo em execução ainda é
+de uma versão anterior; não adianta repetir `/reply` antes de substituí-lo. `/reply` é
+uma rota HTTP e não deve ser digitado sozinho como se fosse um comando do PowerShell.
+
 Os campos de critérios e consentimento só aparecem quando **Sugestão da IA (somente
 texto)** está realmente selecionado no menu **Modo**. Se o menu continuar em **Perfis
 já filtrados pelo Tinder**, a IA não é consultada, mesmo que uma versão antiga do

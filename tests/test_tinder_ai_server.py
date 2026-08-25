@@ -3,6 +3,7 @@ import json
 import os
 import unittest
 import urllib.error
+from http.client import HTTPMessage
 from unittest.mock import patch
 
 import tinder_ai_server
@@ -23,6 +24,18 @@ class FakeResponse:
 
 
 class TinderAIServerTests(unittest.TestCase):
+    def test_health_identifies_running_server_version(self):
+        handler = object.__new__(tinder_ai_server.Handler)
+        handler.path = "/health"
+        handler.headers = HTTPMessage()
+        with patch.object(handler, "_send_json") as send_json:
+            handler.do_GET()
+
+        status, payload = send_json.call_args.args
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["server_version"], tinder_ai_server.SERVER_VERSION)
+        self.assertEqual(payload["openai_endpoint"], "/v1/chat/completions")
+
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     @patch("tinder_ai_server.urllib.request.urlopen")
     def test_validates_and_returns_json_decision(self, urlopen):

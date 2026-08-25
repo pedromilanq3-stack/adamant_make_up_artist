@@ -14,6 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "127.0.0.1"
 PORT = 8767
+SERVER_VERSION = "1.6.2"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 MAX_BODY = 32_000
@@ -153,7 +154,13 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/health":
             self.send_error(404)
             return
-        self._send_json(200, {"ok": True, "model": MODEL, "api_key_configured": bool(os.environ.get("OPENAI_API_KEY"))})
+        self._send_json(200, {
+            "ok": True,
+            "server_version": SERVER_VERSION,
+            "model": MODEL,
+            "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
+            "openai_endpoint": "/v1/chat/completions",
+        })
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path not in {"/decision", "/reply"}:
@@ -187,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    print(f"TinderAI local em http://{HOST}:{PORT} usando {MODEL}")
+    print(f"TinderAI {SERVER_VERSION} local em http://{HOST}:{PORT} usando {MODEL}")
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
 
 

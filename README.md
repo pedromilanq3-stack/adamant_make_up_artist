@@ -1,5 +1,10 @@
 # Arquivo Local — pesquisa em exportações do Instagram
 
+> **Utilitário adicional:** este repositório também contém um userscript independente
+> para Tinder Web, com Dry Run, controles de segurança e decisões sem análise de
+> imagens. Consulte [`docs/TINDER_BOT.md`](docs/TINDER_BOT.md) e copie
+> [`tinder-bot.user.js`](tinder-bot.user.js) para o Tampermonkey.
+
 Aplicação local para localizar mensagens **já contidas** no ZIP oficial que o próprio titular obtém em **Instagram → Central de Contas → Suas informações e permissões → Baixar suas informações**. Aceita somente ZIP e interpreta os formatos JSON e HTML de mensagens.
 
 > **Esta aplicação não “recupera” conteúdo apagado.** Ela não consulta o Instagram e não consegue obter conteúdo ausente da exportação oficial fornecida pelo titular.

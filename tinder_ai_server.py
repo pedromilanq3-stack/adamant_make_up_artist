@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "127.0.0.1"
 PORT = 8767
-SERVER_VERSION = "1.6.2"
+SERVER_VERSION = "1.6.3"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 MAX_BODY = 32_000
@@ -64,30 +64,56 @@ def extract_openai_error(error: urllib.error.HTTPError) -> str:
         return f"{fallback}: {text.strip()[:500]}"
 
 
-def request_openai(profile: dict, criteria: str) -> dict:
+def send_chat_completion(messages: list[dict]) -> dict:
+    """Envia Chat Completions e tenta novamente sem JSON mode em caso de HTTP 400.
+
+    Alguns projetos/modelos rejeitam ``response_format`` mesmo aceitando o restante
+    da requisição. O prompt já exige JSON, portanto o fallback mantém a validação local
+    e evita transformar uma incompatibilidade desse parâmetro em falha definitiva.
+    """
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY não configurada")
+
+    base = {"model": MODEL, "messages": messages}
+    attempts = ({**base, "response_format": {"type": "json_object"}}, base)
+    first_error: urllib.error.HTTPError | None = None
+    for index, body in enumerate(attempts):
+        request = urllib.request.Request(
+            OPENAI_URL,
+            data=json.dumps(body, ensure_ascii=False).encode(),
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                result = json.load(response)
+            if first_error is not None:
+                first_error.close()
+            return result
+        except urllib.error.HTTPError as error:
+            if index == 0 and error.code == 400:
+                first_error = error
+                continue
+            if first_error is not None:
+                first_error.close()
+            raise
+    raise RuntimeError("A API não retornou uma resposta")
+
+
+def request_openai(profile: dict, criteria: str) -> dict:
     prompt = json.dumps(
         {"criteria": criteria, "profile_text": profile.get("text", "")[:4000]},
         ensure_ascii=False,
     )
-    payload = json.dumps({
-        "model": MODEL,
-        "messages": [
+    result = send_chat_completion([
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
-        ],
-        "response_format": {"type": "json_object"},
-    }, ensure_ascii=False).encode()
-    request = urllib.request.Request(
-        OPENAI_URL,
-        data=payload,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "Accept": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        result = json.load(response)
+    ])
     output = extract_output_text(result)
     decision = json.loads(output)
     if decision.get("action") not in {"LIKE", "REJECT", "SKIP"}:
@@ -96,29 +122,14 @@ def request_openai(profile: dict, criteria: str) -> dict:
 
 
 def request_openai_reply(conversation: str, style: str) -> dict:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY não configurada")
     prompt = json.dumps(
         {"conversation": conversation[-6000:], "requested_style_and_examples": style[:2000]},
         ensure_ascii=False,
     )
-    payload = json.dumps({
-        "model": MODEL,
-        "messages": [
+    result = send_chat_completion([
             {"role": "system", "content": REPLY_SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
-        ],
-        "response_format": {"type": "json_object"},
-    }, ensure_ascii=False).encode()
-    request = urllib.request.Request(
-        OPENAI_URL,
-        data=payload,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "Accept": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        result = json.load(response)
+    ])
     output = extract_output_text(result)
     suggestion = json.loads(output)
     return {

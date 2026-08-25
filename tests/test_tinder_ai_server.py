@@ -76,6 +76,28 @@ class TinderAIServerTests(unittest.TestCase):
         transmitted = json.loads(sent["messages"][-1]["content"])
         self.assertEqual(set(transmitted), {"conversation", "requested_style_and_examples"})
 
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch("tinder_ai_server.urllib.request.urlopen")
+    def test_retries_http_400_without_response_format(self, urlopen):
+        urlopen.side_effect = [
+            urllib.error.HTTPError(
+                tinder_ai_server.OPENAI_URL,
+                400,
+                "Bad Request",
+                {},
+                io.BytesIO(b""),
+            ),
+            FakeResponse({"choices": [{"message": {"content": '{"reply":"Tudo bem! E você?","reason":"Pergunta aberta."}'}}]}),
+        ]
+
+        result = tinder_ai_server.request_openai_reply("Pessoa: oi", "curta")
+
+        self.assertEqual(result["reply"], "Tudo bem! E você?")
+        first = json.loads(urlopen.call_args_list[0].args[0].data)
+        second = json.loads(urlopen.call_args_list[1].args[0].data)
+        self.assertIn("response_format", first)
+        self.assertNotIn("response_format", second)
+
     def test_extracts_detailed_openai_error(self):
         error = urllib.error.HTTPError(
             tinder_ai_server.OPENAI_URL,

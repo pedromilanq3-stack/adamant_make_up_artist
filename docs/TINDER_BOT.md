@@ -94,15 +94,17 @@ do Tampermonkey e do domínio `tinder.com`. Se o navegador for administrado por 
 empresa/escola e a permissão estiver bloqueada por política, use um perfil pessoal
 administrado por você; o script não tenta contornar políticas do navegador.
 
-Na versão 1.1.0 ou posterior, há duas formas de recuperar o painel sem reinstalar:
-
-- pressione **Alt+Shift+T** na aba do Tinder; ou
-- clique no ícone do Tampermonkey e escolha **Mostrar/recriar painel TinderBot**.
+Na versão 1.1.1 ou posterior, recupere o painel sem reinstalar pressionando
+**Alt+Shift+T** na aba do Tinder.
 
 O painel agora é anexado ao elemento raiz do documento, em vez do `body`, porque o
 Tinder pode substituir o `body` durante uma navegação SPA. O script também verifica a
 cada segundo se o painel foi removido e o recria automaticamente. Ao atualizar o
 código no editor do Tampermonkey, salve e faça uma recarga completa com `Ctrl+F5`.
+
+O cabeçalho usa `@grant none` para manter o modo de execução mais simples e compatível
+com o Tampermonkey no Firefox. Por isso, a versão 1.1.1 não depende de comandos extras
+no menu da extensão; o botão **PARAR / EMERGÊNCIA** continua disponível no painel.
 
 Se o painel aparecer como **ATIVO**, mas o total continuar em zero, substitua o código
 instalado pela versão atual deste repositório e recarregue a página. A versão atual

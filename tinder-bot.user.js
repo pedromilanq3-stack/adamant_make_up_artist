@@ -1,18 +1,18 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.1.0
+// @version      1.1.1
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
-// @grant        GM_registerMenuCommand
+// @grant        none
 // @run-at       document-idle
 // ==/UserScript==
 
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.1.0";
+  const SCRIPT_VERSION = "1.1.1";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -519,11 +519,6 @@
 
   window[INSTANCE_KEY] = { version: SCRIPT_VERSION, show: showPanel, destroy: destroyInstance };
   addEventListener("keydown", panelShortcut);
-  if (typeof GM_registerMenuCommand === "function") {
-    GM_registerMenuCommand("Mostrar/recriar painel TinderBot", showPanel);
-    GM_registerMenuCommand("Parar TinderBot", () => stopAutomation("Parada pelo menu do Tampermonkey."));
-  }
-
   if (document.documentElement) showPanel();
   else addEventListener("DOMContentLoaded", showPanel, { once: true });
 })();

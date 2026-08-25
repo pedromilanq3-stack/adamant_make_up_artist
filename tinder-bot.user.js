@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.3.0
+// @version      1.3.1
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.3.0";
+  const SCRIPT_VERSION = "1.3.1";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -244,7 +244,9 @@
   function findStructuralGamepadButton(kind) {
     const controls = [...document.querySelectorAll('button, [role="button"]')]
       .filter((element) => {
-        if (!visible(element) || !enabled(element)) return false;
+        // O botão de desfazer frequentemente começa desabilitado. Ele ainda precisa
+        // participar da contagem estrutural dos cinco controles do gamepad.
+        if (!visible(element)) return false;
         const rect = element.getBoundingClientRect();
         return rect.width >= 35 && rect.width <= 110 && rect.height >= 35 && rect.height <= 110;
       });
@@ -262,8 +264,10 @@
         const index = kind === "like"
           ? CONFIG.structuralGamepad.likeIndex
           : CONFIG.structuralGamepad.rejectIndex;
+        const target = group[index] || null;
+        if (!target || !enabled(target)) continue;
         debug("Botão encontrado pelo fallback estrutural do gamepad");
-        return group[index] || null;
+        return target;
       }
     }
     return null;

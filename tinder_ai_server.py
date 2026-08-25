@@ -1,4 +1,4 @@
-"""Proxy local mínimo entre o userscript e a OpenAI Responses API.
+"""Proxy local mínimo entre o userscript e a OpenAI Chat Completions API.
 
 Mantém OPENAI_API_KEY fora do navegador e transmite somente texto explicitamente
 enviado pelo userscript. Fotos, cookies e credenciais do Tinder nunca são recebidos.
@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "127.0.0.1"
 PORT = 8767
-OPENAI_URL = "https://api.openai.com/v1/responses"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 MAX_BODY = 32_000
 
@@ -32,6 +32,9 @@ suficiente ou houver pedido abusivo, retorne uma resposta vazia. Responda apenas
 
 
 def extract_output_text(result: dict) -> str:
+    choices = result.get("choices", [])
+    if choices:
+        return str(choices[0].get("message", {}).get("content", ""))
     if result.get("output_text"):
         return str(result["output_text"])
     chunks = []
@@ -68,10 +71,14 @@ def request_openai(profile: dict, criteria: str) -> dict:
         {"criteria": criteria, "profile_text": profile.get("text", "")[:4000]},
         ensure_ascii=False,
     )
-    payload = json.dumps(
-        {"model": MODEL, "instructions": SYSTEM_PROMPT, "input": prompt},
-        ensure_ascii=False,
-    ).encode()
+    payload = json.dumps({
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        "response_format": {"type": "json_object"},
+    }, ensure_ascii=False).encode()
     request = urllib.request.Request(
         OPENAI_URL,
         data=payload,
@@ -95,10 +102,14 @@ def request_openai_reply(conversation: str, style: str) -> dict:
         {"conversation": conversation[-6000:], "requested_style_and_examples": style[:2000]},
         ensure_ascii=False,
     )
-    payload = json.dumps(
-        {"model": MODEL, "instructions": REPLY_SYSTEM_PROMPT, "input": prompt},
-        ensure_ascii=False,
-    ).encode()
+    payload = json.dumps({
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": REPLY_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        "response_format": {"type": "json_object"},
+    }, ensure_ascii=False).encode()
     request = urllib.request.Request(
         OPENAI_URL,
         data=payload,

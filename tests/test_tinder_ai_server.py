@@ -27,7 +27,7 @@ class TinderAIServerTests(unittest.TestCase):
     @patch("tinder_ai_server.urllib.request.urlopen")
     def test_validates_and_returns_json_decision(self, urlopen):
         urlopen.return_value = FakeResponse(
-            {"output_text": '{"action":"LIKE","reason":"Critério textual atendido."}'}
+            {"choices": [{"message": {"content": '{"action":"LIKE","reason":"Critério textual atendido."}'}}]}
         )
 
         result = tinder_ai_server.request_openai(
@@ -37,8 +37,9 @@ class TinderAIServerTests(unittest.TestCase):
         self.assertEqual(result["action"], "LIKE")
         request = urlopen.call_args.args[0]
         sent = json.loads(request.data)
-        transmitted = json.loads(sent["input"])
+        transmitted = json.loads(sent["messages"][-1]["content"])
         self.assertEqual(set(transmitted), {"criteria", "profile_text"})
+        self.assertEqual(sent["response_format"], {"type": "json_object"})
         self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
 
     @patch.dict(os.environ, {}, clear=True)
@@ -50,7 +51,7 @@ class TinderAIServerTests(unittest.TestCase):
     @patch("tinder_ai_server.urllib.request.urlopen")
     def test_generates_text_only_reply_draft(self, urlopen):
         urlopen.return_value = FakeResponse(
-            {"output_text": '{"reply":"Também gosto de trilhas! Qual foi a última?","reason":"Pergunta aberta."}'}
+            {"choices": [{"message": {"content": '{"reply":"Também gosto de trilhas! Qual foi a última?","reason":"Pergunta aberta."}'}}]}
         )
 
         result = tinder_ai_server.request_openai_reply(
@@ -59,7 +60,7 @@ class TinderAIServerTests(unittest.TestCase):
 
         self.assertIn("trilhas", result["reply"])
         sent = json.loads(urlopen.call_args.args[0].data)
-        transmitted = json.loads(sent["input"])
+        transmitted = json.loads(sent["messages"][-1]["content"])
         self.assertEqual(set(transmitted), {"conversation", "requested_style_and_examples"})
 
     def test_extracts_detailed_openai_error(self):

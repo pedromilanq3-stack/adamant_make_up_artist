@@ -40,6 +40,10 @@ Esse modo usa a **OpenAI API**, que é separada da assinatura do ChatGPT e exige
 chave de API e faturamento próprios. A chave nunca deve ser colada no Tampermonkey.
 Ela fica somente na variável de ambiente do processo local `tinder_ai_server.py`.
 
+O proxy usa o endpoint Chat Completions com saída JSON estruturada. Essa escolha evita
+incompatibilidades observadas no endpoint Responses em alguns projetos com o modelo
+configurado, mantendo exatamente os mesmos limites textuais e validações locais.
+
 No Windows PowerShell, dentro da pasta do projeto:
 
 ```powershell

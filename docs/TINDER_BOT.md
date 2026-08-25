@@ -67,12 +67,13 @@ Essas duas mensagens no menu do Tampermonkey significam que o userscript **não 
 a ser executado**. Portanto, nesse caso o problema ainda não é o seletor do Tinder nem
 a montagem do painel. Faça o seguinte:
 
-1. Clique na linha amarela **Parcialmente restrito pelas configurações** e conceda a
-   permissão solicitada para executar userscripts ou acessar `tinder.com`.
-2. Se a linha não abrir a configuração, digite `about:addons` na barra do Firefox,
-   abra **Extensões → Tampermonkey → Permissões** e habilite **Executar scripts de
-   usuário** (o texto pode aparecer como **Run user scripts**) e o acesso aos dados de
-   `tinder.com`, quando essas opções forem exibidas.
+1. Clique na linha amarela **Parcialmente restrito pelas configurações** e veja se o
+   Firefox oferece uma permissão específica para `tinder.com`.
+2. Se em `about:addons` → **Tampermonkey → Permissões e dados** já constar, na seção
+   **Necessário**, **Acessar seus dados em todos os sites visitados**, a permissão de
+   acesso ao Tinder já está concedida. Não é necessário habilitar proxy nem acesso a
+   arquivos locais e não haverá necessariamente uma opção chamada “Executar scripts
+   de usuário”. Nesse cenário, prossiga para conferir a instalação do script.
 3. Volte ao **Painel de controle** do Tampermonkey e confirme que **Tinder Web -
    Assistente de decisões** consta na lista e que sua chave está ativada. Se ele não
    estiver na lista, o código apenas foi aberto, mas não foi salvo/instalado.
@@ -81,6 +82,12 @@ a montagem do painel. Faça o seguinte:
 5. Volte à aba do Tinder e faça uma recarga completa com `Ctrl+F5`. Abra novamente o
    menu do Tampermonkey: ele deve listar **Tinder Web - Assistente de decisões** em vez
    de **Nenhum script sendo executado**.
+
+Para isolar uma instalação incompleta, abra **Adicionar novo script**, apague o modelo,
+cole o arquivo `tinder-bot.user.js` inteiro — desde `// ==UserScript==` até o último
+`})();` — e pressione `Ctrl+S`. Não cole apenas a parte interna da função. Se o editor
+mostrar erro de sintaxe, procure e remova marcadores `<<<<<<<`, `=======` e `>>>>>>>`;
+eles pertencem à tela de conflitos do GitHub e não são JavaScript válido.
 
 Não altere opções avançadas de segurança do Firefox além das permissões específicas
 do Tampermonkey e do domínio `tinder.com`. Se o navegador for administrado por uma

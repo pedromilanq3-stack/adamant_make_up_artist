@@ -35,6 +35,7 @@ class TinderAIServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload["server_version"], tinder_ai_server.SERVER_VERSION)
         self.assertEqual(payload["openai_endpoint"], "/v1/chat/completions")
+        self.assertEqual(payload["fallback_endpoint"], "/v1/responses")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     @patch("tinder_ai_server.urllib.request.urlopen")
@@ -97,6 +98,32 @@ class TinderAIServerTests(unittest.TestCase):
         second = json.loads(urlopen.call_args_list[1].args[0].data)
         self.assertIn("response_format", first)
         self.assertNotIn("response_format", second)
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch("tinder_ai_server.urllib.request.urlopen")
+    def test_falls_back_to_responses_api_after_two_http_400_errors(self, urlopen):
+        errors = [
+            urllib.error.HTTPError(
+                tinder_ai_server.OPENAI_URL,
+                400,
+                "Bad Request",
+                {},
+                io.BytesIO(b""),
+            )
+            for _ in range(2)
+        ]
+        urlopen.side_effect = [
+            *errors,
+            FakeResponse({"output_text": '{"reply":"Tudo ótimo! E por aí?","reason":"Pergunta aberta."}'}),
+        ]
+
+        result = tinder_ai_server.request_openai_reply("Pessoa: oi", "curta")
+
+        self.assertEqual(result["reply"], "Tudo ótimo! E por aí?")
+        third_request = urlopen.call_args_list[2].args[0]
+        self.assertEqual(third_request.full_url, tinder_ai_server.OPENAI_RESPONSES_URL)
+        third = json.loads(third_request.data)
+        self.assertEqual(set(third), {"model", "instructions", "input"})
 
     def test_extracts_detailed_openai_error(self):
         error = urllib.error.HTTPError(

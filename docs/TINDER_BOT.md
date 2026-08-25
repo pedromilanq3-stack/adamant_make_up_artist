@@ -164,14 +164,16 @@ python .\tinder_ai_server.py
 
 Em outro PowerShell, execute
 `Invoke-RestMethod http://127.0.0.1:8767/health`. A versão atual deve exibir
-`server_version` igual a `1.6.3` e `openai_endpoint` igual a
+`server_version` igual a `1.6.4` e `openai_endpoint` igual a
 `/v1/chat/completions`. Se esses campos não aparecerem, o processo em execução ainda é
 de uma versão anterior; não adianta repetir `/reply` antes de substituí-lo. `/reply` é
 uma rota HTTP e não deve ser digitado sozinho como se fosse um comando do PowerShell.
 
-A partir da versão 1.6.3, uma resposta HTTP 400 causada por incompatibilidade com
-`response_format` dispara automaticamente uma segunda tentativa sem esse parâmetro. O
-JSON retornado continua sendo validado localmente antes de chegar ao userscript.
+A partir da versão 1.6.4, uma resposta HTTP 400 causada por incompatibilidade com
+`response_format` dispara uma segunda tentativa sem esse parâmetro. Se ambas as
+tentativas de Chat Completions retornarem HTTP 400, o proxy tenta a Responses API. O
+JSON retornado continua sendo validado localmente antes de chegar ao userscript. O
+`/health` identifica os endpoints principal e de fallback.
 
 Os campos de critérios e consentimento só aparecem quando **Sugestão da IA (somente
 texto)** está realmente selecionado no menu **Modo**. Se o menu continuar em **Perfis

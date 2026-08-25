@@ -14,8 +14,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HOST = "127.0.0.1"
 PORT = 8767
-SERVER_VERSION = "1.6.3"
+SERVER_VERSION = "1.6.4"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 MAX_BODY = 32_000
 
@@ -65,7 +66,7 @@ def extract_openai_error(error: urllib.error.HTTPError) -> str:
 
 
 def send_chat_completion(messages: list[dict]) -> dict:
-    """Envia Chat Completions e tenta novamente sem JSON mode em caso de HTTP 400.
+    """Tenta Chat Completions e usa Responses API se ambas devolverem HTTP 400.
 
     Alguns projetos/modelos rejeitam ``response_format`` mesmo aceitando o restante
     da requisição. O prompt já exige JSON, portanto o fallback mantém a validação local
@@ -76,11 +77,19 @@ def send_chat_completion(messages: list[dict]) -> dict:
         raise RuntimeError("OPENAI_API_KEY não configurada")
 
     base = {"model": MODEL, "messages": messages}
-    attempts = ({**base, "response_format": {"type": "json_object"}}, base)
-    first_error: urllib.error.HTTPError | None = None
-    for index, body in enumerate(attempts):
+    attempts = (
+        (OPENAI_URL, {**base, "response_format": {"type": "json_object"}}),
+        (OPENAI_URL, base),
+        (OPENAI_RESPONSES_URL, {
+            "model": MODEL,
+            "instructions": messages[0]["content"],
+            "input": messages[-1]["content"],
+        }),
+    )
+    previous_errors: list[urllib.error.HTTPError] = []
+    for index, (url, body) in enumerate(attempts):
         request = urllib.request.Request(
-            OPENAI_URL,
+            url,
             data=json.dumps(body, ensure_ascii=False).encode(),
             headers={
                 "Authorization": f"Bearer {api_key}",
@@ -92,15 +101,15 @@ def send_chat_completion(messages: list[dict]) -> dict:
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 result = json.load(response)
-            if first_error is not None:
-                first_error.close()
+            for previous_error in previous_errors:
+                previous_error.close()
             return result
         except urllib.error.HTTPError as error:
-            if index == 0 and error.code == 400:
-                first_error = error
+            if index < len(attempts) - 1 and error.code == 400:
+                previous_errors.append(error)
                 continue
-            if first_error is not None:
-                first_error.close()
+            for previous_error in previous_errors:
+                previous_error.close()
             raise
     raise RuntimeError("A API não retornou uma resposta")
 
@@ -171,6 +180,7 @@ class Handler(BaseHTTPRequestHandler):
             "model": MODEL,
             "api_key_configured": bool(os.environ.get("OPENAI_API_KEY")),
             "openai_endpoint": "/v1/chat/completions",
+            "fallback_endpoint": "/v1/responses",
         })
 
     def do_POST(self) -> None:  # noqa: N802

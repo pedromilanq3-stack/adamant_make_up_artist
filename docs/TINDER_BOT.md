@@ -89,6 +89,16 @@ cole o arquivo `tinder-bot.user.js` inteiro — desde `// ==UserScript==` até o
 mostrar erro de sintaxe, procure e remova marcadores `<<<<<<<`, `=======` e `>>>>>>>`;
 eles pertencem à tela de conflitos do GitHub e não são JavaScript válido.
 
+Mantenha **somente uma cópia** do TinderBot. Se o painel listar várias linhas com o
+mesmo nome, use a lixeira para apagar as versões antigas e preserve apenas a de maior
+versão (atualmente `1.1.1`), ativada. Várias cópias podem criar timers e observadores
+concorrentes na mesma aba, ainda que o script tenha uma trava de instância.
+
+Observe também se a janela exibe **Navegação privativa**. Em uma janela privativa, abra
+`about:addons` → **Tampermonkey → Detalhes** e permita a execução em janelas
+privativas, ou faça o teste em uma janela normal do Firefox. A permissão de navegação
+privativa fica em **Detalhes** e pode não aparecer na aba **Permissões e dados**.
+
 Não altere opções avançadas de segurança do Firefox além das permissões específicas
 do Tampermonkey e do domínio `tinder.com`. Se o navegador for administrado por uma
 empresa/escola e a permissão estiver bloqueada por política, use um perfil pessoal

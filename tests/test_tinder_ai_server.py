@@ -2,6 +2,7 @@ import io
 import json
 import os
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 import tinder_ai_server
@@ -60,6 +61,22 @@ class TinderAIServerTests(unittest.TestCase):
         sent = json.loads(urlopen.call_args.args[0].data)
         transmitted = json.loads(sent["input"])
         self.assertEqual(set(transmitted), {"conversation", "requested_style_and_examples"})
+
+    def test_extracts_detailed_openai_error(self):
+        error = urllib.error.HTTPError(
+            tinder_ai_server.OPENAI_URL,
+            400,
+            "Bad Request",
+            {},
+            io.BytesIO(b'{"error":{"message":"Invalid request payload"}}'),
+        )
+
+        try:
+            self.assertEqual(
+                tinder_ai_server.extract_openai_error(error), "Invalid request payload"
+            )
+        finally:
+            error.close()
 
 
 if __name__ == "__main__":

@@ -185,6 +185,8 @@ http://127.0.0.1:8767/health` funcionar, mas o painel disser offline, confirme e
 permissão e verifique se o script instalado mostra a versão 1.6.1 ou posterior. A
 versão 1.6.1 também mostra no painel mensagens de erro da API (por exemplo, chave
 inválida, modelo indisponível ou ausência de créditos) em vez de “JSON inválido”.
+O servidor atualizado preserva a mensagem detalhada enviada pela OpenAI em respostas
+HTTP 400/401/429, limitada a 1.000 caracteres e sem incluir o cabeçalho de autorização.
 
 ## Instalação no Tampermonkey
 

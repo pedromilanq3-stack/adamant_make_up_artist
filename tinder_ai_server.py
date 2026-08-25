@@ -42,6 +42,24 @@ def extract_output_text(result: dict) -> str:
     return "".join(chunks)
 
 
+def extract_openai_error(error: urllib.error.HTTPError) -> str:
+    fallback = f"OpenAI API respondeu HTTP {error.code}"
+    raw = error.read()
+    if not raw:
+        return fallback
+    text = raw.decode("utf-8", errors="replace")
+    try:
+        payload = json.loads(text)
+        detail = payload.get("error", fallback)
+        if isinstance(detail, dict):
+            return str(detail.get("message") or detail.get("code") or fallback)[:1000]
+        return str(detail)[:1000]
+    except json.JSONDecodeError:
+        # A resposta nunca deve conter a chave enviada no cabeçalho. Limita o corpo
+        # para evitar despejar páginas inteiras ou dados inesperados no navegador.
+        return f"{fallback}: {text.strip()[:500]}"
+
+
 def request_openai(profile: dict, criteria: str) -> dict:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -57,7 +75,7 @@ def request_openai(profile: dict, criteria: str) -> dict:
     request = urllib.request.Request(
         OPENAI_URL,
         data=payload,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=30) as response:
@@ -84,7 +102,7 @@ def request_openai_reply(conversation: str, style: str) -> dict:
     request = urllib.request.Request(
         OPENAI_URL,
         data=payload,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "Accept": "application/json"},
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=30) as response:
@@ -149,13 +167,7 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, RuntimeError, json.JSONDecodeError) as error:
             self._send_json(400, {"error": str(error)})
         except urllib.error.HTTPError as error:
-            message = f"OpenAI API respondeu HTTP {error.code}"
-            try:
-                api_error = json.loads(error.read().decode())
-                message = api_error.get("error", {}).get("message", message)
-            except (ValueError, UnicodeDecodeError):
-                pass
-            self._send_json(502, {"error": message})
+            self._send_json(502, {"error": extract_openai_error(error)})
         except (urllib.error.URLError, TimeoutError) as error:
             self._send_json(502, {"error": f"Falha na API: {error}"})
 

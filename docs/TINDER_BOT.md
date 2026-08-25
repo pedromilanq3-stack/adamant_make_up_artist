@@ -43,9 +43,18 @@ Ela fica somente na variável de ambiente do processo local `tinder_ai_server.py
 No Windows PowerShell, dentro da pasta do projeto:
 
 ```powershell
-$env:OPENAI_API_KEY="sua-chave-da-api"
+$secureKey = Read-Host "Cole sua OPENAI_API_KEY" -AsSecureString
+$keyPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
+try {
+  $env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPtr)
+} finally {
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPtr)
+}
 python tinder_ai_server.py
 ```
+
+O `Read-Host -AsSecureString` evita que a chave apareça no terminal, em capturas ou no
+histórico de comandos. Não escreva a chave real diretamente na linha de comando.
 
 No Prompt de Comando (`cmd.exe`):
 
@@ -67,7 +76,10 @@ Se ele mostrar uma versão, entre na pasta extraída do projeto e use `py` no lu
 
 ```powershell
 cd "$HOME\Downloads\adamant_make_up_artist"
-$env:OPENAI_API_KEY="sua-chave-da-api"
+$secureKey = Read-Host "Cole sua OPENAI_API_KEY" -AsSecureString
+$keyPtr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
+try { $env:OPENAI_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPtr) }
+finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPtr) }
 py tinder_ai_server.py
 ```
 
@@ -123,6 +135,10 @@ Python informado ao final da instalação. O servidor requer Python 3.11 ou post
 O aviso sobre a Microsoft Store pode vir de um alias do Windows, e não deste projeto.
 Não é necessário desabilitar o alias se o comando `py` funcionar. Nunca publique nem
 envie uma captura contendo o valor real de `OPENAI_API_KEY`.
+
+Se uma chave aparecer em captura, gravação, chat ou histórico público, considere-a
+comprometida: pare o servidor, revogue imediatamente essa chave no painel da OpenAI e
+crie outra. Não basta apagar a imagem, pois ela pode já ter sido copiada ou armazenada.
 
 Mantenha o terminal aberto. O servidor escuta exclusivamente em
 `http://127.0.0.1:8767`; depois, no painel, selecione **Sugestão da IA (somente

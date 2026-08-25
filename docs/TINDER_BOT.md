@@ -75,6 +75,29 @@ Ajuste o caminho do `cd` para a pasta onde estão **os dois arquivos**
 `tinder_ai_server.py` e `tinder-bot.user.js`. Não execute a partir de
 `C:\Users\pedro` se o projeto estiver em Downloads ou em outra pasta.
 
+Se a busca em Downloads não retornar nenhuma linha, o projeto não foi baixado ou
+extraído nessa pasta. Baixe o ZIP do repositório, abra Downloads, clique com o botão
+direito no ZIP e escolha **Extrair tudo**. Em vez de adivinhar o nome da pasta, localize
+o arquivo diretamente pelo PowerShell:
+
+```powershell
+$server = Get-ChildItem "$HOME\Downloads" -Filter "tinder_ai_server.py" -File -Recurse |
+  Select-Object -First 1
+$server
+Set-Location $server.DirectoryName
+```
+
+Se `$server` continuar vazio, o ZIP disponível não contém o servidor. Nesse caso,
+baixe/salve separadamente o arquivo `tinder_ai_server.py` desta versão do projeto em
+uma pasta como `$HOME\TinderBot`, entre nessa pasta e só então execute o servidor:
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\TinderBot"
+Set-Location "$HOME\TinderBot"
+# Salve tinder_ai_server.py nesta pasta antes do próximo comando.
+python .\tinder_ai_server.py
+```
+
 Se `py --version` também falhar, instale Python 3 pelo instalador oficial para Windows
 em `https://www.python.org/downloads/windows/`. Durante a instalação, habilite a opção
 para adicionar Python ao `PATH`, conclua a instalação e feche/reabra o PowerShell.

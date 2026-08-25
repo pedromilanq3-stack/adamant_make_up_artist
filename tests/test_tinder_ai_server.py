@@ -59,7 +59,7 @@ class TinderAIServerTests(unittest.TestCase):
         self.assertIn("trilhas", result["reply"])
         sent = json.loads(urlopen.call_args.args[0].data)
         transmitted = json.loads(sent["input"])
-        self.assertEqual(set(transmitted), {"conversation", "requested_style"})
+        self.assertEqual(set(transmitted), {"conversation", "requested_style_and_examples"})
 
 
 if __name__ == "__main__":

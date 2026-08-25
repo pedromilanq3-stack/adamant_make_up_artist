@@ -154,6 +154,13 @@ visível da conversa (no máximo os 6.000 caracteres finais) e o estilo solicita
 envia fotos, anexos, cookies ou credenciais. Não use a sugestão para assediar,
 pressionar ou manipular alguém; descarte respostas inadequadas e respeite recusas.
 
+Um link compartilhado do ChatGPT não é carregado automaticamente pela OpenAI API. Para
+aproximar o estilo de um assistente específico, escreva a personalidade desejada e
+cole alguns exemplos curtos de respostas no campo **Persona, estilo e exemplos**. Não
+cole dados privados de terceiros. O campo aceita até 2.000 caracteres enviados ao
+proxy. Use **Testar servidor da IA** antes de gerar: ele diferencia servidor offline
+de chave ausente sem expor a chave.
+
 ## Instalação no Tampermonkey
 
 ### Firefox: quando o projeto foi baixado como ZIP
@@ -215,7 +222,7 @@ eles pertencem à tela de conflitos do GitHub e não são JavaScript válido.
 
 Mantenha **somente uma cópia** do TinderBot. Se o painel listar várias linhas com o
 mesmo nome, use a lixeira para apagar as versões antigas e preserve apenas a de maior
-versão (atualmente `1.5.0`), ativada. Várias cópias podem criar timers e observadores
+versão (atualmente `1.5.1`), ativada. Várias cópias podem criar timers e observadores
 concorrentes na mesma aba, ainda que o script tenha uma trava de instância.
 
 Observe também se a janela exibe **Navegação privativa**. Em uma janela privativa, abra
@@ -228,7 +235,7 @@ do Tampermonkey e do domínio `tinder.com`. Se o navegador for administrado por 
 empresa/escola e a permissão estiver bloqueada por política, use um perfil pessoal
 administrado por você; o script não tenta contornar políticas do navegador.
 
-Na versão 1.5.0 ou posterior, recupere o painel sem reinstalar pressionando
+Na versão 1.5.1 ou posterior, recupere o painel sem reinstalar pressionando
 **Alt+Shift+T** na aba do Tinder.
 
 O painel agora é anexado ao elemento raiz do documento, em vez do `body`, porque o
@@ -237,17 +244,17 @@ cada segundo se o painel foi removido e o recria automaticamente. Ao atualizar o
 código no editor do Tampermonkey, salve e faça uma recarga completa com `Ctrl+F5`.
 
 O cabeçalho usa `@grant none` para manter o modo de execução mais simples e compatível
-com o Tampermonkey no Firefox. Por isso, a versão 1.5.0 não depende de comandos extras
+com o Tampermonkey no Firefox. Por isso, a versão 1.5.1 não depende de comandos extras
 no menu da extensão; o botão **PARAR / EMERGÊNCIA** continua disponível no painel.
 
 Se o painel aparecer como **ATIVO**, mas o total continuar em zero, substitua o código
 instalado pela versão atual deste repositório e recarregue a página. A versão atual
 também encontra variantes do Tinder que não possuem `data-testid="profile-card"`:
 ela localiza os botões ❤️/X e sobe pela árvore DOM até o contêiner que contém o nome.
-Na versão 1.5.0, o nome e a idade também podem ser identificados em texto comum quando
+Na versão 1.5.1, o nome e a idade também podem ser identificados em texto comum quando
 o Tinder não usa mais elementos `h1`/`h2`; esse texto serve apenas para sincronizar o
 card e nunca é usado para inferir gênero.
-Como último fallback para os controles, a versão 1.5.0 reconhece estruturalmente o
+Como último fallback para os controles, a versão 1.5.1 reconhece estruturalmente o
 gamepad somente quando encontra exatamente cinco botões circulares visíveis no mesmo
 contêiner (desfazer, X, estrela, coração e boost). Ela usa a ordem DOM desse grupo, não
 coordenadas fixas; seletores semânticos continuam tendo prioridade.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.5.0
+// @version      1.5.1
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.5.0";
+  const SCRIPT_VERSION = "1.5.1";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -100,6 +100,7 @@
     ai: {
       decisionEndpoint: "http://127.0.0.1:8767/decision",
       replyEndpoint: "http://127.0.0.1:8767/reply",
+      healthEndpoint: "http://127.0.0.1:8767/health",
       timeoutMs: 15000,
       maxTextLength: 4000,
       maxConversationLength: 6000
@@ -386,6 +387,23 @@
     setStatus("Resposta copiada — cole e envie manualmente");
   }
 
+  async function testAIServer() {
+    ui.testAI.disabled = true;
+    setStatus("TESTANDO servidor local da IA");
+    try {
+      const response = await fetch(CONFIG.ai.healthEndpoint, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const health = await response.json();
+      setStatus(health.api_key_configured
+        ? `IA LOCAL pronta — modelo ${health.model}`
+        : "SERVIDOR ativo — falta configurar OPENAI_API_KEY");
+    } catch (error) {
+      setStatus(`SERVIDOR IA offline em 127.0.0.1:8767 — ${error.message || error}`);
+    } finally {
+      ui.testAI.disabled = false;
+    }
+  }
+
   function safetyReason() {
     if (queryFirst(CONFIG.selectors.safetySignals)) return "Elemento de CAPTCHA/verificação detectado.";
     const text = normalize(document.body?.innerText).slice(0, 20000);
@@ -606,8 +624,9 @@
       <label class="tb-check"><input data-ui="dryRun" type="checkbox" checked> Dry Run (não clicar)</label>
       <label class="tb-check"><input data-ui="debug" type="checkbox"> DEBUG no console</label>
       <details><summary>Assistente de respostas</summary>
-      <label>Estilo da resposta<input data-ui="replyStyle" placeholder="Ex.: leve, respeitosa e curta"></label>
+      <label>Persona, estilo e exemplos<textarea data-ui="replyStyle" rows="3" placeholder="Ex.: leve, respeitosa e curta. Cole aqui exemplos do estilo que deseja."></textarea></label>
       <label class="tb-check"><input data-ui="replyConsent" type="checkbox"> Autorizar envio da conversa textual à API</label>
+      <button data-ui="testAI" type="button">Testar servidor da IA</button>
       <div class="tb-row"><button data-ui="generateReply" type="button">Gerar resposta</button><button data-ui="copyReply" type="button">Copiar</button></div>
       <label>Rascunho<textarea data-ui="replyDraft" rows="3" placeholder="A sugestão aparecerá aqui. Nada é enviado automaticamente."></textarea></label>
       </details>
@@ -624,6 +643,7 @@
     ui.start.addEventListener("click", startAutomation);
     ui.mode.addEventListener("change", updateModeUI);
     ui.generateReply.addEventListener("click", generateReplySuggestion);
+    ui.testAI.addEventListener("click", testAIServer);
     ui.copyReply.addEventListener("click", () => copyReplySuggestion().catch((error) => setStatus(`Falha ao copiar — ${error.message}`)));
     ui.stop.addEventListener("click", () => { writeLog("STOP", "Parada solicitada pelo usuário.", getCurrentProfile(), "Automação parada."); stopAutomation(); });
     panel.querySelector('[data-export="txt"]').addEventListener("click", () => downloadLog("txt"));

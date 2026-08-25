@@ -74,7 +74,7 @@ def request_openai_reply(conversation: str, style: str) -> dict:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY não configurada")
     prompt = json.dumps(
-        {"conversation": conversation[-6000:], "requested_style": style[:500]},
+        {"conversation": conversation[-6000:], "requested_style_and_examples": style[:2000]},
         ensure_ascii=False,
     )
     payload = json.dumps(
@@ -110,6 +110,20 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(204)
         self._cors()
         self.end_headers()
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path != "/health":
+            self.send_error(404)
+            return
+        encoded = json.dumps(
+            {"ok": True, "model": MODEL, "api_key_configured": bool(os.environ.get("OPENAI_API_KEY"))}
+        ).encode()
+        self.send_response(200)
+        self._cors()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path not in {"/decision", "/reply"}:

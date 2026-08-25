@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.3.2
+// @version      1.4.0
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.3.2";
+  const SCRIPT_VERSION = "1.4.0";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -97,6 +97,7 @@
       ]
     },
     defaults: { limit: 50, minDelay: 1800, maxDelay: 3500 },
+    ai: { endpoint: "http://127.0.0.1:8767/decision", timeoutMs: 15000, maxTextLength: 4000 },
     structuralGamepad: { buttonCount: 5, rejectIndex: 1, likeIndex: 3 },
     nextProfileTimeout: 20000,
     debounceMs: 350,
@@ -287,7 +288,35 @@
   function findLikeButton(profileRoot) { return findActionButton("like", profileRoot); }
   function findRejectButton(profileRoot) { return findActionButton("reject", profileRoot); }
 
-  function decideAction(profile) {
+  async function getAIDecision(profile) {
+    if (!ui.aiConsent.checked) {
+      return { action: "SKIP", confidence: "ai-text", reason: "Envio de texto à API não autorizado pelo usuário." };
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CONFIG.ai.timeoutMs);
+    try {
+      const response = await fetch(CONFIG.ai.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile: { name: profile.name, text: profile.text.slice(0, CONFIG.ai.maxTextLength) },
+          criteria: normalize(ui.aiCriteria.value)
+        }),
+        signal: controller.signal
+      });
+      if (!response.ok) throw new Error(`Servidor local respondeu HTTP ${response.status}`);
+      const decision = await response.json();
+      if (!["LIKE", "REJECT", "SKIP"].includes(decision.action)) throw new Error("Ação inválida recebida do servidor local");
+      return { action: decision.action, confidence: "ai-text", reason: `Sugestão da IA: ${normalize(decision.reason) || "sem justificativa"}` };
+    } catch (error) {
+      return { action: "SKIP", confidence: "ai-text", reason: `IA indisponível; nenhum clique: ${error.message || error}` };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function decideAction(profile) {
+    if (ui.mode.value === "ai") return getAIDecision(profile);
     if (ui.mode.value === "filter") {
       return { action: "LIKE", confidence: "filter-mode", reason: "Perfil aceito pelos filtros configurados pelo usuário no Tinder." };
     }
@@ -379,7 +408,7 @@
     setStatus("PROCESSANDO");
     debug("Perfil detectado", profile.name || profile.fingerprint);
     try {
-      const decision = decideAction(profile);
+      const decision = await decideAction(profile);
       debug(`Decisão: ${decision.action}`);
       const { minDelay, maxDelay } = readSettings();
       const delay = Math.round(minDelay + Math.random() * (maxDelay - minDelay));
@@ -492,7 +521,7 @@
       <style>
         #tinder-bot-panel{position:fixed;z-index:2147483647;right:16px;top:72px;width:300px;padding:14px;border-radius:14px;background:#17171c;color:#fff;box-shadow:0 8px 30px #0008;font:13px/1.35 system-ui,sans-serif;border:1px solid #ffffff25}
         #tinder-bot-panel *{box-sizing:border-box}#tinder-bot-panel h2{font-size:16px;margin:0 0 10px;color:#ff4458}#tinder-bot-panel label{display:block;margin:7px 0}
-        #tinder-bot-panel input,#tinder-bot-panel select{width:100%;margin-top:3px;border:1px solid #ffffff35;border-radius:6px;padding:6px;background:#292930;color:#fff}
+        #tinder-bot-panel input,#tinder-bot-panel select,#tinder-bot-panel textarea{width:100%;margin-top:3px;border:1px solid #ffffff35;border-radius:6px;padding:6px;background:#292930;color:#fff}
         #tinder-bot-panel .tb-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}#tinder-bot-panel button{border:0;border-radius:7px;padding:7px;cursor:pointer;font-weight:700}
         #tinder-bot-panel button:disabled{opacity:.45;cursor:not-allowed}#tinder-bot-panel .tb-start{background:#21d07a}#tinder-bot-panel .tb-stop{background:#ff4458;color:#fff}
         #tinder-bot-panel .tb-status{padding:7px;background:#ffffff12;border-radius:7px;margin:8px 0;overflow-wrap:anywhere}#tinder-bot-panel .tb-counts{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:8px 0}
@@ -500,7 +529,9 @@
       </style>
       <h2>TinderBot <small>(local)</small></h2>
       <div class="tb-status">Status: <b data-ui="status">PARADO</b></div>
-      <label>Modo<select data-ui="mode"><option value="filter">Perfis já filtrados pelo Tinder</option><option value="text">Regra por texto explícito</option></select></label>
+      <label>Modo<select data-ui="mode"><option value="filter">Perfis já filtrados pelo Tinder</option><option value="text">Regra por texto explícito</option><option value="ai">Sugestão da IA (somente texto)</option></select></label>
+      <label>Critérios para a IA<textarea data-ui="aiCriteria" rows="2" placeholder="Ex.: LIKE se a bio mencionar trilhas; caso contrário SKIP."></textarea></label>
+      <label class="tb-check"><input data-ui="aiConsent" type="checkbox"> Autorizar envio do texto visível à API</label>
       <label class="tb-check"><input data-ui="dryRun" type="checkbox" checked> Dry Run (não clicar)</label>
       <label class="tb-check"><input data-ui="debug" type="checkbox"> DEBUG no console</label>
       <label>Limite máximo<input data-ui="limit" type="number" min="1" max="5000" value="${CONFIG.defaults.limit}"></label>

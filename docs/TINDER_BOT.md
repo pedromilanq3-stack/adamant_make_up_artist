@@ -2,15 +2,19 @@
 
 ## Arquitetura e limites
 
-`tinder-bot.user.js` é um userscript executado localmente no Firefox, Chrome ou Edge. Ele não
-usa fotos, visão computacional, reconhecimento facial, rede externa, credenciais,
-CAPTCHA ou mecanismos de evasão. Há dois modos:
+`tinder-bot.user.js` é um userscript executado localmente no Firefox, Chrome ou Edge.
+Ele não usa fotos, visão computacional, reconhecimento facial, credenciais do Tinder,
+CAPTCHA ou mecanismos de evasão. Somente o modo opcional de IA envia texto à OpenAI
+API, após consentimento; os demais modos não usam serviços externos. Há três modos:
 
 1. **Perfis já filtrados pelo Tinder:** trata todo card apresentado como aceito pelo
    filtro que o próprio usuário configurou e escolhe `LIKE`.
 2. **Regra por texto explícito:** procura apenas declarações textuais inequívocas no
    DOM (por exemplo, `Gênero: mulher`). Mulher resulta em `LIKE`, homem em `REJECT` e
    ausência/ambiguidade em `SKIP`, sem clique.
+3. **Sugestão da IA (somente texto):** envia, mediante consentimento específico, o
+   texto visível do perfil e critérios escritos pelo usuário a um proxy local. A IA
+   responde `LIKE`, `REJECT` ou `SKIP`. Fotos nunca são enviadas.
 
 O fluxo é dividido nas funções pedidas: `getCurrentProfile`, `getExplicitGender`,
 `findLikeButton`, `findRejectButton`, `decideAction`, `performAction`,
@@ -29,6 +33,39 @@ reinstala o observador após navegação SPA e recria o painel caso o Tinder rem
 > Automação pode contrariar termos ou limites da plataforma. Use por sua conta, com
 > limite baixo, supervisão e Dry Run primeiro. O script para ao detectar CAPTCHA,
 > verificação, atividade suspeita ou bloqueio; ele não tenta contornar esses controles.
+
+## Modo opcional de sugestão pela OpenAI API
+
+Esse modo usa a **OpenAI API**, que é separada da assinatura do ChatGPT e exige uma
+chave de API e faturamento próprios. A chave nunca deve ser colada no Tampermonkey.
+Ela fica somente na variável de ambiente do processo local `tinder_ai_server.py`.
+
+No Windows PowerShell, dentro da pasta do projeto:
+
+```powershell
+$env:OPENAI_API_KEY="sua-chave-da-api"
+python tinder_ai_server.py
+```
+
+No Prompt de Comando (`cmd.exe`):
+
+```bat
+set OPENAI_API_KEY=sua-chave-da-api
+python tinder_ai_server.py
+```
+
+Mantenha o terminal aberto. O servidor escuta exclusivamente em
+`http://127.0.0.1:8767`; depois, no painel, selecione **Sugestão da IA (somente
+texto)**, descreva seus critérios, marque **Autorizar envio do texto visível à API** e
+comece com Dry Run e limite 1. Sem consentimento, sem servidor ou diante de qualquer
+erro da API, a decisão é `SKIP` e nenhum clique ocorre.
+
+O modelo pode ser alterado antes de iniciar o servidor com `OPENAI_MODEL`, por exemplo
+`$env:OPENAI_MODEL="gpt-4.1-mini"`. Use um identificador disponível em seu projeto da
+API. O script envia no máximo 4.000 caracteres do texto visível e até 1.000 caracteres
+dos critérios. Ele não envia fotos, cookies ou credenciais do Tinder. A resposta da IA
+é uma sugestão probabilística; revise seus critérios e faça Dry Run antes de confiar
+em ações reais.
 
 ## Instalação no Tampermonkey
 
@@ -91,7 +128,7 @@ eles pertencem à tela de conflitos do GitHub e não são JavaScript válido.
 
 Mantenha **somente uma cópia** do TinderBot. Se o painel listar várias linhas com o
 mesmo nome, use a lixeira para apagar as versões antigas e preserve apenas a de maior
-versão (atualmente `1.3.2`), ativada. Várias cópias podem criar timers e observadores
+versão (atualmente `1.4.0`), ativada. Várias cópias podem criar timers e observadores
 concorrentes na mesma aba, ainda que o script tenha uma trava de instância.
 
 Observe também se a janela exibe **Navegação privativa**. Em uma janela privativa, abra
@@ -104,7 +141,7 @@ do Tampermonkey e do domínio `tinder.com`. Se o navegador for administrado por 
 empresa/escola e a permissão estiver bloqueada por política, use um perfil pessoal
 administrado por você; o script não tenta contornar políticas do navegador.
 
-Na versão 1.3.2 ou posterior, recupere o painel sem reinstalar pressionando
+Na versão 1.4.0 ou posterior, recupere o painel sem reinstalar pressionando
 **Alt+Shift+T** na aba do Tinder.
 
 O painel agora é anexado ao elemento raiz do documento, em vez do `body`, porque o
@@ -113,17 +150,17 @@ cada segundo se o painel foi removido e o recria automaticamente. Ao atualizar o
 código no editor do Tampermonkey, salve e faça uma recarga completa com `Ctrl+F5`.
 
 O cabeçalho usa `@grant none` para manter o modo de execução mais simples e compatível
-com o Tampermonkey no Firefox. Por isso, a versão 1.3.2 não depende de comandos extras
+com o Tampermonkey no Firefox. Por isso, a versão 1.4.0 não depende de comandos extras
 no menu da extensão; o botão **PARAR / EMERGÊNCIA** continua disponível no painel.
 
 Se o painel aparecer como **ATIVO**, mas o total continuar em zero, substitua o código
 instalado pela versão atual deste repositório e recarregue a página. A versão atual
 também encontra variantes do Tinder que não possuem `data-testid="profile-card"`:
 ela localiza os botões ❤️/X e sobe pela árvore DOM até o contêiner que contém o nome.
-Na versão 1.3.2, o nome e a idade também podem ser identificados em texto comum quando
+Na versão 1.4.0, o nome e a idade também podem ser identificados em texto comum quando
 o Tinder não usa mais elementos `h1`/`h2`; esse texto serve apenas para sincronizar o
 card e nunca é usado para inferir gênero.
-Como último fallback para os controles, a versão 1.3.2 reconhece estruturalmente o
+Como último fallback para os controles, a versão 1.4.0 reconhece estruturalmente o
 gamepad somente quando encontra exatamente cinco botões circulares visíveis no mesmo
 contêiner (desfazer, X, estrela, coração e boost). Ela usa a ordem DOM desse grupo, não
 coordenadas fixas; seletores semânticos continuam tendo prioridade.

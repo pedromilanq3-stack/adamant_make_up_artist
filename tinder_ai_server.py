@@ -1,0 +1,111 @@
+"""Proxy local mínimo entre o userscript e a OpenAI Responses API.
+
+Mantém OPENAI_API_KEY fora do navegador e transmite somente texto explicitamente
+enviado pelo userscript. Fotos, cookies e credenciais do Tinder nunca são recebidos.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+HOST = "127.0.0.1"
+PORT = 8767
+OPENAI_URL = "https://api.openai.com/v1/responses"
+MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
+MAX_BODY = 32_000
+
+SYSTEM_PROMPT = """Você sugere uma decisão para um perfil de namoro usando SOMENTE o
+texto fornecido e os critérios do usuário. Nunca infira gênero, raça, saúde, religião,
+orientação sexual ou qualquer característica pela aparência, nome ou pistas ambíguas.
+Não há imagens. Se os critérios não puderem ser aplicados com segurança, escolha SKIP.
+Responda apenas JSON: {"action":"LIKE|REJECT|SKIP","reason":"frase curta"}."""
+
+
+def request_openai(profile: dict, criteria: str) -> dict:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY não configurada")
+    prompt = json.dumps(
+        {"criteria": criteria, "profile_text": profile.get("text", "")[:4000]},
+        ensure_ascii=False,
+    )
+    payload = json.dumps(
+        {"model": MODEL, "instructions": SYSTEM_PROMPT, "input": prompt},
+        ensure_ascii=False,
+    ).encode()
+    request = urllib.request.Request(
+        OPENAI_URL,
+        data=payload,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        result = json.load(response)
+    output = result.get("output_text")
+    if not output:
+        chunks = []
+        for item in result.get("output", []):
+            for content in item.get("content", []):
+                if content.get("type") == "output_text":
+                    chunks.append(content.get("text", ""))
+        output = "".join(chunks)
+    decision = json.loads(output)
+    if decision.get("action") not in {"LIKE", "REJECT", "SKIP"}:
+        raise ValueError("A API retornou uma ação inválida")
+    return {"action": decision["action"], "reason": str(decision.get("reason", ""))[:500]}
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _cors(self) -> None:
+        origin = self.headers.get("Origin", "")
+        if origin in {"https://tinder.com", "https://www.tinder.com"}:
+            self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Private-Network", "true")
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
+
+    def do_POST(self) -> None:  # noqa: N802
+        if self.path != "/decision":
+            self.send_error(404)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0 or length > MAX_BODY:
+                raise ValueError("Corpo vazio ou grande demais")
+            body = json.loads(self.rfile.read(length))
+            profile = body.get("profile") or {}
+            if not isinstance(profile, dict) or not isinstance(profile.get("text", ""), str):
+                raise ValueError("Perfil inválido")
+            decision = request_openai(profile, str(body.get("criteria", ""))[:1000])
+            encoded = json.dumps(decision, ensure_ascii=False).encode()
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+        except (ValueError, RuntimeError, json.JSONDecodeError) as error:
+            self.send_error(400, str(error))
+        except (urllib.error.URLError, TimeoutError) as error:
+            self.send_error(502, f"Falha na API: {error}")
+
+    def log_message(self, format: str, *args: object) -> None:
+        print(f"[TinderAI] {format % args}")
+
+
+def main() -> None:
+    print(f"TinderAI local em http://{HOST}:{PORT} usando {MODEL}")
+    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.2.0
+// @version      1.3.0
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -12,7 +12,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.2.0";
+  const SCRIPT_VERSION = "1.3.0";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -97,6 +97,7 @@
       ]
     },
     defaults: { limit: 50, minDelay: 1800, maxDelay: 3500 },
+    structuralGamepad: { buttonCount: 5, rejectIndex: 1, likeIndex: 3 },
     nextProfileTimeout: 20000,
     debounceMs: 350,
     maxLogEntries: 5000
@@ -240,10 +241,39 @@
     }) || null;
   }
 
+  function findStructuralGamepadButton(kind) {
+    const controls = [...document.querySelectorAll('button, [role="button"]')]
+      .filter((element) => {
+        if (!visible(element) || !enabled(element)) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.width >= 35 && rect.width <= 110 && rect.height >= 35 && rect.height <= 110;
+      });
+    const checked = new Set();
+    for (const control of controls) {
+      let container = control.parentElement;
+      for (let depth = 0; container && depth < 5; depth += 1, container = container.parentElement) {
+        if (checked.has(container)) continue;
+        checked.add(container);
+        const group = [...container.querySelectorAll('button, [role="button"]')]
+          .filter((element) => controls.includes(element));
+        if (group.length !== CONFIG.structuralGamepad.buttonCount) continue;
+        // Fallback conservador para o gamepad atual: desfazer, X, estrela, coração,
+        // boost. Exige exatamente cinco controles visíveis no mesmo contêiner.
+        const index = kind === "like"
+          ? CONFIG.structuralGamepad.likeIndex
+          : CONFIG.structuralGamepad.rejectIndex;
+        debug("Botão encontrado pelo fallback estrutural do gamepad");
+        return group[index] || null;
+      }
+    }
+    return null;
+  }
+
   function findActionButton(kind, profileRoot) {
     const selectors = kind === "like" ? CONFIG.selectors.likeButtons : CONFIG.selectors.rejectButtons;
     return queryFirst(selectors, profileRoot || document) || queryFirst(selectors) ||
-      semanticButtonFallback(kind, profileRoot || document) || semanticButtonFallback(kind);
+      semanticButtonFallback(kind, profileRoot || document) || semanticButtonFallback(kind) ||
+      findStructuralGamepadButton(kind);
   }
 
   function findLikeButton(profileRoot) { return findActionButton("like", profileRoot); }

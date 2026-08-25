@@ -61,6 +61,32 @@ ativados; a página aberta é exatamente `https://tinder.com/`; o Firefox não e
 uma janela privativa sem permissão para o complemento; e a página foi recarregada
 depois de salvar o script.
 
+### Firefox mostra “Parcialmente restrito” e “Nenhum script sendo executado”
+
+Essas duas mensagens no menu do Tampermonkey significam que o userscript **não chegou
+a ser executado**. Portanto, nesse caso o problema ainda não é o seletor do Tinder nem
+a montagem do painel. Faça o seguinte:
+
+1. Clique na linha amarela **Parcialmente restrito pelas configurações** e conceda a
+   permissão solicitada para executar userscripts ou acessar `tinder.com`.
+2. Se a linha não abrir a configuração, digite `about:addons` na barra do Firefox,
+   abra **Extensões → Tampermonkey → Permissões** e habilite **Executar scripts de
+   usuário** (o texto pode aparecer como **Run user scripts**) e o acesso aos dados de
+   `tinder.com`, quando essas opções forem exibidas.
+3. Volte ao **Painel de controle** do Tampermonkey e confirme que **Tinder Web -
+   Assistente de decisões** consta na lista e que sua chave está ativada. Se ele não
+   estiver na lista, o código apenas foi aberto, mas não foi salvo/instalado.
+4. Abra o editor do script e confirme que o cabeçalho ainda contém
+   `@match https://tinder.com/*`. Não copie marcadores de conflito do GitHub.
+5. Volte à aba do Tinder e faça uma recarga completa com `Ctrl+F5`. Abra novamente o
+   menu do Tampermonkey: ele deve listar **Tinder Web - Assistente de decisões** em vez
+   de **Nenhum script sendo executado**.
+
+Não altere opções avançadas de segurança do Firefox além das permissões específicas
+do Tampermonkey e do domínio `tinder.com`. Se o navegador for administrado por uma
+empresa/escola e a permissão estiver bloqueada por política, use um perfil pessoal
+administrado por você; o script não tenta contornar políticas do navegador.
+
 Na versão 1.1.0 ou posterior, há duas formas de recuperar o painel sem reinstalar:
 
 - pressione **Alt+Shift+T** na aba do Tinder; ou

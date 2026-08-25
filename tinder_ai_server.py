@@ -111,19 +111,20 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    def _send_json(self, status: int, payload: dict) -> None:
+        encoded = json.dumps(payload, ensure_ascii=False).encode()
+        self.send_response(status)
+        self._cors()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
     def do_GET(self) -> None:  # noqa: N802
         if self.path != "/health":
             self.send_error(404)
             return
-        encoded = json.dumps(
-            {"ok": True, "model": MODEL, "api_key_configured": bool(os.environ.get("OPENAI_API_KEY"))}
-        ).encode()
-        self.send_response(200)
-        self._cors()
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(encoded)))
-        self.end_headers()
-        self.wfile.write(encoded)
+        self._send_json(200, {"ok": True, "model": MODEL, "api_key_configured": bool(os.environ.get("OPENAI_API_KEY"))})
 
     def do_POST(self) -> None:  # noqa: N802
         if self.path not in {"/decision", "/reply"}:
@@ -144,17 +145,19 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(conversation, str) or not conversation.strip():
                     raise ValueError("Conversa inválida")
                 result = request_openai_reply(conversation, str(body.get("style", "")))
-            encoded = json.dumps(result, ensure_ascii=False).encode()
-            self.send_response(200)
-            self._cors()
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(encoded)))
-            self.end_headers()
-            self.wfile.write(encoded)
+            self._send_json(200, result)
         except (ValueError, RuntimeError, json.JSONDecodeError) as error:
-            self.send_error(400, str(error))
+            self._send_json(400, {"error": str(error)})
+        except urllib.error.HTTPError as error:
+            message = f"OpenAI API respondeu HTTP {error.code}"
+            try:
+                api_error = json.loads(error.read().decode())
+                message = api_error.get("error", {}).get("message", message)
+            except (ValueError, UnicodeDecodeError):
+                pass
+            self._send_json(502, {"error": message})
         except (urllib.error.URLError, TimeoutError) as error:
-            self.send_error(502, f"Falha na API: {error}")
+            self._send_json(502, {"error": f"Falha na API: {error}"})
 
     def log_message(self, format: str, *args: object) -> None:
         print(f"[TinderAI] {format % args}")

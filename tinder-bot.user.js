@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Tinder Web - Assistente de decisões
 // @namespace    local.tinder.assistant
-// @version      1.6.0
+// @version      1.6.1
 // @description  Automatiza decisões no Tinder Web sem analisar imagens.
 // @match        https://tinder.com/*
 // @match        https://www.tinder.com/*
@@ -13,7 +13,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "1.6.0";
+  const SCRIPT_VERSION = "1.6.1";
   const INSTANCE_KEY = "__TINDER_DECISION_ASSISTANT__";
   const previousInstance = window[INSTANCE_KEY];
   if (previousInstance?.version === SCRIPT_VERSION) {
@@ -156,7 +156,11 @@
           onload: (response) => {
             let data;
             try { data = JSON.parse(response.responseText || "null"); }
-            catch { return reject(new Error("Servidor local retornou JSON inválido")); }
+            catch {
+              data = { error: response.status >= 200 && response.status < 300
+                ? "Servidor local retornou JSON inválido"
+                : `Servidor local retornou HTTP ${response.status}` };
+            }
             resolve({ ok: response.status >= 200 && response.status < 300, status: response.status, data });
           },
           ontimeout: () => reject(new Error("Tempo limite ao acessar o servidor local")),
@@ -335,7 +339,7 @@
           criteria: normalize(ui.aiCriteria.value)
         }
       });
-      if (!response.ok) throw new Error(`Servidor local respondeu HTTP ${response.status}`);
+      if (!response.ok) throw new Error(response.data?.error || `Servidor local respondeu HTTP ${response.status}`);
       const decision = response.data;
       if (!["LIKE", "REJECT", "SKIP"].includes(decision.action)) throw new Error("Ação inválida recebida do servidor local");
       return { action: decision.action, confidence: "ai-text", reason: `Sugestão da IA: ${normalize(decision.reason) || "sem justificativa"}` };
@@ -385,7 +389,7 @@
         method: "POST",
         body: { conversation, style: normalize(ui.replyStyle.value) }
       });
-      if (!response.ok) throw new Error(`Servidor local respondeu HTTP ${response.status}`);
+      if (!response.ok) throw new Error(response.data?.error || `Servidor local respondeu HTTP ${response.status}`);
       const result = response.data;
       ui.replyDraft.value = normalize(result.reply);
       setStatus(ui.replyDraft.value ? "RESPOSTA sugerida — revise antes de copiar" : "IA não sugeriu resposta");

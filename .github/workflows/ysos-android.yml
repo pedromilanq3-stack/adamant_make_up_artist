@@ -66,6 +66,10 @@ jobs:
           p.write_text(s.replace(old, new))
           PY
 
+          # Regression test for the Motorola task-switch race observed on-device.
+          # At this stage the test is intentionally red until the production guard exists.
+          python3 ysos-ci/patch_snapshot_guard.py
+
           test -f android-app/settings.gradle.kts
           test -f android-app/app/build.gradle.kts
 

@@ -10,6 +10,11 @@
 > confirmação manual obrigatória antes de cada envio, com parada imediata diante de
 > CAPTCHA/bloqueio. Consulte [`docs/TINDER_MESSAGES.md`](docs/TINDER_MESSAGES.md) e
 > copie [`tinder-messages.user.js`](tinder-messages.user.js) para o Tampermonkey.
+>
+> **Utilitário adicional 3:** o mesmo assistente de mensagens existe também para o
+> Sexlog (seletores ainda não confirmados nesse site — valide com Dry Run antes de
+> qualquer envio real). Consulte [`docs/SEXLOG_MESSAGES.md`](docs/SEXLOG_MESSAGES.md)
+> e copie [`sexlog-messages.user.js`](sexlog-messages.user.js) para o Tampermonkey.
 
 Aplicação local para localizar mensagens **já contidas** no ZIP oficial que o próprio titular obtém em **Instagram → Central de Contas → Suas informações e permissões → Baixar suas informações**. Aceita somente ZIP e interpreta os formatos JSON e HTML de mensagens.
 

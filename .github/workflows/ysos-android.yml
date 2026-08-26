@@ -1,0 +1,90 @@
+name: YSOS Android Build
+
+on:
+  push:
+    branches:
+      - feature/ysos-autolike-apk
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Reconstruct Android source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p android-app
+          cat ysos-src/part*.b64 | base64 -d > /tmp/ysos-src.tar.gz
+          gzip -t /tmp/ysos-src.tar.gz
+          tar -xzf /tmp/ysos-src.tar.gz -C android-app
+          test -f android-app/settings.gradle.kts
+          test -f android-app/app/build.gradle.kts
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36 SDK
+        shell: bash
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Run unit tests
+        working-directory: android-app
+        run: gradle --no-daemon testDebugUnitTest
+
+      - name: Run Android lint
+        working-directory: android-app
+        run: gradle --no-daemon lintDebug
+
+      - name: Assemble debug APK
+        working-directory: android-app
+        run: gradle --no-daemon assembleDebug
+
+      - name: Verify APK structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android-app/app/build/outputs/apk/debug/app-debug.apk
+          unzip -t android-app/app/build/outputs/apk/debug/app-debug.apk >/dev/null
+
+      - name: Package deliverables
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp android-app/app/build/outputs/apk/debug/app-debug.apk app-debug.apk
+          chmod +x android-app/scripts/package-source.sh
+          (cd android-app && ./scripts/package-source.sh)
+          cp android-app/ysos-autolike-source.zip .
+          sha256sum app-debug.apk ysos-autolike-source.zip > SHA256SUMS.txt
+
+      - name: Upload APK and source
+        uses: actions/upload-artifact@v4
+        with:
+          name: ysos-autolike-debug
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            app-debug.apk
+            ysos-autolike-source.zip
+            SHA256SUMS.txt
+            android-app/docs/INSTALL.md
+            android-app/docs/SELECTOR_CALIBRATION.md

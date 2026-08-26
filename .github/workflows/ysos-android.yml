@@ -27,6 +27,7 @@ jobs:
           gzip -t /tmp/ysos-src.tar.gz
           tar -xzf /tmp/ysos-src.tar.gz -C android-app
           python3 ysos-ci/patch_calibration_v4_test.py
+          python3 ysos-ci/patch_calibration_v4_fix.py
           test -f android-app/settings.gradle.kts
           test -f android-app/app/build.gradle.kts
 

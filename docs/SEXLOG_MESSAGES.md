@@ -54,8 +54,12 @@ Restrições de propósito, por desenho (as mesmas do assistente do Tinder):
 
 ## Como descobrir e ajustar seletores (faça isto primeiro)
 
-1. Com o script instalado e **Dry Run marcado**, navegue até a área de mensagens do
-   Sexlog (na sua conta) e abra uma conversa existente.
+1. Com o script instalado e **Dry Run marcado**, navegue até
+   `https://www.sexlog.com/ultimate-mensagens` (área de mensagens da sua conta) e
+   abra uma conversa existente. O ambiente usado para escrever este script não
+   conseguiu acessar esse domínio (bloqueio de rede do lado da automação, além de a
+   página exigir login), então os seletores abaixo continuam não confirmados até
+   alguém validar com a própria conta.
 2. Abra o DevTools (`F12`) e use o seletor de elementos (`Ctrl+Shift+C`) em três
    coisas: (a) o link/item de cada conversa na lista, (b) o campo onde se digita a
    mensagem, (c) o botão que efetivamente envia.

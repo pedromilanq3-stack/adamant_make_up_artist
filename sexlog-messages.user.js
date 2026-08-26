@@ -31,6 +31,7 @@
   const CONFIG = Object.freeze({
     selectors: {
       conversationItems: [
+        'a[href*="/ultimate-mensagens"]',
         'a[href*="/mensagens/"]',
         'a[href*="/mensagem/"]',
         'a[href*="/conversas/"]',
@@ -164,8 +165,11 @@
   }
 
   function conversationIdFromHref(href) {
-    const match = href && href.match(/\/(?:mensagens?|conversas?|chat)\/([^/?#]+)/);
-    return match ? match[1] : null;
+    if (!href) return null;
+    const pathMatch = href.match(/\/(?:mensagens?|conversas?|chat|ultimate-mensagens)\/([^/?#]+)/);
+    if (pathMatch) return pathMatch[1];
+    const queryMatch = href.match(/[?&](?:id|conversa|chat)=([^&#]+)/i);
+    return queryMatch ? queryMatch[1] : null;
   }
 
   function scanConversations() {

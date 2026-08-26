@@ -1,5 +1,19 @@
 # Sexlog — mensagens assistidas (Tampermonkey)
 
+## O que já foi confirmado por print de tela
+
+- O campo de mensagem tem o placeholder **"Digite sua mensagem"** — o script já
+  procura por `input[placeholder="Digite sua mensagem"]` primeiro.
+- O botão de enviar é só um **ícone de seta**, sem texto ou rótulo visível. Não dá
+  para mirar nele por texto/aria-label com segurança, então o script usa um
+  fallback estrutural (`locateSendButton` em `sexlog-messages.user.js`): procura o
+  último elemento clicável visível dentro do mesmo `<form>` (ou contêiner) do campo
+  de mensagem — que costuma ser exatamente esse botão de seta, já que ele fica à
+  direita do campo na interface.
+- Ainda não sabemos o atributo real do botão (`class`, `aria-label`, `data-*`), então
+  esse fallback é uma aposta razoável, não uma confirmação. Teste sempre com Dry Run
+  antes de confiar nele.
+
 ## Aviso importante: seletores não confirmados
 
 Diferente do assistente para Tinder Web deste repositório, a estrutura de página do
@@ -44,13 +58,29 @@ Restrições de propósito, por desenho (as mesmas do assistente do Tinder):
 
 ## Instalação no Tampermonkey
 
-1. Instale a extensão **Tampermonkey** pela loja oficial do Chrome ou Edge.
+Tampermonkey não roda em Chrome/Safari de celular. No Android, use **Kiwi Browser**
+(aceita extensões Chrome, inclusive Tampermonkey) ou **Firefox para Android** com o
+addon Tampermonkey.
+
+1. Instale a extensão **Tampermonkey** no navegador escolhido.
 2. Abra o painel do Tampermonkey e escolha **Criar novo script**.
 3. Apague o modelo, copie todo o conteúdo de `sexlog-messages.user.js`, cole e salve.
 4. Entre em `https://www.sexlog.com/`. Um painel **Mensagens assistidas — Sexlog
    (local)** aparece no canto superior esquerdo, com um aviso de que os seletores
    ainda não foram confirmados.
 5. **Não desmarque Dry Run** antes de completar a validação de seletores abaixo.
+
+### Conferir o HTML pelo celular, sem instalar nada
+
+Chrome e a maioria dos navegadores mobile aceitam abrir a versão "código-fonte" de
+uma página com o prefixo `view-source:` na barra de endereço (ex.:
+`view-source:https://www.sexlog.com/ultimate-mensagens/<usuário>`). Isso mostra o
+HTML como texto puro. Use o "Localizar na página" do menu do navegador para buscar
+por `Digite sua mensagem` e veja o trecho ao redor — ele mostra a tag exata do campo
+(`input` ou `textarea`) e, principalmente, algum atributo do botão de enviar
+(`class`, `aria-label`, `data-*`) que hoje o script só está adivinhando. Como essa
+página parece ser renderizada pelo servidor (não uma SPA), o `view-source:` deve
+mostrar o mesmo HTML que o navegador realmente usa.
 
 ## Como descobrir e ajustar seletores (faça isto primeiro)
 

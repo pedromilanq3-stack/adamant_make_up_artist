@@ -51,20 +51,29 @@
         'span'
       ],
       messageInput: [
-        'textarea[name*="mensagem" i]',
-        'textarea[name*="message" i]',
+        'input[placeholder="Digite sua mensagem"]',
+        'input[placeholder*="mensagem" i]',
         'textarea[placeholder*="mensagem" i]',
-        'textarea[placeholder*="message" i]',
+        'input[name*="mensagem" i]',
+        'textarea[name*="mensagem" i]',
+        'input[name*="message" i]',
+        'textarea[name*="message" i]',
         'div[contenteditable="true"]',
         'main textarea',
         'textarea'
       ],
+      // Botão de enviar do Sexlog é só um ícone de seta, sem texto/aria-label visível
+      // no print recebido. Estes seletores são um chute; o fallback estrutural em
+      // locateSendButton() (mais abaixo) é quem realmente deve resolver isso até
+      // alguém confirmar o atributo real do botão.
       sendButton: [
         'button[type="submit"]',
         'button[aria-label*="enviar" i]',
         'button[aria-label*="send" i]',
+        'a[aria-label*="enviar" i]',
         'input[type="submit"][value*="enviar" i]',
-        'button'
+        '[class*="send" i]',
+        '[class*="enviar" i]'
       ],
       safetySignals: [
         '[data-testid*="captcha" i]',
@@ -267,6 +276,27 @@
     return element.tagName === "TEXTAREA" || element.tagName === "INPUT" ? element.value : element.textContent;
   }
 
+  /**
+   * O botão de enviar do Sexlog observado até agora é só um ícone (seta), sem texto
+   * ou aria-label conhecidos. Como CONFIG.selectors.sendButton pode não bater com
+   * nada nesse caso, este fallback procura o elemento clicável mais próximo do campo
+   * de mensagem: primeiro dentro do <form> mais próximo, senão dentro do contêiner
+   * imediato (avô) do campo. Escolhe o último candidato visível, já que na interface
+   * o botão de enviar fica depois do campo de texto, à direita.
+   */
+  function locateSendButton(input) {
+    if (!input) return null;
+    const scoped = queryFirst(CONFIG.selectors.sendButton, input.closest("form") || document);
+    if (scoped) return scoped;
+    const global = queryFirst(CONFIG.selectors.sendButton);
+    if (global) return global;
+    const container = input.closest("form") || input.parentElement?.parentElement || input.parentElement;
+    if (!container) return null;
+    const candidates = [...container.querySelectorAll('button, a[role="button"], input[type="submit"], [role="button"], svg, img')]
+      .filter((element) => element !== input && visible(element));
+    return candidates[candidates.length - 1] || null;
+  }
+
   async function prepareNext() {
     if (haltOnSafety("preparação do próximo item")) return;
     if (state.current) {
@@ -321,7 +351,7 @@
       finishCurrent();
       return;
     }
-    const button = queryFirst(CONFIG.selectors.sendButton);
+    const button = locateSendButton(input);
     if (!button || !visible(button) || !enabled(button)) {
       entry.status = "failed";
       writeLog("SEND_FAIL", "Botão de enviar não encontrado, invisível ou desabilitado. Verifique os seletores em CONFIG.", entry.name, "Nenhum clique foi feito.");

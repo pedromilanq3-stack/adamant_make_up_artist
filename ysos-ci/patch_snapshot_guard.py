@@ -1,6 +1,7 @@
 from pathlib import Path
 
 root = Path("android-app")
+
 test_path = root / "app/src/test/java/com/ysoshelper/autolike/accessibility/SnapshotRootGuardContractTest.kt"
 test_path.parent.mkdir(parents=True, exist_ok=True)
 test_path.write_text(
@@ -52,3 +53,45 @@ class SnapshotRootGuardContractTest {
 }
 '''
 )
+
+guard_path = root / "app/src/main/java/com/ysoshelper/autolike/accessibility/SnapshotRootGuard.kt"
+guard_path.write_text(
+    '''package com.ysoshelper.autolike.accessibility
+
+import com.ysoshelper.autolike.automation.YSOS_PACKAGE
+
+object SnapshotRootGuard {
+    fun shouldCapture(eventPackage: String?, rootPackage: String?): Boolean =
+        eventPackage == YSOS_PACKAGE && rootPackage == YSOS_PACKAGE
+}
+'''
+)
+
+service_path = root / "app/src/main/java/com/ysoshelper/autolike/accessibility/YsosAccessibilityService.kt"
+service = service_path.read_text()
+old = '''        val root = rootInActiveWindow ?: return
+        try {
+            val snapshot = treeMapper.map(root, packageName, System.currentTimeMillis())
+            latestSnapshot = snapshot
+            controller.submitSnapshot(snapshot)
+        } finally {
+            @Suppress("DEPRECATION")
+            root.recycle()
+        }
+'''
+new = '''        val root = rootInActiveWindow ?: return
+        try {
+            val rootPackage = root.packageName?.toString()
+            if (!SnapshotRootGuard.shouldCapture(packageName, rootPackage)) return
+
+            val snapshot = treeMapper.map(root, packageName, System.currentTimeMillis())
+            latestSnapshot = snapshot
+            controller.submitSnapshot(snapshot)
+        } finally {
+            @Suppress("DEPRECATION")
+            root.recycle()
+        }
+'''
+if old not in service:
+    raise SystemExit("Expected YsosAccessibilityService root capture block not found")
+service_path.write_text(service.replace(old, new))

@@ -116,3 +116,33 @@ python -m unittest discover -s tests -v
 ```
 
 Todas as fixtures são geradas sinteticamente durante os testes. Elas cobrem JSON, HTML, Unicode, anexos presentes e ausentes, anonimização, extensões inesperadas e ZIPs maliciosos; nenhuma mensagem ou documento real é versionado.
+
+## Validação dos arquivos Markdown
+
+O projeto usa o `markdownlint-cli2` para encontrar problemas de consistência
+nos arquivos Markdown. Instale a ferramenta de desenvolvimento e execute a
+validação com:
+
+```bash
+npm install
+npm run lint:md
+```
+
+O arquivo `.markdownlint.json` desativa duas regras:
+
+- `MD013` (`line-length`): permite linhas com mais de 80 caracteres. Isso é
+  útil, por exemplo, para manter um link longo ou um comando em uma única linha.
+- `MD060` (`table-column-style`): permite misturar estilos de espaçamento e
+  alinhamento em tabelas. Assim, uma tabela compacta como a do exemplo abaixo
+  não precisa ter as barras verticais alinhadas.
+
+```markdown
+| Comando | Finalidade |
+| --- | --- |
+| `npm install` | Instala a ferramenta de validação |
+| `npm run lint:md` | Verifica todos os arquivos Markdown |
+```
+
+As demais regras padrão do `markdownlint` continuam ativas. Para reativar uma
+das duas regras, remova sua entrada do arquivo de configuração ou troque
+`false` por `true`.

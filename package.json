@@ -1,0 +1,14 @@
+{
+  "name": "adamant_make_up_artist",
+  "version": "1.0.0",
+  "description": "Pesquisa local e segura em exportações oficiais do Instagram",
+  "private": true,
+  "scripts": {
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#.agents\""
+  },
+  "keywords": [],
+  "author": "",
+  "devDependencies": {
+    "markdownlint-cli2": "^0.23.2"
+  }
+}

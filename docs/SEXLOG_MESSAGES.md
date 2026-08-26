@@ -14,6 +14,18 @@
   esse fallback é uma aposta razoável, não uma confirmação. Teste sempre com Dry Run
   antes de confiar nele.
 
+## Detecção automática (melhor esforço)
+
+A pedido do usuário, o script não depende de seletores confirmados manualmente: ele
+tenta descobrir sozinho o campo de mensagem e o botão de enviar, usando várias
+tentativas em cascata (`CONFIG.selectors`) e, para o botão (que é só um ícone sem
+texto), um fallback estrutural (`locateSendButton`) que procura o elemento clicável
+mais próximo do campo, começando pela linha imediata e só alargando a busca se
+necessário. Isso é conveniente, mas continua sendo uma aposta, não uma garantia —
+por isso o **Dry Run é obrigatório** na primeira execução em qualquer conta: confira
+no preview do painel se o texto realmente foi parar no campo certo antes de desmarcar
+Dry Run e confirmar um envio de verdade.
+
 ## Aviso importante: seletores não confirmados
 
 Diferente do assistente para Tinder Web deste repositório, a estrutura de página do

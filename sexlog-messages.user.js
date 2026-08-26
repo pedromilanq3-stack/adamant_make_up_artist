@@ -60,7 +60,11 @@
         'textarea[name*="message" i]',
         'div[contenteditable="true"]',
         'main textarea',
-        'textarea'
+        'textarea',
+        // Últimos recursos: qualquer campo de texto de linha única visível dentro de
+        // um <form>, caso nenhum seletor específico acima bata.
+        'form input[type="text"]',
+        'form input:not([type])'
       ],
       // Botão de enviar do Sexlog é só um ícone de seta, sem texto/aria-label visível
       // no print recebido. Estes seletores são um chute; o fallback estrutural em
@@ -280,9 +284,11 @@
    * O botão de enviar do Sexlog observado até agora é só um ícone (seta), sem texto
    * ou aria-label conhecidos. Como CONFIG.selectors.sendButton pode não bater com
    * nada nesse caso, este fallback procura o elemento clicável mais próximo do campo
-   * de mensagem: primeiro dentro do <form> mais próximo, senão dentro do contêiner
-   * imediato (avô) do campo. Escolhe o último candidato visível, já que na interface
-   * o botão de enviar fica depois do campo de texto, à direita.
+   * de mensagem, começando pelo contêiner mais estreito (linha imediata do campo,
+   * onde câmera/texto/enviar costumam ficar juntos) e só alargando a busca se nada
+   * for encontrado ali — evita pegar um botão qualquer, distante, em outra parte da
+   * página. Escolhe o último candidato visível de cada nível, já que na interface o
+   * botão de enviar fica depois do campo de texto, à direita.
    */
   function locateSendButton(input) {
     if (!input) return null;
@@ -290,11 +296,22 @@
     if (scoped) return scoped;
     const global = queryFirst(CONFIG.selectors.sendButton);
     if (global) return global;
-    const container = input.closest("form") || input.parentElement?.parentElement || input.parentElement;
-    if (!container) return null;
-    const candidates = [...container.querySelectorAll('button, a[role="button"], input[type="submit"], [role="button"], svg, img')]
-      .filter((element) => element !== input && visible(element));
-    return candidates[candidates.length - 1] || null;
+    const pickFrom = (container) => {
+      if (!container) return null;
+      const candidates = [...container.querySelectorAll('button, a[role="button"], input[type="submit"], [role="button"], svg, img')]
+        .filter((element) => element !== input && visible(element));
+      return candidates[candidates.length - 1] || null;
+    };
+    const levels = [
+      input.parentElement,
+      input.parentElement?.parentElement,
+      input.closest("form")
+    ];
+    for (const level of levels) {
+      const found = pickFrom(level);
+      if (found) return found;
+    }
+    return null;
   }
 
   async function prepareNext() {
@@ -490,7 +507,7 @@
         #sexlog-messages-panel .sm-warn{background:#4a3400;border:1px solid #ffb74d55;border-radius:6px;padding:6px;font-size:11px;margin-bottom:8px}
       </style>
       <h2>Mensagens assistidas — Sexlog <small>(local)</small></h2>
-      <div class="sm-warn">Seletores ainda não confirmados neste site. Use Dry Run e valide tudo antes de desligar (veja docs/SEXLOG_MESSAGES.md).</div>
+      <div class="sm-warn">Detecção automática de campo/botão (melhor esforço, não confirmada). Use Dry Run e confira o preview antes de desligar (veja docs/SEXLOG_MESSAGES.md).</div>
       <div>Status: <b data-ui="status">PARADO</b></div>
       <div>Enviadas nesta sessão: <b data-ui="sentCounter">0 / 50</b></div>
 

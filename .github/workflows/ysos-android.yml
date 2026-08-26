@@ -26,9 +26,46 @@ jobs:
           cat ysos-src/part*.b64 | base64 -d > /tmp/ysos-src.tar.gz
           gzip -t /tmp/ysos-src.tar.gz
           tar -xzf /tmp/ysos-src.tar.gz -C android-app
-          # Compose exposes weight through RowScope. Remove the stale explicit
-          # import inherited from the web-project conversion before compiling.
+
+          # Compose exposes weight through RowScope; the explicit import is stale.
           sed -i '/import androidx.compose.foundation.layout.weight/d' android-app/app/src/main/java/com/ysoshelper/autolike/ui/MainScreen.kt
+
+          # Safety rule: all semantic like matches are considered together. If two
+          # distinct actionable nodes look like Like/Curtir, the matcher must return
+          # Ambiguous instead of choosing one based on selector priority.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android-app/app/src/main/java/com/ysoshelper/autolike/matching/YsosUiMatcher.kt')
+          s = p.read_text()
+          old = '''        val calibrated = actionable.filter { node ->
+                      node.viewId != null && node.viewId in YsosSelectors.calibratedLikeViewIds
+                  }
+                  match(calibrated)?.let { return it }
+
+                  val byDescription = actionable.filter { node ->
+                      normalize(node.contentDescription) in YsosSelectors.likeLabels
+                  }
+                  match(byDescription)?.let { return it }
+
+                  val byText = actionable.filter { node ->
+                      normalize(node.text) in YsosSelectors.likeLabels
+                  }
+                  return match(byText) ?: LikeMatch.None
+          '''
+          new = '''        val candidates = actionable.filter { node ->
+                      val calibratedId = node.viewId != null && node.viewId in YsosSelectors.calibratedLikeViewIds
+                      val explicitDescription = normalize(node.contentDescription) in YsosSelectors.likeLabels
+                      val explicitText = normalize(node.text) in YsosSelectors.likeLabels
+                      calibratedId || explicitDescription || explicitText
+                  }.distinctBy { it.ref }
+
+                  return match(candidates) ?: LikeMatch.None
+          '''
+          if old not in s:
+              raise SystemExit('Expected YsosUiMatcher block not found')
+          p.write_text(s.replace(old, new))
+          PY
+
           test -f android-app/settings.gradle.kts
           test -f android-app/app/build.gradle.kts
 

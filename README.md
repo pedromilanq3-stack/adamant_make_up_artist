@@ -15,6 +15,11 @@
 > Sexlog (seletores ainda não confirmados nesse site — valide com Dry Run antes de
 > qualquer envio real). Consulte [`docs/SEXLOG_MESSAGES.md`](docs/SEXLOG_MESSAGES.md)
 > e copie [`sexlog-messages.user.js`](sexlog-messages.user.js) para o Tampermonkey.
+>
+> **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
+> detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia
+> telas de compra e permite apagar apenas o histórico local do script. Copie
+> [`tinder-boost-helper.user.js`](tinder-boost-helper.user.js) para o Tampermonkey.
 
 Aplicação local para localizar mensagens **já contidas** no ZIP oficial que o próprio titular obtém em **Instagram → Central de Contas → Suas informações e permissões → Baixar suas informações**. Aceita somente ZIP e interpreta os formatos JSON e HTML de mensagens.
 

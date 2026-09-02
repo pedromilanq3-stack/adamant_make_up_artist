@@ -787,6 +787,25 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(payload, (root / "cerebro.pyz").read_bytes(),
                          "cerebro_android.py desatualizado: rode python ferramentas/empacotar_cerebro.py")
 
+    def test_skill_zip_matches_skill_folder(self) -> None:
+        import zipfile
+        root = Path(__file__).resolve().parent.parent
+        skill = root / ".claude" / "skills" / "cerebro"
+        archive_path = root / "cerebro-skill.zip"
+        self.assertTrue(archive_path.exists(), "rode python ferramentas/empacotar_skill.py")
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+            self.assertIn("cerebro/SKILL.md", names)
+            for path in skill.rglob("*.md"):
+                name = f"cerebro/{path.relative_to(skill).as_posix()}"
+                self.assertIn(name, names)
+                self.assertEqual(archive.read(name), path.read_bytes(), f"{name} mudou: rode python ferramentas/empacotar_skill.py")
+        text = (skill / "SKILL.md").read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("---\nname: cerebro\n"))
+        self.assertIn("description:", text.split("---")[1])
+        for section in ("## 1. Tempo", "## 4. Perceber", "## 7. Reflexão", "## 8. Quadros", "## 10. Postura"):
+            self.assertIn(section, (skill / "references" / "regras.md").read_text(encoding="utf-8"))
+
     def test_committed_pyz_matches_package(self) -> None:
         root = Path(__file__).resolve().parent.parent
         pyz = root / "cerebro.pyz"

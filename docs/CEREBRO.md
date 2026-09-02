@@ -36,6 +36,41 @@ Cada cérebro:
   princípios e, em encruzilhadas, decide entre valores opostos. Ninguém sabe de antemão
   o caminho: a moralidade segue os valores que ele mesmo elegeu.
 
+## Só como skill, sem instalar nada
+
+A pasta `.claude/skills/cerebro/` é o cérebro inteiro em forma de **skill**: o próprio
+modelo aplica as regras a cada mensagem e guarda o estado em uma ficha de texto. Não
+precisa de Python, servidor ou arquivo executável.
+
+- **No Claude Code, Cowork ou neste repositório**: a skill já está ativa. Mande
+  `/cerebro criar Lua: Sou curiosa, tímida e gosto de ajudar quem sofre.` e converse. A
+  ficha fica em `cerebros/lua.md`.
+- **No Claude.ai (site ou app)**: baixe [`cerebro-skill.zip`](../cerebro-skill.zip) e
+  envie em *Configurações → Capacidades → Skills* (ou *Recursos*, conforme a versão).
+  Depois, em qualquer conversa, mande `/cerebro criar Nome: descrição`. Sem sistema de
+  arquivos, a ficha vai no fim de cada resposta num bloco recolhido; `/cerebro salvar`
+  entrega a ficha para colar em outra conversa com `/cerebro carregar`.
+- **Em outro assistente**: copie o conteúdo de `SKILL.md` e de `references/` para o
+  *system prompt* ou para as instruções do projeto.
+
+O que a skill contém:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `SKILL.md` | como criar, ativar, conversar, os comandos e os limites |
+| `references/ficha-modelo.md` | a ficha em branco: identidade, traços, genética, emoções, química, caráter, valores, sentido, estratégias, memória |
+| `references/regras.md` | o motor mental em dez seções: tempo, destino, resultado da postura, percepção, a própria resposta, memória, reflexão, quadros, impulso, postura |
+| `references/motor-python.md` | como usar o motor em código, para quem o tiver |
+
+É o mesmo modelo do pacote Python, em escalas de 0 a 10 e com "dados" mentais no lugar
+do gerador de números. Fica menos preciso e menos imprevisível que o motor em código,
+mas funciona em qualquer lugar onde uma skill funcione. Quem alterar a skill regenera o
+zip com `python ferramentas/empacotar_skill.py`.
+
+Comandos dentro da conversa: `/cerebro estado`, `/cerebro acaso`,
+`/cerebro viver <acontecimento>`, `/cerebro salvar`, `/cerebro carregar`,
+`/cerebro parar`.
+
 ## Instalação fácil: um arquivo só
 
 Não precisa instalar nada além do Python (3.11 ou mais novo, em

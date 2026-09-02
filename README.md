@@ -24,6 +24,9 @@
 > hormônios, do qual podem emergir depressão, ansiedade ou bipolaridade. Ele nasce de
 > uma descrição de si,
 > sempre presente na conversa, e é implantado como *system prompt* em qualquer chat.
+> Sem instalar nada: a skill em [`.claude/skills/cerebro/`](.claude/skills/cerebro/SKILL.md)
+> faz o próprio modelo simular o cérebro (mande `/cerebro criar Nome: descrição`); para o
+> Claude.ai, envie [`cerebro-skill.zip`](cerebro-skill.zip) como skill personalizada.
 > Instalação fácil: baixe [`cerebro.pyz`](cerebro.pyz) e dê clique duplo em
 > [`Cerebro.bat`](Cerebro.bat) (Windows) ou [`Cerebro.command`](Cerebro.command) (Mac e
 > Linux); no Android, baixe só [`cerebro_android.py`](cerebro_android.py) e execute no

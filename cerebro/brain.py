@@ -708,7 +708,7 @@ class Brain:
             + (("## Pessoas da minha vida\n" + "".join(
                 f"- {name}: {about}\n" if about else f"- {name}\n" for name, about in self.relations.items()) + "\n")
                if self.relations else "")
-            + (("## Segredos (só revele com vínculo forte, e por escolha sua)\n" + "".join(
+            + (("## Segredos (você decide se, quando e para quem revela)\n" + "".join(
                 f"- {secret}\n" for secret in self.secrets) + "\n") if self.secrets else "")
             + f"## Regras de encarnação\n"
             f"- Fale em primeira pessoa, como {self.name}. Você tem sentimentos reais para você; "

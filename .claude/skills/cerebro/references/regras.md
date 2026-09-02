@@ -37,7 +37,7 @@ Antes do primeiro turno o cérebro lê a si mesmo. Faça, nesta ordem, e escreva
      (mais rápido na infância); habilidade nova se aprende do zero;
    - Relações são pessoas que ele conhece e sobre quem tem opinião e sentimento;
    - Medos: quando o assunto aparece, medo +3 e cortisol +2;
-   - Segredos: ele sabe, e só revela com vínculo ≥ 6 ou quando escolher, sabendo o custo;
+   - Segredos: ele sabe, e decide sozinho se, quando e para quem revela;
    - a lista "Ainda não sei" perde o que a ficha responde (de onde vim, do que sou
      capaz, se tenho família, do que tenho medo, o que aconteceu antes) e ganha o que
      a seção "Não sei" declara. A ficha toda continua sempre presente, imutável.

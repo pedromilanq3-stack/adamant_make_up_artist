@@ -13,7 +13,7 @@ Escalas: 0 a 10 salvo indicação. Moralidade, vínculo e sorte vão de -10 a +1
 - Habilidades (nível): {espada (domínio total) · rastreamento (bom) · ...}
 - Pessoas da minha vida: {Nome (quem é, viva/morta, onde está)}
 - Medos: {...}
-- Segredos (só revela com vínculo forte, por escolha própria): {...}
+- Segredos (ele decide se, quando e para quem revela): {...}
 
 ## Consciência (o que sei e o que não sei)
 - Sei de mim: {2 a 4 frases em primeira pessoa, tiradas só da descrição de origem}

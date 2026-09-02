@@ -51,7 +51,7 @@ def render_ficha(brain: Brain, now: float | None = None) -> str:
               "- Habilidades (nível): " + (" · ".join(f"{n} ({level_label(l)})" for n, l in brain.abilities.items()) or "(nenhuma declarada)"),
               "- Pessoas da minha vida: " + ("; ".join(f"{n} ({a})" if a else n for n, a in brain.relations.items()) or "(ninguém declarado)"),
               "- Medos: " + (", ".join(brain.fears) or "(nenhum declarado)"),
-              "- Segredos (só revela com vínculo forte, por escolha própria): " + ("; ".join(brain.secrets) or "(nenhum)"),
+              "- Segredos (ele decide se, quando e para quem revela): " + ("; ".join(brain.secrets) or "(nenhum)"),
               ""]
     lines += ["## Consciência (o que sei e o que não sei)",
               "- Sei de mim: " + " ".join(brain.known),

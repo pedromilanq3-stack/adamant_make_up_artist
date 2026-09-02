@@ -172,7 +172,7 @@ Com ficha, o despertar entrega o personagem inteiro:
   fazer": ele domina de verdade o que a ficha diz. Habilidade mencionada na conversa se
   exercita devagar; `brain.practice("arco")` aprende ou treina uma;
 - **pessoas** e **segredos** vão para o bloco estável do implante: ele conhece essas
-  pessoas e só revela um segredo com vínculo forte, por escolha própria;
+  pessoas e decide sozinho se, quando e para quem revela um segredo;
 - **medos** assustam de verdade quando o assunto aparece (medo e cortisol sobem);
 - a lista "ainda não sei" perde o que a ficha responde e ganha o que a seção "Não sei"
   declara.

@@ -1,12 +1,17 @@
 import json
 import random
 import tempfile
+import threading
 import unittest
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from cerebro import ADVERSITIES, FORTUNES, Brain, Experience, Fate, Session, appraise, build_request, stage_for
 from cerebro.growth import PURPOSES, VALUES, StrategyMemory, ValueSystem, choose_purpose, resolve_crossroads
 from cerebro.neurochemistry import CHEMICALS, Genetics, Neurochemistry
+from cerebro.web import Hub, make_handler, slugify, snapshot
 from cerebro.emotions import EMOTIONS, Emotions
 from cerebro.memory import MemoryStore
 from cerebro.personality import inflect, plasticity_for, seed_from_description
@@ -615,6 +620,119 @@ class NeurochemistryTests(unittest.TestCase):
         self.assertEqual(len(restored.neuro.synapses), len(brain.neuro.synapses))
         self.assertEqual(set(restored.neuro.levels), set(CHEMICALS))
         self.assertEqual(Genetics.from_dict(brain.neuro.genetics.to_dict()).to_dict(), brain.neuro.genetics.to_dict())
+
+
+class ExchangeTests(unittest.TestCase):
+    def test_record_exchange_updates_brain_and_history(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "lua.json"
+            session = Session(brain, save_path=path, clock=Clock(0.0))
+            reply = session.record_exchange("obrigado por existir", "Estou aqui com você.")
+            self.assertEqual(reply, "Estou aqui com você.")
+            self.assertEqual(brain.experience_count, 2)
+            self.assertEqual([m["role"] for m in session.history], ["user", "assistant"])
+            self.assertEqual(Brain.load(path).experience_count, 2)
+            session.record_exchange("e aí?", "")
+            self.assertEqual(brain.experience_count, 3)
+            with self.assertRaises(ValueError):
+                session.record_exchange("   ", "x")
+
+    def test_snapshot_has_everything_the_page_needs(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD, gender="f")
+        brain.perceive("obrigado", now=1.0)
+        data = snapshot(brain, now=2.0)
+        for key in ("nome", "emocoes", "quimica", "carater", "proposito", "valores", "postura", "implante", "resumo"):
+            self.assertIn(key, data)
+        self.assertIn(DESCRIPTION_GOOD, data["implante"])
+        json.dumps(data, ensure_ascii=False)
+
+    def test_slugify(self) -> None:
+        self.assertEqual(slugify("Lua Cheia!"), "lua-cheia")
+        self.assertEqual(slugify("Ção"), "cao")
+        self.assertEqual(slugify("***"), "cerebro")
+
+
+class WebApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory()
+        self.hub = Hub(Path(self.directory.name), force_mirror=True)
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.hub))
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
+
+    def tearDown(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+        self.directory.cleanup()
+
+    def call(self, path: str, body: dict | None = None):
+        data = json.dumps(body).encode("utf-8") if body is not None else None
+        request = urllib.request.Request(self.base + path, data=data,
+                                         headers={"Content-Type": "application/json"} if data else {})
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return response.status, json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            return error.code, json.loads(error.read().decode("utf-8"))
+
+    def test_page_and_assets(self) -> None:
+        for path, needle in (("/", "<title>Cérebro</title>"), ("/static/app.css", "#estado"), ("/static/app.js", "/api/dizer")):
+            with urllib.request.urlopen(self.base + path, timeout=10) as response:
+                self.assertEqual(response.status, 200)
+                self.assertIn(needle, response.read().decode("utf-8"))
+
+    def test_full_flow(self) -> None:
+        status, data = self.call("/api/cerebros")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["cerebros"], [])
+        self.assertIn("espelho", data["modo"])
+
+        status, created = self.call("/api/criar", {"nome": "Lua", "descricao": DESCRIPTION_GOOD, "genero": "f"})
+        self.assertEqual(status, 200)
+        file = created["arquivo"]
+        self.assertEqual(file, "lua.json")
+        self.assertTrue((Path(self.directory.name) / file).exists())
+
+        status, said = self.call("/api/dizer", {"arquivo": file, "texto": "oi, obrigado por existir"})
+        self.assertEqual(status, 200)
+        self.assertTrue(said["resposta"].startswith("[Lua"))
+        self.assertGreaterEqual(said["estado"]["experiencias"], 2)  # o destino pode ter agido no tick
+
+        status, state = self.call(f"/api/estado?arquivo={file}")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(state["historico"]), 2)
+        self.assertIn(DESCRIPTION_GOOD, state["estado"]["implante"])
+
+        status, fate = self.call("/api/acaso", {"arquivo": file})
+        self.assertEqual(status, 200)
+        self.assertTrue(fate["acontecimento"])
+
+        status, registered = self.call("/api/registrar", {"arquivo": file, "voce": "e aí?", "resposta": "Tudo bem."})
+        self.assertEqual(status, 200)
+        self.assertEqual(registered["resposta"], "Tudo bem.")
+
+        status, listing = self.call("/api/cerebros")
+        self.assertEqual(listing["cerebros"][0]["nome"], "Lua")
+        self.assertEqual(Brain.load(Path(self.directory.name) / file).experience_count, registered["estado"]["experiencias"])
+
+    def test_errors(self) -> None:
+        status, data = self.call("/api/dizer", {"arquivo": "nada.json", "texto": "oi"})
+        self.assertEqual(status, 404)
+        status, data = self.call("/api/criar", {"nome": "", "descricao": DESCRIPTION_GOOD})
+        self.assertEqual(status, 400)
+        self.assertIn("erro", data)
+        status, data = self.call("/api/dizer", {"arquivo": "../fora.json", "texto": "oi"})
+        self.assertIn(status, (400, 404))
+        _, created = self.call("/api/criar", {"nome": "Eco", "descricao": DESCRIPTION_GOOD})
+        status, data = self.call("/api/dizer", {"arquivo": created["arquivo"], "texto": "   "})
+        self.assertEqual(status, 400)
+
+    def test_duplicate_names_get_new_files(self) -> None:
+        _, first = self.call("/api/criar", {"nome": "Lua", "descricao": DESCRIPTION_GOOD})
+        _, second = self.call("/api/criar", {"nome": "Lua", "descricao": DESCRIPTION_EVIL})
+        self.assertNotEqual(first["arquivo"], second["arquivo"])
 
 
 class PersistenceTests(unittest.TestCase):

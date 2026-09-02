@@ -36,6 +36,52 @@ Cada cérebro:
   princípios e, em encruzilhadas, decide entre valores opostos. Ninguém sabe de antemão
   o caminho: a moralidade segue os valores que ele mesmo elegeu.
 
+## Como implantar na conversa
+
+Há três jeitos, do mais simples ao mais integrado.
+
+### 1. Chat local no navegador (recomendado)
+
+```bash
+python -m cerebro web
+```
+
+Abra `http://127.0.0.1:8766`. A página tem o chat à esquerda e o cérebro vivo à
+direita: emoções e química em barras, quadros clínicos, caráter, propósito, valores,
+decisões, o que a vida fez, lições, destino e estratégias. Os botões permitem criar um
+cérebro (nome, gênero dos adjetivos, descrição de si), deixar o destino agir e ver ou
+copiar o implante. Os cérebros ficam em `~/.cerebro` (ou na pasta de `CEREBRO_DIR`, ou
+em `--pasta`), um JSON por personagem, regravado a cada turno.
+
+Se o SDK `anthropic` estiver instalado e houver credencial (`ANTHROPIC_API_KEY`,
+`ANTHROPIC_AUTH_TOKEN` ou um perfil de `ant auth login`), a fala vem do modelo, com o
+implante como *system prompt*. Sem isso, o chat roda em modo espelho: só o estado
+interno fala, com frases moldadas pela postura e pela emoção. `--espelho` força esse
+modo; `--modelo-id` troca o modelo; `--porta` troca a porta. O servidor escuta somente
+em `127.0.0.1`.
+
+### 2. Em outro app de chat (ChatGPT, Claude, o que for)
+
+O cérebro precisa rodar em algum lugar para evoluir. O ciclo com um chat externo é:
+
+1. `python -m cerebro prompt --arquivo lua.json` imprime o implante. Cole como *system
+   prompt*, ou como primeira mensagem, no chat externo.
+2. Converse. A cada troca, registre-a aqui:
+   ```bash
+   python -m cerebro registrar --arquivo lua.json --voce "o que você disse" --resposta "o que o personagem respondeu"
+   ```
+   O cérebro percebe a sua mensagem, vive a resposta como escolha própria e imprime o
+   implante atualizado, já com as lembranças evocadas pela sua última mensagem.
+3. Cole o implante novo no chat externo (substituindo o anterior, ou como mensagem de
+   contexto) e continue.
+
+Na página web o mesmo existe em `POST /api/registrar`.
+
+### 3. Em código próprio
+
+`Session` com qualquer *responder* (veja abaixo), ou `build_request` para montar o
+*system prompt* em dois blocos e enviar a qualquer API de chat.
+
 ## Uso em Python
 
 ```python
@@ -257,6 +303,8 @@ python -m cerebro viver --arquivo lua.json --texto "Perdi meu cão" --valencia -
 python -m cerebro acaso --arquivo lua.json           # força o destino a agir uma vez
 python -m cerebro conversar --arquivo lua.json       # modo espelho, sem modelo
 python -m cerebro conversar --arquivo lua.json --modelo   # com o SDK anthropic
+python -m cerebro web                                # chat no navegador em 127.0.0.1:8766
+python -m cerebro registrar --arquivo lua.json --voce "..." --resposta "..."  # troca feita em outro chat
 ```
 
 Dentro de `conversar`, os comandos `/estado`, `/prompt` e `/sair` estão disponíveis.
@@ -289,4 +337,6 @@ exploração, moralidade seguindo os valores escolhidos, encruzilhadas com viés
 inércia do propósito e vidas diferentes a partir da mesma descrição; e a neuroquímica:
 genética a partir da descrição, sinapses hebbianas, tolerância e dependência, abuso
 gerando ansiedade, solidão com serotonina baixa gerando depressão, ciclotimia alternando
-mania e depressão, cérebro estável permanecendo estável, sono e privação de sono.
+mania e depressão, cérebro estável permanecendo estável, sono e privação de sono; e o
+chat local: página e recursos, fluxo completo pela API (criar, dizer, estado, acaso,
+registrar), erros e nomes duplicados.

@@ -23,8 +23,9 @@
 > próprias escolhas, forma valores, elege um propósito) e um corpo com sinapses e
 > hormônios, do qual podem emergir depressão, ansiedade ou bipolaridade. Ele nasce de
 > uma descrição de si,
-> sempre presente na conversa, e é implantado como *system prompt* em qualquer chat
-> (`python -m cerebro criar ...`, `python -m cerebro conversar ...`).
+> sempre presente na conversa, e é implantado como *system prompt* em qualquer chat.
+> `python -m cerebro web` abre um chat local no navegador com o cérebro vivo ao lado;
+> `python -m cerebro registrar` acompanha conversas feitas em outro app.
 >
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia

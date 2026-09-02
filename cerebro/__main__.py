@@ -7,6 +7,8 @@
     python -m cerebro acaso --arquivo lua.json                # deixa o destino agir uma vez
     python -m cerebro conversar --arquivo lua.json            # modo espelho, sem modelo
     python -m cerebro conversar --arquivo lua.json --modelo   # usa o SDK anthropic
+    python -m cerebro web                                     # chat no navegador
+    python -m cerebro registrar --arquivo lua.json --voce "..." --resposta "..."
 """
 
 from __future__ import annotations
@@ -72,6 +74,23 @@ def cmd_acaso(args: argparse.Namespace) -> None:
     print(brain.summary())
 
 
+def cmd_registrar(args: argparse.Namespace) -> None:
+    """Registra uma troca feita em outro chat e imprime o implante atualizado."""
+    brain = _load(args.arquivo)
+    session = Session(brain, save_path=args.arquivo)
+    session.record_exchange(args.voce, args.resposta or "")
+    print(session.implant(args.voce))
+
+
+def cmd_web(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    from .web import serve
+
+    serve(port=args.porta, directory=Path(args.pasta) if args.pasta else None,
+          model=args.modelo_id, force_mirror=args.espelho)
+
+
 def cmd_conversar(args: argparse.Namespace) -> None:
     brain = _load(args.arquivo)
     responder = AnthropicResponder(model=args.modelo_id) if args.modelo else None
@@ -131,6 +150,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("acaso", help="deixa o destino agir uma vez (adversidade, sorte ou tentação)")
     p.add_argument("--arquivo", required=True)
     p.set_defaults(func=cmd_acaso)
+
+    p = sub.add_parser("registrar", help="registra uma troca feita em outro chat e imprime o implante novo")
+    p.add_argument("--arquivo", required=True)
+    p.add_argument("--voce", required=True, help="o que você disse")
+    p.add_argument("--resposta", help="o que o personagem respondeu no outro chat")
+    p.set_defaults(func=cmd_registrar)
+
+    p = sub.add_parser("web", help="chat local no navegador com o estado do cérebro ao lado")
+    p.add_argument("--porta", type=int, default=8766)
+    p.add_argument("--pasta", help="pasta dos cérebros (padrão: ~/.cerebro ou CEREBRO_DIR)")
+    p.add_argument("--modelo-id", default="claude-opus-5")
+    p.add_argument("--espelho", action="store_true", help="força o modo espelho mesmo com credencial")
+    p.set_defaults(func=cmd_web)
 
     p = sub.add_parser("conversar", help="conversa interativa")
     p.add_argument("--arquivo", required=True)

@@ -145,5 +145,27 @@ class Session:
             self.brain.save(self.save_path)
         return reply
 
+    def record_exchange(self, user_text: str, reply: str) -> str:
+        """Registra uma troca feita em outro lugar (outro app de chat).
+
+        O cérebro percebe a mensagem e vive a resposta como se a tivesse dito,
+        sem gerar nada. Devolve a resposta registrada. Serve para quem conversa
+        em um chat externo: cola a troca aqui e pega o implante atualizado.
+        """
+        user_text = user_text.strip()
+        reply = reply.strip()
+        if not user_text:
+            raise ValueError("Informe o que você disse.")
+        now = self.clock()
+        self.brain.tick(now)
+        self.brain.perceive(user_text, now)
+        self.history.append({"role": "user", "content": user_text})
+        if reply:
+            self.history.append({"role": "assistant", "content": reply})
+            self.brain.act(reply, now)
+        if self.save_path is not None:
+            self.brain.save(self.save_path)
+        return reply
+
     def implant(self, context: str = "") -> str:
         return self.brain.implant(context, self.clock())

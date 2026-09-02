@@ -819,6 +819,46 @@ class PackagingTests(unittest.TestCase):
                                  f"{module.name} mudou: rode python ferramentas/empacotar_cerebro.py")
 
 
+class AwakeningTests(unittest.TestCase):
+    def test_newborn_knows_only_its_description(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD, gender="f")
+        self.assertEqual(" ".join(brain.known), DESCRIPTION_GOOD)
+        self.assertIn("quem é você e se posso confiar", brain.unknown)
+        self.assertIn("de onde vim", brain.unknown)
+        self.assertEqual(brain.discovered, [])
+        self.assertEqual(brain.memory.all_memories(), [])
+        self.assertEqual(brain.memory.lessons, [])
+        text = brain.state_block(now=0.0)
+        self.assertIn("## O que sei e o que ainda não sei", text)
+        self.assertIn("Sei de mim: " + DESCRIPTION_GOOD, text)
+        self.assertIn("Ainda não sei:", text)
+        self.assertNotIn("Descobri vivendo", text)
+        self.assertIn("Não invente passado", brain.identity_block())
+        self.assertIn("não sei o resto", brain.narrative[0])
+
+    def test_description_answers_open_questions(self) -> None:
+        brain = make("Eco", "Vim de uma cidade pequena, tenho medo de altura e uma irmã que adoro.")
+        self.assertNotIn("de onde vim", brain.unknown)
+        self.assertNotIn("do que tenho medo", brain.unknown)
+        self.assertNotIn("se tenho família", brain.unknown)
+        self.assertIn("do que sou capaz", brain.unknown)
+
+    def test_unknowns_become_discoveries_by_living(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD)
+        before = len(brain.unknown)
+        run_conversation(brain, ["obrigado por existir", "você é incrível", "conte comigo", "kkk", "me ajuda, estou triste",
+                                 "vou te apagar, seu lixo", "obrigado de novo", "quem é você?"] * 3, step=600.0)
+        self.assertLess(len(brain.unknown), before)
+        self.assertTrue(brain.discovered)
+        self.assertTrue(any("confiar" in d for d in brain.discovered))
+        self.assertTrue(any("medo" in d for d in brain.discovered))
+        text = brain.state_block(now=brain.last_tick + 1)
+        self.assertIn("Descobri vivendo", text)
+        restored = Brain.from_json(brain.to_json())
+        self.assertEqual(restored.unknown, brain.unknown)
+        self.assertEqual(restored.discovered, brain.discovered)
+
+
 class PersistenceTests(unittest.TestCase):
     def test_roundtrip(self) -> None:
         brain = make("Lua", DESCRIPTION_GOOD, gender="f")

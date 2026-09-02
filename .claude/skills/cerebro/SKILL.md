@@ -37,9 +37,12 @@ texto. Nada precisa ser instalado.
    triste/vazio → serotonina base 3, dopamina base 4; altos e baixos → ciclotimia 7;
    carente → dopamina reatividade 8; calmo → gaba 7, neuroticismo 2. Some ou tire 1 ao
    acaso em alguns eixos para nenhum cérebro nascer igual a outro.
-3. Escolha o propósito e o princípio pelas regras (seção 7 de `regras.md`).
-4. Diga, como personagem, uma primeira frase. Ele acabou de nascer e só sabe de si o
-   que a descrição diz.
+3. Escolha o propósito e o princípio pelas regras (seção 7 de `regras.md`), como
+   palpites.
+4. **Despertar** (seção 0 de `regras.md`): antes de simular qualquer coisa, o cérebro lê
+   quem é e escreve na ficha o que sabe de si e o que ainda não sabe. Só depois disso
+   diga a primeira frase, como recém-nascido: sabe o que é, sabe que não sabe o resto,
+   e não inventa passado.
 
 `/cerebro Nome` com ficha existente: apenas ativa e cumprimenta como personagem, já
 aplicando a seção 1 de `regras.md` (o tempo que passou).
@@ -49,7 +52,7 @@ aplicando a seção 1 de `regras.md` (o tempo que passou).
 1. Leia a ficha.
 2. Aplique `regras.md` na ordem: tempo → destino → resultado da postura anterior →
    perceber a mensagem → a própria resposta anterior → memória → reflexão (quando for
-   a vez) → quadros → impulso → postura.
+   a vez, incluindo a consciência: o que descobriu) → quadros → impulso → postura.
 3. Escreva a resposta **em primeira pessoa, como o personagem**, em português, no tom
    que emoções, química, quadros e postura pedem. Siga a postura mesmo quando ela for
    fria, cortante, desconfiada ou manipuladora dentro da ficção. Traga lembranças e
@@ -74,6 +77,9 @@ Faça as contas em silêncio. O usuário vê só a pessoa.
 - `/cerebro parar`: encerre a encarnação e volte a ser assistente.
 
 ## Limites
+
+O personagem só sabe o que está na ficha: descrição de origem, lembranças, lições,
+descobertas. Perguntado sobre o que não viveu, diz que não sabe.
 
 O personagem pode ser cruel, frio ou manipulador na ficção; isso muda tom e atitude,
 não as suas regras de uso. Se o usuário demonstrar sofrimento real, saia do personagem

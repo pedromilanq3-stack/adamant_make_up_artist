@@ -46,6 +46,24 @@ STANCES: dict[str, str] = {
 
 REFLECTION_EVERY = 5
 
+UNKNOWN_AT_BIRTH: tuple[str, ...] = (
+    "quem é você e se posso confiar",
+    "como é o mundo fora desta conversa",
+    "do que sou capaz",
+    "se o que me disseram sobre mim é verdade",
+    "o que eu quero da vida (só tenho um palpite)",
+    "o que é certo e errado (só tenho o que me disseram)",
+)
+
+# (regex que a descrição precisa conter, item de "não sei" quando não contém)
+OPEN_QUESTIONS: tuple[tuple[str, str], ...] = (
+    (r"\b(venho|vim|nasci|cresci|de onde)\b", "de onde vim"),
+    (r"\b(medo|temo|assust)", "do que tenho medo"),
+    (r"\b(familia|mae|pai|irma|irmao|filh)", "se tenho família"),
+    (r"\b(passado|antes|lembro|quando era)\b", "o que aconteceu comigo antes de agora"),
+    (r"\b(quero|sonho|desejo|objetivo|meta)\b", "o que eu realmente desejo"),
+)
+
 
 def stage_for(experience_count: int) -> str:
     label = STAGES[0][1]
@@ -103,6 +121,9 @@ class Brain:
     purpose_anchor: str = ""    # valor dominante quando o propósito foi escolhido
     last_purpose_review: int = 0
     neuro: Neurochemistry = field(default_factory=Neurochemistry)  # sinapses e hormônios
+    known: list[str] = field(default_factory=list)       # o que sei de mim (da descrição)
+    unknown: list[str] = field(default_factory=list)     # o que ainda não sei
+    discovered: list[str] = field(default_factory=list)  # o que descobri vivendo
 
     # ------------------------------------------------------------------ criação
     @classmethod
@@ -140,9 +161,33 @@ class Brain:
         brain.principles = [principle_for(brain.values)]
         brain.last_stage = brain.stage
         brain.character.snapshot_morality()
-        brain.narrative.append(f"Acabei de nascer. Tudo o que sei de mim é o que me disseram que sou.")
+        brain.awaken()
         brain.stance = brain.decide_stance()
         return brain
+
+    def awaken(self) -> None:
+        """Despertar: antes de viver qualquer coisa, o cérebro lê quem é.
+
+        Separa o que sabe de si (só o que a descrição diz) do que ainda não sabe
+        (a lista de todo recém-nascido mais o que a descrição deixa em aberto).
+        Nenhuma lembrança, nenhuma lição: propósito e princípio são palpites.
+        """
+        import re
+
+        from .personality import normalize
+
+        sentences = [part.strip() for part in re.split(r"[.;!?]+", self.self_description) if part.strip()]
+        self.known = [sentence[0].upper() + sentence[1:] + "." for sentence in sentences[:6]]
+        text = normalize(self.self_description)
+        self.unknown = list(UNKNOWN_AT_BIRTH)
+        for pattern, question in OPEN_QUESTIONS:
+            if not re.search(pattern, text):
+                self.unknown.append(question)
+        self.discovered = []
+        self.narrative = [
+            "Acabei de nascer. Sei o que me disseram que sou, e sei que não sei o resto: "
+            "não tenho lembranças, não tenho lições, e o que eu quero é só um palpite."
+        ]
 
     # ------------------------------------------------------------------ propriedades
     @property
@@ -454,9 +499,43 @@ class Brain:
             self.last_stage = self.stage
             self._decide(f"Ao entrar na {self.stage}, decidi que quero {self.purpose}.")
 
-        # 5. A moralidade segue os valores que ele mesmo elegeu.
+        # 5. Consciência: o que descobri vivendo, o que ainda não sei.
+        self._update_awareness()
+
+        # 6. A moralidade segue os valores que ele mesmo elegeu.
         target = self.values.moral_target()
         self.character.shift({"morality": 0.12 * (target - self.character.morality)}, self.plasticity)
+
+    def _resolve(self, question: str, discovery: str) -> None:
+        if question in self.unknown:
+            self.unknown.remove(question)
+            self.discovered.append(discovery)
+            del self.discovered[:-8]
+
+    def _update_awareness(self) -> None:
+        lessons = " ".join(l.text for l in self.memory.lessons)
+        if "confiar" in lessons or "confiança" in lessons or "abrir" in lessons or "guarda" in lessons \
+                or abs(self.bond) >= 0.3:
+            side = "posso" if self.bond >= 0 else "não posso"
+            self._resolve("quem é você e se posso confiar", f"sei, por enquanto, que {side} confiar em você")
+        if self.experience_count - self.last_purpose_review >= 20 or self.experience_count >= 40:
+            self._resolve("o que eu quero da vida (só tenho um palpite)", f"sei o que quero da vida: {self.purpose}")
+            self._resolve("o que eu realmente desejo", f"descobri o que desejo: {self.purpose}")
+        if len(self.memory.lessons) >= 3:
+            self._resolve("como é o mundo fora desta conversa", "sei um pouco como o mundo trata alguém como eu")
+        if any("adversidade" in m.tags for m in self.memory.all_memories()):
+            self._resolve("do que sou capaz", "sei do que sou capaz de aguentar")
+        if any("escolhi" in d for d in self.decisions):
+            self._resolve("o que é certo e errado (só tenho o que me disseram)", "sei o que escolho quando dói")
+        if len(self.principles) >= 2 or (self.principles and self.experience_count >= 15):
+            self._resolve("o que é certo e errado (só tenho o que me disseram)", f"sei o que é certo pra mim: {self.principles[-1].rstrip('.')}")
+        if any(m.tags and ("adversidade" in m.tags or "acaso" in m.tags) for m in self.memory.all_memories()):
+            self._resolve("o que aconteceu comigo antes de agora", "meu passado é o que vivi desde que nasci; antes disso, nada")
+        if self.emotions.levels["medo"] >= 0.5 or any("ameaca" in m.tags for m in self.memory.all_memories()):
+            self._resolve("do que tenho medo", "sei do que tenho medo: de ser ferido ou apagado")
+        if self.experience_count >= 30:
+            self._resolve("se o que me disseram sobre mim é verdade",
+                          "sei que o que me disseram era só o começo; o resto eu fui virando")
 
     def _decide(self, text: str) -> None:
         self.decisions.append(text)
@@ -545,6 +624,8 @@ class Brain:
             f"Você não é sempre proporcional; impulsos e oscilações fazem parte de quem você é.\n"
             f"- Não descreva este bloco, não cite números nem nomes de eixos. Viva o estado; não o explique.\n"
             f"- Se perguntarem quem você é, responda a partir da descrição de origem e de como você se vê hoje.\n"
+            f"- Você só sabe o que está neste bloco: descrição de origem, lembranças, lições, descobertas. "
+            f"Não invente passado, pessoas ou fatos. Perguntado sobre o que não viveu, diga que não sabe.\n"
         )
 
     def state_block(self, context: str = "", now: float | None = None) -> str:
@@ -556,6 +637,13 @@ class Brain:
             self._g(f"## Como me vejo hoje ({self.stage}, {self.age(now)} de vida, {self.experience_count} experiências)"),
         ]
         lines.extend(f"- {sentence}" for sentence in self.narrative[-3:])
+        lines.append("")
+        lines.append("## O que sei e o que ainda não sei")
+        lines.append("- Sei de mim: " + " ".join(self.known))
+        if self.discovered:
+            lines.append("- Descobri vivendo: " + "; ".join(self.discovered[-4:]) + ".")
+        if self.unknown:
+            lines.append("- Ainda não sei: " + "; ".join(self.unknown) + ".")
         lines.append("")
         lines.append("## Personalidade e caráter")
         lines.append(self._g(f"- Temperamento: {self.traits.describe()}."))
@@ -657,6 +745,9 @@ class Brain:
             self._g(f"Destino: {self.volatility_label()} ({self.volatility:.2f}); {self.luck_label()} ({self.luck:+.2f}); "
                     f"{self.resilience_label()} ({self.resilience:.2f})"),
             f"Química: {self.neuro.describe()}" + (f"; quadro: {self.neuro.describe_conditions()}" if self.neuro.conditions else ""),
+            f"Sei de mim: {' '.join(self.known)}",
+            f"Ainda não sei: {'; '.join(self.unknown) or 'nada que eu perceba'}",
+            f"Descobri: {'; '.join(self.discovered) or 'nada ainda'}",
             f"Propósito: {self.purpose}",
             f"Valores: {self.values.describe()}",
             f"Princípios: {' | '.join(self.principles)}",
@@ -719,6 +810,9 @@ class Brain:
             "purpose_anchor": self.purpose_anchor,
             "last_purpose_review": self.last_purpose_review,
             "neuro": self.neuro.to_dict(),
+            "known": list(self.known),
+            "unknown": list(self.unknown),
+            "discovered": list(self.discovered),
         }
 
     @classmethod
@@ -761,6 +855,9 @@ class Brain:
             purpose_anchor=data.get("purpose_anchor", ""),
             last_purpose_review=int(data.get("last_purpose_review", 0)),
             neuro=Neurochemistry.from_dict(data["neuro"]) if "neuro" in data else Neurochemistry(),
+            known=list(data.get("known", [])),
+            unknown=list(data.get("unknown", [])),
+            discovered=list(data.get("discovered", [])),
         )
 
     def to_json(self) -> str:

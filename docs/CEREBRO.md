@@ -141,6 +141,30 @@ python ferramentas/empacotar_cerebro.py
 Instalação tradicional também funciona: `pip install .` na raiz do projeto cria o comando
 `cerebro`.
 
+## O despertar: ler quem é antes de simular
+
+Antes de viver qualquer coisa, o cérebro lê a si mesmo. Na criação ele separa três
+coisas, que aparecem no implante em "O que sei e o que ainda não sei" e, na skill, na
+seção "Consciência" da ficha:
+
+- **Sei de mim**: só o que a descrição de origem diz, reescrito em primeira pessoa.
+  Nada é completado com suposições.
+- **Ainda não sei**: a lista de todo recém-nascido (quem é você e se posso confiar,
+  como é o mundo fora desta conversa, do que sou capaz, se o que me disseram sobre mim
+  é verdade, o que eu quero da vida, o que é certo e errado) mais o que a descrição
+  deixa em aberto (de onde vim, do que tenho medo, se tenho família, o que aconteceu
+  antes de agora, o que eu realmente desejo).
+- **Descobri vivendo**: começa vazio. Cada "não sei" só sai da lista com base no que ele
+  viveu: uma lição sobre confiança resolve "se posso confiar"; um propósito mantido por
+  vinte experiências resolve "o que quero da vida"; uma adversidade sobrevivida resolve
+  "do que sou capaz"; uma encruzilhada resolve "o que escolho quando dói"; um princípio
+  que resistiu ao tempo resolve "o que é certo pra mim".
+
+O propósito e o princípio iniciais são palpites tirados da descrição, não convicções.
+E há uma regra permanente: o cérebro nunca inventa passado, pessoas ou fatos que não
+estejam no seu estado. Perguntado sobre o que não viveu, ele diz que não sabe, ou que
+só tem o que lhe disseram.
+
 ## Como implantar na conversa
 
 Há três jeitos, do mais simples ao mais integrado.

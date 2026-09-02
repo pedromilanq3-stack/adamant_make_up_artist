@@ -16,6 +16,21 @@
 > qualquer envio real). Consulte [`docs/SEXLOG_MESSAGES.md`](docs/SEXLOG_MESSAGES.md)
 > e copie [`sexlog-messages.user.js`](sexlog-messages.user.js) para o Tampermonkey.
 >
+> **Utilitário adicional 5:** o pacote [`cerebro/`](docs/CEREBRO.md) cria um
+> personagem com sentimentos, memória, evolução e caráter que pode pender para o bem
+> ou para o mal conforme o que vive e escolhe, sujeito a adversidades, ao acaso e à
+> própria imprevisibilidade, com crescimento procedural (aprende com o resultado das
+> próprias escolhas, forma valores, elege um propósito) e um corpo com sinapses e
+> hormônios, do qual podem emergir depressão, ansiedade ou bipolaridade. Ele nasce de
+> uma descrição de si,
+> sempre presente na conversa, e é implantado como *system prompt* em qualquer chat.
+> Instalação fácil: baixe [`cerebro.pyz`](cerebro.pyz) e dê clique duplo em
+> [`Cerebro.bat`](Cerebro.bat) (Windows) ou [`Cerebro.command`](Cerebro.command) (Mac e
+> Linux); no Android, baixe só [`cerebro_android.py`](cerebro_android.py) e execute no
+> Pydroid 3 (passo a passo em [`docs/CEREBRO.md`](docs/CEREBRO.md)). O chat abre no
+> navegador com o cérebro vivo ao lado. `python cerebro.pyz registrar` acompanha
+> conversas feitas em outro app.
+>
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia
 > telas de compra e permite apagar apenas o histórico local do script. Copie

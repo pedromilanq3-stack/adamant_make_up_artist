@@ -75,8 +75,38 @@ _LABEL_RE = re.compile(r"^\s*(?:[-*•]\s*)?([A-Za-zÀ-ÿ ]{2,24})\s*:\s*(.*)$")
 
 
 def _split_items(text: str) -> list[str]:
-    parts = re.split(r"\s*(?:;|\n|(?<=[.!?])\s+(?=[A-ZÀ-Ý]))\s*", text)
-    return [p.strip().strip("-•* ").strip() for p in parts if p and p.strip().strip("-•* ").strip()]
+    """Separa itens por ';', quebra de linha ou fim de frase, sem cortar dentro de parênteses."""
+    items: list[str] = []
+    current: list[str] = []
+    depth = 0
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char in "([":
+            depth += 1
+        elif char in ")]":
+            depth = max(0, depth - 1)
+        boundary = False
+        if depth == 0:
+            if char in ";\n":
+                boundary = True
+            elif char in ".!?" and text[index + 1:index + 2].isspace():
+                after = text[index + 1:].lstrip()
+                if after and after[0].isupper():
+                    current.append(char)
+                    boundary = True
+        if boundary:
+            item = "".join(current).strip().strip("-•* ").strip()
+            if item:
+                items.append(item)
+            current = []
+        else:
+            current.append(char)
+        index += 1
+    item = "".join(current).strip().strip("-•* ").strip()
+    if item:
+        items.append(item)
+    return items
 
 
 def _parse_ability(item: str) -> tuple[str, float]:

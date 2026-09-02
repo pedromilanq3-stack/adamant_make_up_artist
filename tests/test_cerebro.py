@@ -892,6 +892,13 @@ class OriginTests(unittest.TestCase):
         self.assertEqual(origin.relations, {"Ana": ""})
         self.assertEqual(origin.fears, ["escuro"])
 
+    def test_parser_keeps_parentheses_whole(self) -> None:
+        origin = parse_origin("Relações: Milan (decide; autoriza gastos); Harvey (estratégia. Redigiu o briefing)\n"
+                              "História: Perdi tudo. Recomecei em 2020; venci.")
+        self.assertEqual(list(origin.relations), ["Milan", "Harvey"])
+        self.assertEqual(origin.relations["Milan"], "decide; autoriza gastos")
+        self.assertEqual(origin.history, ["Perdi tudo.", "Recomecei em 2020", "venci."])
+
     def test_rich_origin_wakes_up_whole(self) -> None:
         brain = make("Kael", ORIGIN_KAEL)
         self.assertEqual(len(brain.memory.long_term), 4)

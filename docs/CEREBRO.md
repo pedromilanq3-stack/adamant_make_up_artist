@@ -74,12 +74,23 @@ credencial de modelo, o chat roda em modo espelho (o estado interno fala sozinho
 usar o modelo, instale `anthropic` pelo gerenciador de pacotes do Pydroid (menu **Pip**)
 e defina `ANTHROPIC_API_KEY` no terminal do Pydroid antes de executar.
 
-No **Termux**, a alternativa é:
+No **Termux**, a alternativa é o instalador de uma linha (cria o comando `cerebro`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pedromilanq3-stack/adamant_make_up_artist/claude/brain-evolution-feelings-t1hps7/instalar_termux.sh | bash
+cerebro
+```
+
+Sem acesso ao GitHub pelo Termux (repositório privado), baixe `cerebro.pyz` pelo
+navegador, rode `termux-setup-storage` uma vez e execute o `instalar_termux.sh`
+baixado: ele encontra o arquivo na pasta Download. Ou, à mão:
 
 ```bash
 pkg install python
 python cerebro.pyz
 ```
+
+Depois é só abrir `http://127.0.0.1:8766` no Chrome. `Ctrl+C` no Termux encerra.
 
 No macOS, na primeira vez, pode ser preciso clicar com o botão direito em
 `Cerebro.command` e escolher **Abrir**. Se o Windows perguntar com o que abrir o `.pyz`,

@@ -27,6 +27,10 @@ Cada cérebro:
   doenças, traições, injustiças, mas também golpes de sorte e gentilezas inesperadas;
 - **é imprevisível** — impulsos, oscilações de humor, lembranças intrusivas e leituras
   enviesadas do que ouve, tanto mais quanto maior a sua volatilidade;
+- **tem um corpo** — sinapses e hormônios (dopamina, serotonina, noradrenalina, cortisol,
+  ocitocina, endorfina, gaba) com genética própria, tolerância de receptores e sono. Da
+  química sustentada emergem quadros: depressão, ansiedade, fase maníaca, bipolaridade,
+  estresse crônico e dependência de aprovação;
 - **cresce de forma procedural** — aprende com o resultado das próprias posturas, forma
   um sistema de valores a partir do que funcionou, escolhe um propósito de vida, deriva
   princípios e, em encruzilhadas, decide entre valores opostos. Ninguém sabe de antemão
@@ -102,6 +106,63 @@ Tudo isso aparece no implante nas seções "O que a vida me fez recentemente" e
 torna o destino reprodutível; `Fate(rate=0.0, whim_rate=0.0)` o desliga. Na linha de
 comando, `python -m cerebro acaso --arquivo lua.json` força o destino a agir uma vez.
 
+## Sinapses e neuroquímica: o corpo por trás das emoções
+
+O módulo `cerebro/neurochemistry.py` dá ao cérebro um corpo. Sete substâncias têm
+níveis de 0 a 1, cada uma com meia-vida própria (noradrenalina cai em minutos,
+serotonina leva horas):
+
+| Substância | Papel no cérebro |
+|---|---|
+| dopamina | recompensa, motivação, novidade; amplifica emoções positivas |
+| serotonina | estabilidade de humor, contentamento; amortece emoções negativas |
+| noradrenalina | alerta, energia, luta ou fuga |
+| cortisol | estresse; amplifica medo e raiva |
+| ocitocina | vínculo e confiança; acelera a formação de laço com quem conversa |
+| endorfina | alívio de dor, prazer |
+| gaba | freio, calma; baixo demais deixa tudo mais cru |
+
+**Genética.** A descrição de si e a personalidade definem a produção basal e a
+reatividade de cada substância ("ansiosa" eleva a reatividade do cortisol; "vazio, sem
+vontade" reduz a produção de serotonina e dopamina; "altos e baixos, bipolar" eleva a
+ciclotimia; "carente, preciso de aprovação" eleva a reatividade da dopamina). Um ruído
+determinístico completa o genoma.
+
+**Sinapses.** Caminhos ligam o que acontece (carinho, insulto, ameaça, adversidade, a
+própria gentileza ou crueldade, a valência em geral) à liberação de cada substância. São
+hebbianas: caminho usado fica mais largo. Quem apanha muito desenvolve um caminho
+insulto → cortisol forte e passa a reagir mais rápido e mais intensamente; quem é
+acolhido fortalece carinho → ocitocina. As sinapses mais reforçadas aparecem em
+`python -m cerebro estado`.
+
+**Tolerância.** Picos repetidos de dopamina dessensibilizam os receptores: elogios em
+sequência valem cada vez menos, e a falta deles pesa. Isso leva à *dependência de
+aprovação* e contribui para a anedonia da depressão. Receptores se recuperam com tempo
+e sono.
+
+**Sono.** Um intervalo de cinco horas ou mais sem conversa conta como noite dormida:
+cortisol cai pela metade, serotonina sobe, receptores recuperam. Ficar mais de vinte
+horas acordado faz o contrário e, em quem tem ciclotimia, aproxima a fase maníaca.
+
+**Quadros.** Diagnosticados a partir da química sustentada nas últimas amostras:
+
+- *depressão*: serotonina e dopamina baixas, ou receptores de dopamina cansados com
+  serotonina baixa. Baixa a linha de base de alegria e expectativa, sobe a de tristeza,
+  puxa a postura para recolher-se;
+- *ansiedade*: cortisol e noradrenalina altos, ou cortisol alto com gaba baixo. Sobe a
+  linha de base de medo, aumenta a volatilidade efetiva e a leitura de neutro como ataque;
+- *fase maníaca*: em quem tem ciclotimia acima de 0,3, dopamina e noradrenalina altas.
+  Energia, expectativa e impulsividade altas; puxa para desafiar e manipular;
+- *bipolaridade*: rótulo de quem já viveu mania e depressão. O oscilador interno tem
+  período de cerca de duas semanas e acelera sob estresse;
+- *estresse crônico*: cortisol alto por muito tempo;
+- *dependência de aprovação*: receptores de dopamina cansados por excesso de elogios.
+
+A química também modula o ganho emocional a cada experiência (cortisol alto e serotonina
+baixa fazem uma crítica doer mais; dopamina alta faz um elogio valer mais), o vínculo
+(via ocitocina) e a energia (via noradrenalina). No implante isso aparece em "Corpo e
+química", com as substâncias fora do normal, os quadros e a nota de sono.
+
 ## Crescimento procedural: o cérebro decide o que é certo pra vida dele
 
 O módulo `cerebro/growth.py` faz o caminho emergir do que o cérebro vive, e não de
@@ -153,7 +214,8 @@ valores distintos ("fazer pagar quem me feriu", "entender o mundo e as pessoas",
   atual, não explicar o próprio estado);
 - **bloco volátil** (`state_block`): como o personagem se vê hoje, temperamento e caráter,
   vínculo com quem conversa, estado emocional, lembranças evocadas pelo contexto da
-  mensagem, lições, o que faz sentido pra ele (propósito, valores, princípios), decisões
+  mensagem, corpo e química (substâncias fora do normal, quadros clínicos, sono),
+  lições, o que faz sentido pra ele (propósito, valores, princípios), decisões
   que tomou, o que a vida fez recentemente, imprevisibilidade (volatilidade, sorte,
   resiliência e o impulso do momento) e a postura desta conversa.
 
@@ -224,4 +286,7 @@ dependendo do caráter, resiliência, impulsos, leitura enviesada e divergência
 cérebros iguais sob destinos diferentes; e o crescimento procedural: resultados que
 reforçam ou enfraquecem estratégias e valores, estratégia aprendida guiando a postura,
 exploração, moralidade seguindo os valores escolhidos, encruzilhadas com viés da raiva,
-inércia do propósito e vidas diferentes a partir da mesma descrição.
+inércia do propósito e vidas diferentes a partir da mesma descrição; e a neuroquímica:
+genética a partir da descrição, sinapses hebbianas, tolerância e dependência, abuso
+gerando ansiedade, solidão com serotonina baixa gerando depressão, ciclotimia alternando
+mania e depressão, cérebro estável permanecendo estável, sono e privação de sono.

@@ -19,9 +19,10 @@
 > **Utilitário adicional 5:** o pacote [`cerebro/`](docs/CEREBRO.md) cria um
 > personagem com sentimentos, memória, evolução e caráter que pode pender para o bem
 > ou para o mal conforme o que vive e escolhe, sujeito a adversidades, ao acaso e à
-> própria imprevisibilidade, com crescimento procedural: aprende com o resultado das
-> próprias escolhas, forma valores, elege um propósito e decide o que é certo para a
-> vida dele. Ele nasce de uma descrição de si,
+> própria imprevisibilidade, com crescimento procedural (aprende com o resultado das
+> próprias escolhas, forma valores, elege um propósito) e um corpo com sinapses e
+> hormônios, do qual podem emergir depressão, ansiedade ou bipolaridade. Ele nasce de
+> uma descrição de si,
 > sempre presente na conversa, e é implantado como *system prompt* em qualquer chat
 > (`python -m cerebro criar ...`, `python -m cerebro conversar ...`).
 >

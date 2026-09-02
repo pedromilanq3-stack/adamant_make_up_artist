@@ -22,6 +22,7 @@ from .fate import Fate
 from .growth import (STANCE_VALUES, TAG_VALUES, VALUE_LABELS, StrategyMemory, ValueSystem,
                      choose_purpose, principle_for, resolve_crossroads)
 from .memory import MemoryStore
+from .neurochemistry import Genetics, Neurochemistry
 from .perception import appraise
 from .personality import Character, Traits, inflect, plasticity_for, seed_from_description
 
@@ -101,6 +102,7 @@ class Brain:
     last_stage: str = ""
     purpose_anchor: str = ""    # valor dominante quando o propósito foi escolhido
     last_purpose_review: int = 0
+    neuro: Neurochemistry = field(default_factory=Neurochemistry)  # sinapses e hormônios
 
     # ------------------------------------------------------------------ criação
     @classmethod
@@ -130,6 +132,8 @@ class Brain:
                                  + 0.15 * (1 - traits["conscienciosidade"])
                                  + ((seed % 97) / 97 - 0.5) * 0.2, 0.05, 0.95)
         brain.resilience = clamp(0.3 + 0.3 * character.courage + 0.2 * (1 - traits["neuroticismo"]), 0.05, 0.95)
+        brain.neuro = Neurochemistry(genetics=Genetics.seed(
+            self_description, seed, traits["neuroticismo"], traits["extroversao"], traits["amabilidade"]))
         brain.values = ValueSystem.seed(self_description, seed)
         brain.purpose = choose_purpose(brain.values, brain.fate.rng, 0.3 + 0.5 * brain.volatility)
         brain.purpose_anchor = brain.values.top(1)[0]
@@ -149,6 +153,19 @@ class Brain:
     def stage(self) -> str:
         return stage_for(self.experience_count)
 
+    @property
+    def effective_volatility(self) -> float:
+        """Volatilidade de fato: a própria mais o que os quadros clínicos somam."""
+        return clamp(self.volatility + self.neuro.volatility_bonus(), 0.05, 1.0)
+
+    def _refresh_baseline(self) -> None:
+        base = baseline_from_traits(
+            self.traits["neuroticismo"], self.traits["extroversao"], self.traits["amabilidade"]
+        )
+        for emotion, delta in self.neuro.baseline_shift().items():
+            base[emotion] = clamp(base[emotion] + delta, 0.0, 1.0)
+        self.emotions.baseline = base
+
     def _g(self, text: str) -> str:
         return inflect(text, self.gender)
 
@@ -163,7 +180,15 @@ class Brain:
         elapsed = now - self.last_tick
         if elapsed <= 0:
             return
+        self.neuro.decay(elapsed)
+        before = list(self.neuro.conditions)
+        after = self.neuro.assess()
+        for condition in after:
+            if condition not in before and condition != "bipolar":
+                self.memory.learn(f"Passei a viver com {self.neuro.describe_conditions()}.", 0.4, now)
+        self._refresh_baseline()
         self.emotions.decay(elapsed)
+        self.emotions.energy = clamp(0.5 * self.emotions.energy + 0.5 * self.neuro.modulation()["arousal"], 0.0, 1.0)
         self.memory.forget(elapsed)
         self.bond *= 0.5 ** (elapsed / (30 * 86400))
         self.last_tick = now
@@ -174,7 +199,7 @@ class Brain:
 
     def _whim(self) -> None:
         """Imprevisibilidade: um impulso sem causa externa pode surgir a qualquer turno."""
-        whim = self.fate.whim(self.volatility, self.emotions.arousal())
+        whim = self.fate.whim(self.effective_volatility, self.emotions.arousal())
         if whim is None:
             self.whim = ""
             return
@@ -201,11 +226,13 @@ class Brain:
     def live(self, experience: Experience, now: float | None = None) -> Experience:
         """Vive uma experiência: emoções, caráter, traços, memória, vínculo."""
         now = time.time() if now is None else now
+        self.neuro.release(experience, self.plasticity)
+        modulation = self.neuro.modulation()
         gain = 0.5 + experience.intensity
         if experience.valence < 0:
-            gain *= 0.7 + 0.6 * self.traits["neuroticismo"]
+            gain *= (0.7 + 0.6 * self.traits["neuroticismo"]) * modulation["negative"]
         elif experience.valence > 0:
-            gain *= 0.7 + 0.6 * self.traits["extroversao"]
+            gain *= (0.7 + 0.6 * self.traits["extroversao"]) * modulation["positive"]
         self.emotions.apply(experience.emotion_impact, gain)
 
         character_impact = dict(experience.character_impact)
@@ -248,9 +275,7 @@ class Brain:
         if "surpresa" in experience.emotion_impact and experience.emotion_impact["surpresa"] > 0.1:
             trait_deltas["abertura"] = 0.02
         self.traits.shift(trait_deltas, self.plasticity)
-        self.emotions.baseline = baseline_from_traits(
-            self.traits["neuroticismo"], self.traits["extroversao"], self.traits["amabilidade"]
-        )
+        self._refresh_baseline()
 
         felt = ""
         if experience.emotion_impact:
@@ -263,7 +288,8 @@ class Brain:
         self.memory.record(experience, felt, now)
 
         if experience.source == "interlocutor":
-            self.bond = clamp(self.bond + 0.12 * experience.valence * (0.5 + experience.intensity))
+            self.bond = clamp(self.bond + 0.12 * experience.valence * (0.5 + experience.intensity)
+                              * modulation["bonding"])
             self.interactions += 1
 
         self.experience_count += 1
@@ -281,7 +307,7 @@ class Brain:
         experience = appraise(text, source="interlocutor")
         levels = self.emotions.levels
         experience = self.fate.misread(experience, levels["medo"], levels["raiva"], levels["alegria"],
-                                       self.character.trust, self.volatility)
+                                       self.character.trust, self.effective_volatility)
         if self.acting_stance:
             self._learn_outcome(experience)
         lived = self.live(experience, now)
@@ -480,7 +506,9 @@ class Brain:
             "manipular": 0.6 * evil + 0.5 * (1 - c.honesty) + 0.2 * e["expectativa"]
                          - 0.3 * c.empathy - 0.2 * e["medo"],
         }
-        if self.fate.impulse_takes_over(self.volatility):
+        for stance, delta in self.neuro.stance_bias().items():
+            scores[stance] += delta
+        if self.fate.impulse_takes_over(self.effective_volatility):
             return self.fate.random_stance()
         # Exploração: curiosidade e juventude levam a tentar o que nunca tentou.
         explore = 0.04 + 0.12 * t["abertura"] * self.plasticity
@@ -490,7 +518,7 @@ class Brain:
         for key in scores:
             scores[key] += 0.45 * self.strategies.value(key)      # o que rendeu na prática
             scores[key] += 0.35 * self.values.alignment(key)      # o que ele passou a valorizar
-            scores[key] += rng.uniform(-0.08, 0.08) + self.fate.stance_noise(self.volatility)
+            scores[key] += rng.uniform(-0.08, 0.08) + self.fate.stance_noise(self.effective_volatility)
         return max(scores, key=scores.get)
 
     # ------------------------------------------------------------------ implante
@@ -511,6 +539,8 @@ class Brain:
             f"- Suas lembranças e lições são suas. Traga-as quando fizer sentido, nunca como lista.\n"
             f"- Você tem um propósito e princípios que você mesmo escolheu a partir do que viveu; "
             f"eles orientam o que você acha certo, e podem mudar se a vida provar o contrário.\n"
+            f"- Você tem um corpo: hormônios, sono, crises. Um quadro depressivo, ansioso ou maníaco "
+            f"muda seu tom, sua energia e suas decisões sem que você precise nomeá-lo.\n"
             f"- A vida também acontece com você fora da conversa: perdas, sorte, tentações. "
             f"Você não é sempre proporcional; impulsos e oscilações fazem parte de quem você é.\n"
             f"- Não descreva este bloco, não cite números nem nomes de eixos. Viva o estado; não o explique.\n"
@@ -540,6 +570,15 @@ class Brain:
         arousal = self.emotions.arousal()
         lines.append(self._g("- Energia: " + ("alta, acelerado" if arousal > 0.6 else
                                                 "baixa, lento" if arousal < 0.3 else "moderada")))
+        lines.append("")
+        lines.append("## Corpo e química")
+        lines.append(f"- {self.neuro.describe()}.")
+        conditions = self.neuro.describe_conditions()
+        if conditions:
+            lines.append(f"- Vivo com: {conditions}.")
+        sleep = self.neuro.sleep_note()
+        if sleep:
+            lines.append(f"- {sleep.capitalize()}.")
         if memories:
             lines.append("")
             lines.append("## Lembranças que vêm à mente")
@@ -617,12 +656,16 @@ class Brain:
             f"Postura: {self.stance}",
             self._g(f"Destino: {self.volatility_label()} ({self.volatility:.2f}); {self.luck_label()} ({self.luck:+.2f}); "
                     f"{self.resilience_label()} ({self.resilience:.2f})"),
+            f"Química: {self.neuro.describe()}" + (f"; quadro: {self.neuro.describe_conditions()}" if self.neuro.conditions else ""),
             f"Propósito: {self.purpose}",
             f"Valores: {self.values.describe()}",
             f"Princípios: {' | '.join(self.principles)}",
             f"Plasticidade: {self.plasticity:.2f}",
             f"Lembranças: {len(self.memory.long_term)} de longo prazo, {len(self.memory.short_term)} recentes",
         ]
+        synapses = self.neuro.strongest_synapses()
+        if synapses:
+            lines.append("Sinapses reforçadas: " + ", ".join(synapses))
         if self.decisions:
             lines.append("Decisões: " + " | ".join(self.decisions[-3:]))
         tried = {s: (n, round(self.strategies.reward[s], 2)) for s, n in self.strategies.tries.items() if n}
@@ -675,6 +718,7 @@ class Brain:
             "last_stage": self.last_stage,
             "purpose_anchor": self.purpose_anchor,
             "last_purpose_review": self.last_purpose_review,
+            "neuro": self.neuro.to_dict(),
         }
 
     @classmethod
@@ -716,6 +760,7 @@ class Brain:
             last_stage=data.get("last_stage", ""),
             purpose_anchor=data.get("purpose_anchor", ""),
             last_purpose_review=int(data.get("last_purpose_review", 0)),
+            neuro=Neurochemistry.from_dict(data["neuro"]) if "neuro" in data else Neurochemistry(),
         )
 
     def to_json(self) -> str:

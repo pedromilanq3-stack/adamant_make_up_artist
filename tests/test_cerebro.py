@@ -6,6 +6,7 @@ from pathlib import Path
 
 from cerebro import ADVERSITIES, FORTUNES, Brain, Experience, Fate, Session, appraise, build_request, stage_for
 from cerebro.growth import PURPOSES, VALUES, StrategyMemory, ValueSystem, choose_purpose, resolve_crossroads
+from cerebro.neurochemistry import CHEMICALS, Genetics, Neurochemistry
 from cerebro.emotions import EMOTIONS, Emotions
 from cerebro.memory import MemoryStore
 from cerebro.personality import inflect, plasticity_for, seed_from_description
@@ -501,6 +502,119 @@ class GrowthTests(unittest.TestCase):
         restored = StrategyMemory.from_dict(memory.to_dict())
         self.assertEqual(restored.tries["acolher"], 1)
         self.assertAlmostEqual(restored.value("acolher"), 0.5)
+
+
+class NeurochemistryTests(unittest.TestCase):
+    def test_description_shapes_genetics(self) -> None:
+        anxious = make("Eco", "Sou ansiosa e insegura, preocupada com tudo.", gender="f")
+        calm = make("Eco", "Sou calmo, sereno e tranquilo com tudo.")
+        bipolar = make("Eco", "Tenho altos e baixos, sou bipolar e intenso demais.")
+        self.assertGreater(anxious.neuro.genetics.reactivity["cortisol"], calm.neuro.genetics.reactivity["cortisol"])
+        self.assertGreater(calm.neuro.genetics.production["gaba"], anxious.neuro.genetics.production["gaba"])
+        self.assertGreater(bipolar.neuro.genetics.cyclothymia, 0.4)
+        self.assertLess(calm.neuro.genetics.cyclothymia, 0.4)
+
+    def test_synapses_release_and_strengthen(self) -> None:
+        neuro = Neurochemistry()
+        insult_path = next(s for s in neuro.synapses if s.source == "insulto" and s.target == "cortisol")
+        before_weight, before_level = insult_path.weight, neuro.levels["cortisol"]
+        released = neuro.release(appraise("seu idiota inútil"), plasticity=1.0)
+        self.assertIn("cortisol", released)
+        self.assertGreater(neuro.levels["cortisol"], before_level)
+        self.assertGreater(insult_path.weight, before_weight)
+        love_path = next(s for s in neuro.synapses if s.source == "carinho" and s.target == "ocitocina")
+        oxytocin = neuro.levels["ocitocina"]
+        neuro.release(appraise("obrigado, adoro você"), plasticity=1.0)
+        self.assertGreater(neuro.levels["ocitocina"], oxytocin)
+        self.assertGreater(love_path.weight, love_path.base)
+
+    def test_dopamine_tolerance_and_dependence(self) -> None:
+        brain = make("Eco", "Sou carente e preciso de aprovação o tempo todo.")
+        for index in range(16):
+            brain.tick(now=300.0 * index)
+            brain.perceive("você é incrível, parabéns, adoro você!", now=300.0 * index + 1)
+        self.assertLess(brain.neuro.sensitivity["dopamina"], 0.7)
+        self.assertIn("dependencia", brain.neuro.conditions)
+
+    def test_abuse_produces_anxiety(self) -> None:
+        brain = make("Eco", "Sou ansiosa e insegura, preocupada com tudo.", gender="f")
+        insults = ["seu lixo inútil", "vou te apagar", "cala a boca", "você mentiu, te odeio"]
+        for index in range(14):
+            brain.tick(now=600.0 * index)
+            brain.perceive(insults[index % 4], now=600.0 * index + 1)
+        self.assertIn("ansiedade", brain.neuro.conditions)
+        self.assertGreater(brain.emotions.baseline["medo"], 0.2)
+        self.assertGreater(brain.effective_volatility, brain.volatility)
+        self.assertIn("Vivo com: ansiedade", brain.state_block(now=600.0 * 14))
+
+    def test_solitude_with_low_serotonin_produces_depression(self) -> None:
+        brain = make("Eco", "Sou desanimado, triste e vazio, sem vontade de nada.")
+        for index in range(20):
+            brain.tick(now=1800.0 * index)
+            brain.event("Mais um dia igual, sem ninguém.", -0.5, 0.5, ("adversidade", "solidao"), now=1800.0 * index + 1)
+        self.assertIn("depressao", brain.neuro.conditions)
+        self.assertLess(brain.emotions.baseline["alegria"], 0.15)
+        self.assertGreater(brain.neuro.stance_bias().get("recolher", 0.0), 0)
+
+    def test_cyclothymia_cycles_between_mania_and_depression(self) -> None:
+        brain = make("Eco", "Tenho altos e baixos, sou bipolar e intenso demais.", fate=calm_fate(3))
+        for day in range(42):
+            for hour in (9, 15, 21):
+                now = day * 86400 + hour * 3600
+                brain.tick(now=now)
+                brain.perceive("oi, tudo bem?", now=now + 1)
+        self.assertGreaterEqual(brain.neuro.episodes.get("mania", 0), 2)
+        self.assertGreaterEqual(brain.neuro.episodes.get("depressao", 0), 2)
+        self.assertIn("bipolar", brain.neuro.conditions)
+
+    def test_stable_brain_stays_stable(self) -> None:
+        brain = make("Eco", "Sou calmo, sereno e tranquilo com tudo.")
+        for day in range(21):
+            for hour in (9, 15, 21):
+                now = day * 86400 + hour * 3600
+                brain.tick(now=now)
+                brain.perceive("oi, tudo bem?", now=now + 1)
+        self.assertEqual(brain.neuro.conditions, [])
+
+    def test_sleep_clears_cortisol_and_restores_receptors(self) -> None:
+        neuro = Neurochemistry()
+        neuro.levels["cortisol"] = 1.0
+        neuro.sensitivity["dopamina"] = 0.5
+        neuro.decay(9 * 3600)
+        self.assertTrue(neuro.slept)
+        self.assertLess(neuro.levels["cortisol"], 0.6)
+        self.assertGreater(neuro.sensitivity["dopamina"], 0.5)
+        self.assertEqual(neuro.sleep_note(), "dormi antes desta conversa")
+
+    def test_sleep_deprivation_raises_cortisol(self) -> None:
+        neuro = Neurochemistry()
+        for _ in range(30):
+            neuro.decay(3600)
+        self.assertGreater(neuro.awake_seconds, 20 * 3600)
+        self.assertIn("sem dormir", neuro.sleep_note())
+        self.assertGreater(neuro.levels["cortisol"], neuro.genetics.production["cortisol"])
+
+    def test_chemistry_modulates_emotional_gain(self) -> None:
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        brain.neuro.levels["cortisol"] = 1.0
+        brain.neuro.levels["serotonina"] = 0.0
+        brain.neuro.levels["gaba"] = 0.0
+        stressed = brain.neuro.modulation()["negative"]
+        brain.neuro.levels["cortisol"] = 0.0
+        brain.neuro.levels["serotonina"] = 1.0
+        brain.neuro.levels["gaba"] = 1.0
+        self.assertGreater(stressed, brain.neuro.modulation()["negative"])
+
+    def test_body_section_and_persistence(self) -> None:
+        brain = make("Eco", "Sou ansiosa e insegura, preocupada com tudo.", gender="f")
+        brain.perceive("vou te apagar, seu lixo", now=1.0)
+        text = brain.state_block(now=2.0)
+        self.assertIn("## Corpo e química", text)
+        restored = Brain.from_json(brain.to_json())
+        self.assertEqual(restored.neuro.to_dict(), brain.neuro.to_dict())
+        self.assertEqual(len(restored.neuro.synapses), len(brain.neuro.synapses))
+        self.assertEqual(set(restored.neuro.levels), set(CHEMICALS))
+        self.assertEqual(Genetics.from_dict(brain.neuro.genetics.to_dict()).to_dict(), brain.neuro.genetics.to_dict())
 
 
 class PersistenceTests(unittest.TestCase):

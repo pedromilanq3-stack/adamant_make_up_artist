@@ -183,6 +183,29 @@ começa, e o resto é escolha dele. Na linha de comando, use
 (a ficha em um `.txt`); no chat local, cole a ficha no campo de descrição; na skill,
 mande a ficha em várias linhas depois de `/cerebro criar Kael:`.
 
+## Um cérebro pronto por personagem
+
+Para transformar a história de um personagem em um cérebro pronto, salve a descrição ou
+a ficha de origem em um `.txt` e rode:
+
+```bash
+python ferramentas/empacotar_personagem.py --nome Kael --origem kael.txt [--genero f]
+```
+
+Isso cria a pasta `personagens/kael/` com quatro arquivos:
+
+| Arquivo | Para quê |
+|---|---|
+| `origem.txt` | a história como foi recebida |
+| `kael.json` | o cérebro do motor em código, já despertado: `python -m cerebro conversar --arquivo personagens/kael/kael.json`, ou copie para `~/.cerebro` para aparecer no chat web |
+| `ficha.md` | o mesmo estado no formato da skill pura, para `/cerebro carregar` |
+| `kael-skill.zip` | uma skill com o nome do personagem, já carregada com ele: envie ao Claude.ai e chame com `/kael` |
+
+O motor e a skill partem exatamente do mesmo estado, porque a ficha é exportada do
+cérebro despertado (`cerebro/ficha.py`). A skill do personagem traz as regras completas,
+a ficha inicial e a origem; se o usuário colar uma ficha salva, a vida dele continua de
+onde parou.
+
 ## O despertar: ler quem é antes de simular
 
 Antes de viver qualquer coisa, o cérebro lê a si mesmo. Na criação ele separa três

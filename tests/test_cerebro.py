@@ -14,6 +14,7 @@ from pathlib import Path
 from cerebro import ADVERSITIES, FORTUNES, Brain, Experience, Fate, Session, appraise, build_request, stage_for
 from cerebro.growth import PURPOSES, VALUES, StrategyMemory, ValueSystem, choose_purpose, resolve_crossroads
 from cerebro.neurochemistry import CHEMICALS, Genetics, Neurochemistry
+from cerebro.ficha import render_ficha
 from cerebro.origin import parse_origin
 from cerebro.web import Hub, make_handler, slugify, snapshot
 from cerebro.emotions import EMOTIONS, Emotions
@@ -955,6 +956,51 @@ class OriginTests(unittest.TestCase):
                 capture_output=True, text=True, timeout=60, cwd=root, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertEqual(Brain.load(brain_file).abilities["espada"], 1.0)
+
+
+class FichaExportTests(unittest.TestCase):
+    def test_ficha_has_every_section_and_origin(self) -> None:
+        brain = make("Kael", ORIGIN_KAEL)
+        brain.perceive("obrigado, Kael", now=1.0)
+        ficha = render_ficha(brain, now=2.0)
+        for section in ("## Identidade", "## Origem", "## Consciência", "## Traços", "## Genética", "## Emoções",
+                        "## Química", "## Caráter", "## Relação com quem conversa", "## Valores", "## Sentido",
+                        "## Estratégias", "## Memória", "## Turno"):
+            self.assertIn(section, ficha)
+        self.assertIn("espada (domínio total)", ficha)
+        self.assertIn("Mira (irmã mais nova, viva, mora em Varen)", ficha)
+        self.assertIn("fui eu que causei o incêndio", ficha)
+        self.assertIn("passado", ficha)
+        self.assertIn("pertencimento", ficha)
+        self.assertNotIn("None", ficha)
+
+    def test_character_packager_builds_everything(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as directory:
+            origin_file = Path(directory) / "kael.txt"
+            origin_file.write_text(ORIGIN_KAEL, encoding="utf-8")
+            run = subprocess.run(
+                [sys.executable, str(root / "ferramentas" / "empacotar_personagem.py"), "--nome", "Kael",
+                 "--origem", str(origin_file), "--saida", directory],
+                capture_output=True, text=True, timeout=60, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+            self.assertEqual(run.returncode, 0, run.stderr)
+            folder = Path(directory) / "kael"
+            for name in ("origem.txt", "kael.json", "ficha.md", "kael-skill.zip"):
+                self.assertTrue((folder / name).exists(), name)
+            brain = Brain.load(folder / "kael.json")
+            self.assertEqual(brain.abilities["espada"], 1.0)
+            self.assertEqual(len(brain.memory.long_term), 4)
+            import zipfile
+            with zipfile.ZipFile(folder / "kael-skill.zip") as archive:
+                names = set(archive.namelist())
+                self.assertEqual(names, {"kael/SKILL.md", "kael/references/ficha-inicial.md", "kael/references/origem.txt",
+                                         "kael/references/regras.md", "kael/references/ficha-modelo.md"})
+                skill = archive.read("kael/SKILL.md").decode("utf-8")
+                self.assertTrue(skill.startswith("---\nname: kael\n"))
+                self.assertIn("/kael", skill)
+                self.assertIn("4 lembranças formativas", skill)
+                self.assertEqual(archive.read("kael/references/ficha-inicial.md").decode("utf-8"),
+                                 (folder / "ficha.md").read_text(encoding="utf-8"))
 
 
 class PersistenceTests(unittest.TestCase):

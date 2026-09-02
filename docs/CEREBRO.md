@@ -36,6 +36,38 @@ Cada cérebro:
   princípios e, em encruzilhadas, decide entre valores opostos. Ninguém sabe de antemão
   o caminho: a moralidade segue os valores que ele mesmo elegeu.
 
+## Instalação fácil: um arquivo só
+
+Não precisa instalar nada além do Python (3.11 ou mais novo, em
+[python.org/downloads](https://www.python.org/downloads/); no Windows, marque
+**Add python.exe to PATH**). Baixe estes arquivos da raiz do projeto para uma pasta:
+
+| Arquivo | Para quê |
+|---|---|
+| `cerebro.pyz` | o programa inteiro em um arquivo só (formato oficial `zipapp`) |
+| `Cerebro.bat` | Windows: clique duplo abre o chat no navegador |
+| `Cerebro.command` | macOS e Linux: clique duplo (ou `./Cerebro.command`) abre o chat |
+| `iniciar_cerebro.py` | Android com Pydroid 3: abra no editor e toque em executar (precisa da pasta `cerebro/` junto) |
+
+Qualquer um deles inicia o servidor local e abre `http://127.0.0.1:8766` no navegador.
+Em um terminal, o mesmo é `python cerebro.pyz` (sem argumentos abre o chat) e todos os
+comandos funcionam: `python cerebro.pyz criar ...`, `python cerebro.pyz registrar ...`.
+Os cérebros são gravados em `~/.cerebro`. Para usar o modelo em vez do modo espelho,
+instale o SDK com `pip install anthropic` e defina `ANTHROPIC_API_KEY`.
+
+No macOS, na primeira vez, pode ser preciso clicar com o botão direito em
+`Cerebro.command` e escolher **Abrir**. Se o Windows perguntar com o que abrir o `.pyz`,
+use o `Cerebro.bat` no lugar.
+
+Quem mexer no código regenera o arquivo único com:
+
+```bash
+python ferramentas/empacotar_cerebro.py
+```
+
+Instalação tradicional também funciona: `pip install .` na raiz do projeto cria o comando
+`cerebro`.
+
 ## Como implantar na conversa
 
 Há três jeitos, do mais simples ao mais integrado.

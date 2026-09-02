@@ -1,5 +1,8 @@
 import json
+import os
 import random
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -733,6 +736,40 @@ class WebApiTests(unittest.TestCase):
         _, first = self.call("/api/criar", {"nome": "Lua", "descricao": DESCRIPTION_GOOD})
         _, second = self.call("/api/criar", {"nome": "Lua", "descricao": DESCRIPTION_EVIL})
         self.assertNotEqual(first["arquivo"], second["arquivo"])
+
+
+class PackagingTests(unittest.TestCase):
+    def test_pyz_builds_and_runs(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        packager = root / "ferramentas" / "empacotar_cerebro.py"
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "cerebro.pyz"
+            build = subprocess.run([sys.executable, str(packager), str(target)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(build.returncode, 0, build.stderr)
+            self.assertTrue(target.exists())
+            brain_file = Path(directory) / "sol.json"
+            run = subprocess.run(
+                [sys.executable, str(target), "criar", "--nome", "Sol", "--descricao",
+                 "Sou alegre, leal e um pouco explosivo.", "--arquivo", str(brain_file)],
+                capture_output=True, text=True, timeout=60, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertIn("Cérebro criado", run.stdout)
+            self.assertEqual(Brain.load(brain_file).name, "Sol")
+            helper = subprocess.run([sys.executable, str(target), "--help"], capture_output=True, text=True, timeout=60)
+            self.assertEqual(helper.returncode, 0)
+            self.assertIn("web", helper.stdout)
+
+    def test_committed_pyz_matches_package(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        pyz = root / "cerebro.pyz"
+        self.assertTrue(pyz.exists(), "cerebro.pyz precisa ser gerado com ferramentas/empacotar_cerebro.py")
+        import zipfile
+        with zipfile.ZipFile(pyz) as archive:
+            names = set(archive.namelist())
+            for module in (root / "cerebro").glob("*.py"):
+                self.assertIn(f"cerebro/{module.name}", names)
+                self.assertEqual(archive.read(f"cerebro/{module.name}"), module.read_bytes(),
+                                 f"{module.name} mudou: rode python ferramentas/empacotar_cerebro.py")
 
 
 class PersistenceTests(unittest.TestCase):

@@ -24,8 +24,11 @@
 > hormônios, do qual podem emergir depressão, ansiedade ou bipolaridade. Ele nasce de
 > uma descrição de si,
 > sempre presente na conversa, e é implantado como *system prompt* em qualquer chat.
-> `python -m cerebro web` abre um chat local no navegador com o cérebro vivo ao lado;
-> `python -m cerebro registrar` acompanha conversas feitas em outro app.
+> Instalação fácil: baixe [`cerebro.pyz`](cerebro.pyz) e dê clique duplo em
+> [`Cerebro.bat`](Cerebro.bat) (Windows) ou [`Cerebro.command`](Cerebro.command) (Mac e
+> Linux); no Pydroid, execute [`iniciar_cerebro.py`](iniciar_cerebro.py). O chat abre no
+> navegador com o cérebro vivo ao lado. `python cerebro.pyz registrar` acompanha
+> conversas feitas em outro app.
 >
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia

@@ -13,8 +13,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
 import unicodedata
+import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -254,10 +256,13 @@ def make_handler(hub: Hub):
 
 
 def serve(port: int = DEFAULT_PORT, directory: Path | None = None, model: str | None = None,
-          force_mirror: bool = False) -> None:
+          force_mirror: bool = False, open_browser: bool = False) -> None:
     hub = Hub(directory or brains_dir(), model=model, force_mirror=force_mirror)
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(hub))
-    print(f"Cérebro local em http://127.0.0.1:{port} ({hub.mode()}). Cérebros em {hub.directory}. Ctrl+C encerra.")
+    url = f"http://127.0.0.1:{server.server_address[1]}"
+    print(f"Cérebro local em {url} ({hub.mode()}). Cérebros em {hub.directory}. Ctrl+C encerra.")
+    if open_browser:
+        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

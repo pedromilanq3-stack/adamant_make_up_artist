@@ -1,5 +1,7 @@
 """Linha de comando: ``python -m cerebro``.
 
+Sem argumentos, abre o chat local no navegador (o mesmo que ``web --abrir``).
+
     python -m cerebro criar --nome Lua --descricao "Sou curiosa e tímida..." --arquivo lua.json
     python -m cerebro estado --arquivo lua.json
     python -m cerebro prompt --arquivo lua.json
@@ -88,7 +90,7 @@ def cmd_web(args: argparse.Namespace) -> None:
     from .web import serve
 
     serve(port=args.porta, directory=Path(args.pasta) if args.pasta else None,
-          model=args.modelo_id, force_mirror=args.espelho)
+          model=args.modelo_id, force_mirror=args.espelho, open_browser=args.abrir)
 
 
 def cmd_conversar(args: argparse.Namespace) -> None:
@@ -121,7 +123,7 @@ def cmd_conversar(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cerebro", description="Cérebro com sentimentos, memória e caráter em evolução.")
-    sub = parser.add_subparsers(dest="comando", required=True)
+    sub = parser.add_subparsers(dest="comando")
 
     p = sub.add_parser("criar", help="cria um cérebro a partir da descrição de si")
     p.add_argument("--nome", required=True)
@@ -162,6 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pasta", help="pasta dos cérebros (padrão: ~/.cerebro ou CEREBRO_DIR)")
     p.add_argument("--modelo-id", default="claude-opus-5")
     p.add_argument("--espelho", action="store_true", help="força o modo espelho mesmo com credencial")
+    p.add_argument("--abrir", action="store_true", help="abre o navegador automaticamente")
     p.set_defaults(func=cmd_web)
 
     p = sub.add_parser("conversar", help="conversa interativa")
@@ -173,6 +176,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
+        argv = ["web", "--abrir"]
     args = build_parser().parse_args(argv)
     args.func(args)
 

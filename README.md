@@ -16,6 +16,12 @@
 > qualquer envio real). Consulte [`docs/SEXLOG_MESSAGES.md`](docs/SEXLOG_MESSAGES.md)
 > e copie [`sexlog-messages.user.js`](sexlog-messages.user.js) para o Tampermonkey.
 >
+> **Utilitário adicional 5:** o pacote [`cerebro/`](docs/CEREBRO.md) cria um
+> personagem com sentimentos, memória, evolução e caráter que pode pender para o bem
+> ou para o mal conforme o que vive e escolhe. Ele nasce de uma descrição de si,
+> sempre presente na conversa, e é implantado como *system prompt* em qualquer chat
+> (`python -m cerebro criar ...`, `python -m cerebro conversar ...`).
+>
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia
 > telas de compra e permite apagar apenas o histórico local do script. Copie

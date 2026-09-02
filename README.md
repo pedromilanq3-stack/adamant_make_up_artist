@@ -26,7 +26,8 @@
 > sempre presente na conversa, e é implantado como *system prompt* em qualquer chat.
 > Instalação fácil: baixe [`cerebro.pyz`](cerebro.pyz) e dê clique duplo em
 > [`Cerebro.bat`](Cerebro.bat) (Windows) ou [`Cerebro.command`](Cerebro.command) (Mac e
-> Linux); no Pydroid, execute [`iniciar_cerebro.py`](iniciar_cerebro.py). O chat abre no
+> Linux); no Android, baixe só [`cerebro_android.py`](cerebro_android.py) e execute no
+> Pydroid 3 (passo a passo em [`docs/CEREBRO.md`](docs/CEREBRO.md)). O chat abre no
 > navegador com o cérebro vivo ao lado. `python cerebro.pyz registrar` acompanha
 > conversas feitas em outro app.
 >

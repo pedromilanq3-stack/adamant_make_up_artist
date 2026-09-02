@@ -47,7 +47,8 @@ Não precisa instalar nada além do Python (3.11 ou mais novo, em
 | `cerebro.pyz` | o programa inteiro em um arquivo só (formato oficial `zipapp`) |
 | `Cerebro.bat` | Windows: clique duplo abre o chat no navegador |
 | `Cerebro.command` | macOS e Linux: clique duplo (ou `./Cerebro.command`) abre o chat |
-| `iniciar_cerebro.py` | Android com Pydroid 3: abra no editor e toque em executar (precisa da pasta `cerebro/` junto) |
+| `cerebro_android.py` | Android com Pydroid 3: um arquivo só, abra no editor e toque em executar |
+| `iniciar_cerebro.py` | Android com Pydroid 3 usando o projeto completo (precisa da pasta `cerebro/` junto) |
 
 Qualquer um deles inicia o servidor local e abre `http://127.0.0.1:8766` no navegador.
 Em um terminal, o mesmo é `python cerebro.pyz` (sem argumentos abre o chat) e todos os
@@ -55,11 +56,37 @@ comandos funcionam: `python cerebro.pyz criar ...`, `python cerebro.pyz registra
 Os cérebros são gravados em `~/.cerebro`. Para usar o modelo em vez do modo espelho,
 instale o SDK com `pip install anthropic` e defina `ANTHROPIC_API_KEY`.
 
+### Android, passo a passo
+
+1. Instale o **Pydroid 3** pela Play Store (gratuito).
+2. Baixe o arquivo [`cerebro_android.py`](../cerebro_android.py) para o celular. No
+   GitHub, abra o arquivo, toque nos três pontos e em **Download**, ou use o botão
+   **Raw** e salve a página. Ele contém o programa inteiro.
+3. No Pydroid, toque no ícone de pasta, abra o `cerebro_android.py` baixado
+   (normalmente em `Download`) e toque no botão amarelo de **executar**.
+4. Aparece "Abra no navegador: http://127.0.0.1:8766". Abra o Chrome no mesmo celular
+   e digite esse endereço. O chat aparece com o cérebro vivo ao lado.
+5. Mantenha o Pydroid aberto enquanto conversa. Os cérebros ficam gravados na pasta
+   `cerebro_dados` dentro da área do Pydroid, e continuam de onde pararam.
+
+Se o Pydroid avisar que o Python é mais antigo que 3.11, atualize o aplicativo. Sem
+credencial de modelo, o chat roda em modo espelho (o estado interno fala sozinho); para
+usar o modelo, instale `anthropic` pelo gerenciador de pacotes do Pydroid (menu **Pip**)
+e defina `ANTHROPIC_API_KEY` no terminal do Pydroid antes de executar.
+
+No **Termux**, a alternativa é:
+
+```bash
+pkg install python
+python cerebro.pyz
+```
+
 No macOS, na primeira vez, pode ser preciso clicar com o botão direito em
 `Cerebro.command` e escolher **Abrir**. Se o Windows perguntar com o que abrir o `.pyz`,
 use o `Cerebro.bat` no lugar.
 
-Quem mexer no código regenera o arquivo único com:
+Quem mexer no código regenera os arquivos únicos (`cerebro.pyz` e
+`cerebro_android.py`) com:
 
 ```bash
 python ferramentas/empacotar_cerebro.py

@@ -759,6 +759,34 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(helper.returncode, 0)
             self.assertIn("web", helper.stdout)
 
+    def test_android_file_runs_standalone(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        android = root / "cerebro_android.py"
+        self.assertTrue(android.exists())
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / "cerebro_android.py"
+            copy.write_bytes(android.read_bytes())
+            env = {**os.environ, "HOME": directory, "PYTHONIOENCODING": "utf-8"}
+            env.pop("CEREBRO_DIR", None)
+            brain_file = Path(directory) / "lua.json"
+            run = subprocess.run(
+                [sys.executable, str(copy), "criar", "--nome", "Lua", "--descricao", DESCRIPTION_GOOD,
+                 "--arquivo", str(brain_file)],
+                capture_output=True, text=True, timeout=60, env=env, cwd=directory)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(Brain.load(brain_file).name, "Lua")
+            self.assertTrue((Path(directory) / "cerebro_app" / "cerebro.pyz").exists()
+                            or any(Path(tempfile.gettempdir()).glob("cerebro_app/cerebro.pyz")))
+
+    def test_committed_android_file_matches_pyz(self) -> None:
+        import base64
+        root = Path(__file__).resolve().parent.parent
+        text = (root / "cerebro_android.py").read_text(encoding="utf-8")
+        chunks = [line.strip().strip('"') for line in text.splitlines() if line.startswith('    "')]
+        payload = base64.b64decode("".join(chunks))
+        self.assertEqual(payload, (root / "cerebro.pyz").read_bytes(),
+                         "cerebro_android.py desatualizado: rode python ferramentas/empacotar_cerebro.py")
+
     def test_committed_pyz_matches_package(self) -> None:
         root = Path(__file__).resolve().parent.parent
         pyz = root / "cerebro.pyz"

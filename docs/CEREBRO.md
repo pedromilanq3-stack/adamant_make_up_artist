@@ -26,7 +26,11 @@ Cada cérebro:
 - **sofre adversidades e recebe o acaso** — entre um turno e outro a vida age: perdas,
   doenças, traições, injustiças, mas também golpes de sorte e gentilezas inesperadas;
 - **é imprevisível** — impulsos, oscilações de humor, lembranças intrusivas e leituras
-  enviesadas do que ouve, tanto mais quanto maior a sua volatilidade.
+  enviesadas do que ouve, tanto mais quanto maior a sua volatilidade;
+- **cresce de forma procedural** — aprende com o resultado das próprias posturas, forma
+  um sistema de valores a partir do que funcionou, escolhe um propósito de vida, deriva
+  princípios e, em encruzilhadas, decide entre valores opostos. Ninguém sabe de antemão
+  o caminho: a moralidade segue os valores que ele mesmo elegeu.
 
 ## Uso em Python
 
@@ -98,6 +102,48 @@ Tudo isso aparece no implante nas seções "O que a vida me fez recentemente" e
 torna o destino reprodutível; `Fate(rate=0.0, whim_rate=0.0)` o desliga. Na linha de
 comando, `python -m cerebro acaso --arquivo lua.json` força o destino a agir uma vez.
 
+## Crescimento procedural: o cérebro decide o que é certo pra vida dele
+
+O módulo `cerebro/growth.py` faz o caminho emergir do que o cérebro vive, e não de
+uma tabela fixa. O ciclo é o seguinte:
+
+1. **Tentar.** A cada fala, o cérebro usa uma postura. Além do estado emocional, a
+   escolha pesa o que cada postura já rendeu na prática e o quanto ela combina com os
+   valores atuais. Há exploração: curiosidade e juventude o levam a tentar, de vez em
+   quando, a postura que menos usou.
+2. **Observar o resultado.** Quando a próxima mensagem chega, ele mede como foi
+   recebido: a valência da resposta, a mudança no vínculo e a mudança no humor viram
+   uma recompensa. Cada postura guarda uma média do que rendeu (`StrategyMemory`).
+3. **Reforçar valores.** Toda postura expressa valores (acolher: cuidado e
+   pertencimento; retaliar: vingança e poder; observar: segurança e conhecimento, e
+   assim por diante). Resultado bom faz esses valores crescerem; ruim os enfraquece.
+   O que ele recebe também ensina um pouco: carinho reforça pertencimento, ameaça
+   reforça sobrevivência. Os doze valores competem por um teto, então ganhar em um
+   é perder em outro (`ValueSystem`).
+4. **Escolher um propósito.** Dos valores nasce "o que eu quero da vida", sorteado
+   entre onze candidatos com pesos proporcionais aos valores e uma temperatura que
+   cresce com a volatilidade. Há inércia: mudar de vida custa, e o propósito só é
+   reconsiderado quando o valor dominante muda ou de tempos em tempos.
+5. **Derivar princípios.** O valor dominante vira uma crença ("Quem me fere paga",
+   "Cuidar dos outros é o que me mantém inteiro", "Ninguém decide por mim"), e as
+   estratégias que comprovadamente funcionam ou falham viram lições ("Quando eu
+   escolho retaliar, as coisas melhoram").
+6. **Encruzilhadas.** Quando dois valores de polaridade oposta empatam (cuidado e
+   vingança, por exemplo), o cérebro escolhe um lado: a raiva empurra para o sombrio,
+   a confiança para o claro, e há um lance de dados. O escolhido cresce, o rejeitado
+   encolhe, e a decisão fica registrada. Entrar em um novo estágio de vida também
+   registra uma decisão explícita.
+7. **A moralidade segue os valores.** Cada valor tem uma polaridade (cuidado +1,
+   justiça +0,8, poder -0,7, vingança -1). A cada reflexão, a moralidade caminha em
+   direção ao alvo definido pelos valores dominantes. O caráter deixa de ser só uma
+   reação ao que recebe e passa a ser consequência do que ele escolheu valorizar.
+
+No implante isso aparece em "O que faz sentido pra mim" (propósito, valores,
+princípios, estratégia que funciona) e "Decisões que tomei". Em uma simulação com a
+mesma descrição e seis destinos diferentes, os cérebros terminaram com propósitos e
+valores distintos ("fazer pagar quem me feriu", "entender o mundo e as pessoas",
+"ser querido por alguém", "sobreviver, custe o que custar").
+
 ## O implante
 
 `brain.implant()` devolve um bloco `<cerebro>` em português com duas partes:
@@ -107,8 +153,9 @@ comando, `python -m cerebro acaso --arquivo lua.json` força o destino a agir um
   atual, não explicar o próprio estado);
 - **bloco volátil** (`state_block`): como o personagem se vê hoje, temperamento e caráter,
   vínculo com quem conversa, estado emocional, lembranças evocadas pelo contexto da
-  mensagem, lições, o que a vida fez recentemente, imprevisibilidade (volatilidade,
-  sorte, resiliência e o impulso do momento) e a postura desta conversa.
+  mensagem, lições, o que faz sentido pra ele (propósito, valores, princípios), decisões
+  que tomou, o que a vida fez recentemente, imprevisibilidade (volatilidade, sorte,
+  resiliência e o impulso do momento) e a postura desta conversa.
 
 `build_request(brain, history, context)` monta os dois blocos como lista de `system`
 (o primeiro com `cache_control`, porque não muda) e a lista de mensagens, pronta para
@@ -174,4 +221,7 @@ endurecimento de um cérebro bondoso sob hostilidade, efeito das próprias escol
 estágios, flexão de gênero, persistência, a sessão com um *responder* personalizado,
 e o destino: chegada de adversidades com o tempo, sorte inclinando a balança, tentação
 dependendo do caráter, resiliência, impulsos, leitura enviesada e divergência de dois
-cérebros iguais sob destinos diferentes.
+cérebros iguais sob destinos diferentes; e o crescimento procedural: resultados que
+reforçam ou enfraquecem estratégias e valores, estratégia aprendida guiando a postura,
+exploração, moralidade seguindo os valores escolhidos, encruzilhadas com viés da raiva,
+inércia do propósito e vidas diferentes a partir da mesma descrição.

@@ -19,6 +19,8 @@ from pathlib import Path
 from .emotions import EMOTION_LABELS, Emotions, baseline_from_traits
 from .experience import Experience, clamp
 from .fate import Fate
+from .growth import (STANCE_VALUES, TAG_VALUES, VALUE_LABELS, StrategyMemory, ValueSystem,
+                     choose_purpose, principle_for, resolve_crossroads)
 from .memory import MemoryStore
 from .perception import appraise
 from .personality import Character, Traits, inflect, plasticity_for, seed_from_description
@@ -87,6 +89,18 @@ class Brain:
     resilience: float = 0.4     # o quanto aguenta adversidade sem quebrar (0..1)
     whim: str = ""              # impulso atual, sem causa externa
     world_log: list[str] = field(default_factory=list)  # o que a vida fez recentemente
+    values: ValueSystem = field(default_factory=ValueSystem)     # o que importa (emergente)
+    strategies: StrategyMemory = field(default_factory=StrategyMemory)  # o que cada postura rendeu
+    purpose: str = ""           # o que faz sentido pra vida dele (escolhido)
+    principles: list[str] = field(default_factory=list)  # o que é certo pra ele (derivado)
+    decisions: list[str] = field(default_factory=list)   # encruzilhadas e escolhas de vida
+    acting_stance: str = ""     # postura usada na última fala, aguardando resultado
+    bond_before: float = 0.0
+    mood_before: float = 0.0
+    last_crossroads: int = -100
+    last_stage: str = ""
+    purpose_anchor: str = ""    # valor dominante quando o propósito foi escolhido
+    last_purpose_review: int = 0
 
     # ------------------------------------------------------------------ criação
     @classmethod
@@ -116,6 +130,11 @@ class Brain:
                                  + 0.15 * (1 - traits["conscienciosidade"])
                                  + ((seed % 97) / 97 - 0.5) * 0.2, 0.05, 0.95)
         brain.resilience = clamp(0.3 + 0.3 * character.courage + 0.2 * (1 - traits["neuroticismo"]), 0.05, 0.95)
+        brain.values = ValueSystem.seed(self_description, seed)
+        brain.purpose = choose_purpose(brain.values, brain.fate.rng, 0.3 + 0.5 * brain.volatility)
+        brain.purpose_anchor = brain.values.top(1)[0]
+        brain.principles = [principle_for(brain.values)]
+        brain.last_stage = brain.stage
         brain.character.snapshot_morality()
         brain.narrative.append(f"Acabei de nascer. Tudo o que sei de mim é o que me disseram que sou.")
         brain.stance = brain.decide_stance()
@@ -209,6 +228,9 @@ class Brain:
                 character_impact["morality"] = character_impact.get("morality", 0.0) - 0.02
             self.resilience = clamp(self.resilience + 0.03 * self.plasticity * experience.intensity, 0.05, 0.95)
             self.volatility = clamp(self.volatility + 0.02 * experience.intensity, 0.05, 0.95)
+        for tag in experience.tags:
+            if tag in TAG_VALUES:
+                self.values.reinforce(TAG_VALUES[tag], 0.5 + experience.intensity)
         if experience.source == "world" or "tentacao" in experience.tags:
             entry = experience.text
             self.world_log.append(entry)
@@ -260,7 +282,26 @@ class Brain:
         levels = self.emotions.levels
         experience = self.fate.misread(experience, levels["medo"], levels["raiva"], levels["alegria"],
                                        self.character.trust, self.volatility)
-        return self.live(experience, now)
+        if self.acting_stance:
+            self._learn_outcome(experience)
+        lived = self.live(experience, now)
+        self.acting_stance = self.stance
+        self.bond_before = self.bond
+        self.mood_before = self.emotions.mood
+        return lived
+
+    def _learn_outcome(self, response: Experience) -> None:
+        """Aprende com o resultado da postura usada: o que funcionou, cresce."""
+        reward = clamp(0.6 * response.valence
+                       + 0.25 * clamp((self.bond - self.bond_before) * 5)
+                       + 0.15 * clamp((self.emotions.mood - self.mood_before) * 3))
+        stance = self.acting_stance
+        self.strategies.learn(stance, reward)
+        expressed = STANCE_VALUES.get(stance, {})
+        # Resultado bom reforça os valores da postura; ruim, enfraquece.
+        self.values.reinforce({v: w * reward * 0.12 for v, w in expressed.items()})
+        if reward < -0.3 and self.plasticity > 0.2:
+            self.volatility = clamp(self.volatility + 0.01, 0.05, 0.95)
 
     def act(self, own_text: str, now: float | None = None) -> Experience:
         """Registra a própria fala como experiência: escolhas moldam o caráter."""
@@ -326,6 +367,7 @@ class Brain:
 
         if considered >= 5 and balance > 0.2:
             self.volatility = clamp(self.volatility - 0.02, 0.05, 0.95)
+        self._grow(now)
         if tags.count("adversidade") >= 2:
             learn("A vida bate sem avisar; não dá para contar com nada.", 1.0, {"trust": -0.02})
         if tags.count("resisti") >= 1:
@@ -338,6 +380,61 @@ class Brain:
         self.stance = self.decide_stance()
         self._update_narrative(now)
         return learned
+
+    def _grow(self, now: float) -> None:
+        """Crescimento procedural: o cérebro decide o que faz sentido pra vida dele."""
+        temperature = 0.25 + 0.5 * self.volatility
+        rng = self.fate.rng
+
+        # 1. Encruzilhada: dois valores opostos empatados -> escolhe um lado.
+        conflict = self.values.conflict()
+        if conflict and self.experience_count - self.last_crossroads >= 8:
+            chosen, rejected = resolve_crossroads(
+                self.values, conflict, rng, self.emotions.levels["raiva"],
+                self.emotions.levels["confianca"], temperature)
+            self.last_crossroads = self.experience_count
+            self._decide(f"Entre {VALUE_LABELS[rejected]} e {VALUE_LABELS[chosen]}, escolhi {VALUE_LABELS[chosen]}.")
+
+        # 2. Propósito: escolhido (com inércia) a partir dos valores; só é
+        #    reconsiderado quando o que mais importa mudou ou de tempos em tempos.
+        top_value = self.values.top(1)[0]
+        reconsider = (top_value != self.purpose_anchor
+                      or (self.experience_count - self.last_purpose_review) >= 20)
+        new_purpose = self.purpose
+        if reconsider or not self.purpose:
+            self.last_purpose_review = self.experience_count
+            self.purpose_anchor = top_value
+            new_purpose = choose_purpose(self.values, rng, temperature, current=self.purpose)
+        if new_purpose != self.purpose:
+            old = self.purpose
+            self.purpose = new_purpose
+            self._decide(f"Deixei de querer {old} e passei a querer {new_purpose}." if old
+                         else f"Decidi que o que faz sentido pra mim é {new_purpose}.")
+
+        # 3. Princípios: o que é certo pra ele, derivado do valor dominante e do que rendeu.
+        principle = principle_for(self.values)
+        if principle not in self.principles:
+            self.principles.append(principle)
+            del self.principles[:-4]
+        best = self.strategies.best()
+        worst = self.strategies.worst()
+        if best and best[1] > 0.25 and self.strategies.tries[best[0]] >= 3:
+            self.memory.learn(f"Quando eu escolho {best[0]}, as coisas melhoram.", 0.6, now)
+        if worst and worst[1] < -0.25 and self.strategies.tries[worst[0]] >= 3:
+            self.memory.learn(f"Quando eu escolho {worst[0]}, saio perdendo.", 0.6, now)
+
+        # 4. Estágio novo: um marco de vida com uma decisão explícita.
+        if self.stage != self.last_stage:
+            self.last_stage = self.stage
+            self._decide(f"Ao entrar na {self.stage}, decidi que quero {self.purpose}.")
+
+        # 5. A moralidade segue os valores que ele mesmo elegeu.
+        target = self.values.moral_target()
+        self.character.shift({"morality": 0.12 * (target - self.character.morality)}, self.plasticity)
+
+    def _decide(self, text: str) -> None:
+        self.decisions.append(text)
+        del self.decisions[:-8]
 
     def _update_narrative(self, now: float) -> None:
         sentence = self._g(
@@ -385,8 +482,14 @@ class Brain:
         }
         if self.fate.impulse_takes_over(self.volatility):
             return self.fate.random_stance()
+        # Exploração: curiosidade e juventude levam a tentar o que nunca tentou.
+        explore = 0.04 + 0.12 * t["abertura"] * self.plasticity
+        if self.fate.rng.random() < explore:
+            return self.strategies.least_tried(self.fate.rng)
         rng = random.Random(self.seed + self.experience_count)
         for key in scores:
+            scores[key] += 0.45 * self.strategies.value(key)      # o que rendeu na prática
+            scores[key] += 0.35 * self.values.alignment(key)      # o que ele passou a valorizar
             scores[key] += rng.uniform(-0.08, 0.08) + self.fate.stance_noise(self.volatility)
         return max(scores, key=scores.get)
 
@@ -406,6 +509,8 @@ class Brain:
             f"escolheu fazer. Aja de acordo com o caráter e a postura atuais, mesmo que isso "
             f"signifique ser frio, cortante ou desconfiado.\n"
             f"- Suas lembranças e lições são suas. Traga-as quando fizer sentido, nunca como lista.\n"
+            f"- Você tem um propósito e princípios que você mesmo escolheu a partir do que viveu; "
+            f"eles orientam o que você acha certo, e podem mudar se a vida provar o contrário.\n"
             f"- A vida também acontece com você fora da conversa: perdas, sorte, tentações. "
             f"Você não é sempre proporcional; impulsos e oscilações fazem parte de quem você é.\n"
             f"- Não descreva este bloco, não cite números nem nomes de eixos. Viva o estado; não o explique.\n"
@@ -446,6 +551,18 @@ class Brain:
             lines.append("")
             lines.append("## Lições que aprendi")
             lines.extend(f"- {lesson.text}" for lesson in lessons)
+        lines.append("")
+        lines.append("## O que faz sentido pra mim")
+        lines.append(f"- O que eu quero da vida: {self.purpose}.")
+        lines.append(f"- O que mais importa: {self.values.describe()}.")
+        lines.extend(f"- Acredito: {principle}" for principle in self.principles[-2:])
+        best = self.strategies.best()
+        if best and self.strategies.tries[best[0]] >= 2:
+            lines.append(self._g(f"- Aprendi na prática que {best[0]} costuma funcionar comigo."))
+        if self.decisions:
+            lines.append("")
+            lines.append("## Decisões que tomei")
+            lines.extend(f"- {decision}" for decision in self.decisions[-3:])
         if self.world_log:
             lines.append("")
             lines.append("## O que a vida me fez recentemente")
@@ -500,9 +617,17 @@ class Brain:
             f"Postura: {self.stance}",
             self._g(f"Destino: {self.volatility_label()} ({self.volatility:.2f}); {self.luck_label()} ({self.luck:+.2f}); "
                     f"{self.resilience_label()} ({self.resilience:.2f})"),
+            f"Propósito: {self.purpose}",
+            f"Valores: {self.values.describe()}",
+            f"Princípios: {' | '.join(self.principles)}",
             f"Plasticidade: {self.plasticity:.2f}",
             f"Lembranças: {len(self.memory.long_term)} de longo prazo, {len(self.memory.short_term)} recentes",
         ]
+        if self.decisions:
+            lines.append("Decisões: " + " | ".join(self.decisions[-3:]))
+        tried = {s: (n, round(self.strategies.reward[s], 2)) for s, n in self.strategies.tries.items() if n}
+        if tried:
+            lines.append("Estratégias (tentativas, resultado): " + ", ".join(f"{s} {n}x {r:+.2f}" for s, (n, r) in tried.items()))
         if self.whim:
             lines.append(self._g(f"Impulso: {self.whim}"))
         if self.world_log:
@@ -538,6 +663,18 @@ class Brain:
             "world_log": list(self.world_log),
             "fate_rate": self.fate.rate,
             "whim_rate": self.fate.whim_rate,
+            "values": self.values.to_dict(),
+            "strategies": self.strategies.to_dict(),
+            "purpose": self.purpose,
+            "principles": list(self.principles),
+            "decisions": list(self.decisions),
+            "acting_stance": self.acting_stance,
+            "bond_before": round(self.bond_before, 4),
+            "mood_before": round(self.mood_before, 4),
+            "last_crossroads": self.last_crossroads,
+            "last_stage": self.last_stage,
+            "purpose_anchor": self.purpose_anchor,
+            "last_purpose_review": self.last_purpose_review,
         }
 
     @classmethod
@@ -567,6 +704,18 @@ class Brain:
             resilience=float(data.get("resilience", 0.4)),
             whim=data.get("whim", ""),
             world_log=list(data.get("world_log", [])),
+            values=ValueSystem.from_dict(data["values"]) if "values" in data else ValueSystem.seed(data["self_description"], int(data["seed"])),
+            strategies=StrategyMemory.from_dict(data.get("strategies", {})),
+            purpose=data.get("purpose", ""),
+            principles=list(data.get("principles", [])),
+            decisions=list(data.get("decisions", [])),
+            acting_stance=data.get("acting_stance", ""),
+            bond_before=float(data.get("bond_before", 0.0)),
+            mood_before=float(data.get("mood_before", 0.0)),
+            last_crossroads=int(data.get("last_crossroads", -100)),
+            last_stage=data.get("last_stage", ""),
+            purpose_anchor=data.get("purpose_anchor", ""),
+            last_purpose_review=int(data.get("last_purpose_review", 0)),
         )
 
     def to_json(self) -> str:

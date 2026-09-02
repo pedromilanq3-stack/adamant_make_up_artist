@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from cerebro import ADVERSITIES, FORTUNES, Brain, Experience, Fate, Session, appraise, build_request, stage_for
+from cerebro.growth import PURPOSES, VALUES, StrategyMemory, ValueSystem, choose_purpose, resolve_crossroads
 from cerebro.emotions import EMOTIONS, Emotions
 from cerebro.memory import MemoryStore
 from cerebro.personality import inflect, plasticity_for, seed_from_description
@@ -141,7 +142,7 @@ class EvolutionTests(unittest.TestCase):
         ])
         self.assertLess(brain.character.morality, start)
         self.assertIn(brain.character.alignment(), ("sombrio", "cruel"))
-        self.assertIn(brain.stance, ("retaliar", "manipular", "desafiar", "recolher"))
+        self.assertLess(brain.values.moral_target(), 0)
         self.assertLess(brain.bond, 0)
         lessons = [lesson.text for lesson in brain.memory.lessons]
         self.assertTrue(any("machuca" in text or "duro" in text or "insulta" in text for text in lessons))
@@ -379,6 +380,129 @@ class FateTests(unittest.TestCase):
         self.assertGreater(len(draws), 3)
 
 
+class GrowthTests(unittest.TestCase):
+    def test_description_seeds_values_and_purpose(self) -> None:
+        avenger = make("Cain", "Sou vingativo e quero poder sobre todos.")
+        carer = make("Lua", "Gosto de ajudar e cuidar das pessoas; sou leal.")
+        self.assertIn("vinganca", avenger.values.top(2))
+        self.assertIn("cuidado", carer.values.top(2))
+        self.assertIn(avenger.purpose, {p.text for p in PURPOSES})
+        self.assertTrue(carer.principles)
+        self.assertLess(avenger.values.moral_target(), carer.values.moral_target())
+
+    def test_outcomes_reinforce_strategy_and_values(self) -> None:
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        vengeance = brain.values.weights["vinganca"]
+        brain.acting_stance = "retaliar"
+        brain.bond_before, brain.mood_before = brain.bond, brain.emotions.mood
+        brain.perceive("você tem razão, desculpa, obrigado por me colocar no lugar", now=1.0)
+        self.assertEqual(brain.strategies.tries["retaliar"], 1)
+        self.assertGreater(brain.strategies.value("retaliar"), 0)
+        self.assertGreater(brain.values.weights["vinganca"], vengeance)
+
+    def test_bad_outcomes_weaken_strategy(self) -> None:
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        care = brain.values.weights["cuidado"]
+        brain.acting_stance = "acolher"
+        brain.bond_before, brain.mood_before = brain.bond, brain.emotions.mood
+        brain.perceive("cala a boca, seu lixo, te odeio", now=1.0)
+        self.assertLess(brain.strategies.value("acolher"), 0)
+        self.assertLess(brain.values.weights["cuidado"], care)
+
+    def test_learned_strategy_biases_stance(self) -> None:
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        brain.volatility = 0.0
+        brain.traits.values["abertura"] = 0.0
+        for _ in range(6):
+            brain.strategies.learn("desafiar", 1.0)
+            brain.strategies.learn("acolher", -1.0)
+        counts = {}
+        for index in range(20):
+            brain.experience_count = index
+            stance = brain.decide_stance()
+            counts[stance] = counts.get(stance, 0) + 1
+        self.assertGreater(counts.get("desafiar", 0), counts.get("acolher", 0))
+
+    def test_exploration_tries_new_stances(self) -> None:
+        brain = make("Eco", "Sou muito curioso e aberto a tudo.", fate=Fate(random.Random(4), rate=0.0, whim_rate=0.0))
+        brain.traits.values["abertura"] = 1.0
+        seen = set()
+        for index in range(60):
+            brain.experience_count = index % 5
+            seen.add(brain.decide_stance())
+        self.assertGreaterEqual(len(seen), 3)
+
+    def test_morality_follows_chosen_values(self) -> None:
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        brain.values = ValueSystem(weights={v: 0.05 for v in VALUES} | {"vinganca": 0.9, "poder": 0.8})
+        start = brain.character.morality
+        for index in range(6):
+            brain.reflect(now=float(index))
+        self.assertLess(brain.character.morality, start)
+        other = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        other.values = ValueSystem(weights={v: 0.05 for v in VALUES} | {"cuidado": 0.9, "justica": 0.8})
+        for index in range(6):
+            other.reflect(now=float(index))
+        self.assertGreater(other.character.morality, start)
+
+    def test_crossroads_commits_to_one_side(self) -> None:
+        values = ValueSystem(weights={v: 0.1 for v in VALUES} | {"cuidado": 0.7, "vinganca": 0.66})
+        self.assertEqual(values.conflict(), ("cuidado", "vinganca"))
+        chosen, rejected = resolve_crossroads(values, ("cuidado", "vinganca"), random.Random(1),
+                                              anger=0.0, trust_feeling=0.0, temperature=0.2)
+        self.assertNotEqual(chosen, rejected)
+        self.assertGreater(values.weights[chosen], values.weights[rejected])
+        self.assertIsNone(values.conflict())
+
+    def test_anger_tilts_crossroads_to_the_dark_side(self) -> None:
+        dark = 0
+        for seed in range(60):
+            values = ValueSystem(weights={v: 0.1 for v in VALUES} | {"cuidado": 0.7, "vinganca": 0.7})
+            chosen, _ = resolve_crossroads(values, ("cuidado", "vinganca"), random.Random(seed),
+                                           anger=1.0, trust_feeling=0.0, temperature=0.2)
+            dark += chosen == "vinganca"
+        self.assertGreater(dark, 45)
+
+    def test_crossroads_recorded_as_decision(self) -> None:
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
+        brain.values = ValueSystem(weights={v: 0.1 for v in VALUES} | {"cuidado": 0.7, "vinganca": 0.68})
+        brain.reflect(now=1.0)
+        self.assertTrue(any("escolhi" in d for d in brain.decisions))
+        self.assertIn("## Decisões que tomei", brain.state_block(now=1.0))
+        self.assertIn("## O que faz sentido pra mim", brain.state_block(now=1.0))
+
+    def test_purpose_has_inertia_but_can_change(self) -> None:
+        values = ValueSystem(weights={v: 0.1 for v in VALUES} | {"cuidado": 0.9})
+        rng = random.Random(0)
+        first = choose_purpose(values, rng, 0.2)
+        same = sum(choose_purpose(values, random.Random(i), 0.2, current=first) == first for i in range(40))
+        self.assertGreater(same, 30)
+        values = ValueSystem(weights={v: 0.1 for v in VALUES} | {"vinganca": 0.95})
+        changed = sum(choose_purpose(values, random.Random(i), 0.2, current=first) != first for i in range(40))
+        self.assertGreater(changed, 30)
+
+    def test_same_description_grows_into_different_lives(self) -> None:
+        messages = ["oi", "seu idiota", "obrigado por existir", "me ajuda, estou triste", "cala a boca lixo",
+                    "kkk", "você é poderoso, ninguém te para", "não confio em você, mentiu",
+                    "vinga de quem te feriu", "seja gentil com as pessoas", "quem é você?", "e aí?"] * 3
+        description = "Sou uma pessoa comum, curiosa, que quer entender as pessoas."
+        outcomes = set()
+        for seed in range(6):
+            brain = make("Eco", description, fate=Fate(random.Random(seed), rate=0.2, whim_rate=0.1))
+            run_conversation(brain, messages, step=600.0)
+            outcomes.add((brain.purpose, tuple(brain.values.top(2))))
+            self.assertTrue(brain.decisions)
+            self.assertTrue(any(n > 0 for n in brain.strategies.tries.values()))
+        self.assertGreaterEqual(len(outcomes), 3)
+
+    def test_strategy_memory_roundtrip(self) -> None:
+        memory = StrategyMemory()
+        memory.learn("acolher", 0.5)
+        restored = StrategyMemory.from_dict(memory.to_dict())
+        self.assertEqual(restored.tries["acolher"], 1)
+        self.assertAlmostEqual(restored.value("acolher"), 0.5)
+
+
 class PersistenceTests(unittest.TestCase):
     def test_roundtrip(self) -> None:
         brain = make("Lua", DESCRIPTION_GOOD, gender="f")
@@ -389,6 +513,9 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(restored.gender, "f")
         self.assertEqual(restored.luck, 0.4)
         self.assertEqual(restored.world_log, ["Ganhei algo sem esperar."])
+        self.assertEqual(restored.purpose, brain.purpose)
+        self.assertEqual(restored.values.to_dict(), brain.values.to_dict())
+        self.assertEqual(restored.strategies.to_dict(), brain.strategies.to_dict())
         self.assertEqual(restored.implant(now=100.0), brain.implant(now=100.0))
 
     def test_save_and_load(self) -> None:

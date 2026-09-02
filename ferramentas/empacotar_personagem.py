@@ -119,11 +119,21 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--origem", required=True, help="arquivo .txt com a descrição ou a ficha de origem")
     parser.add_argument("--genero", choices=("m", "f"), default="m")
     parser.add_argument("--saida", help="pasta raiz de saída (padrão: personagens/)")
+    parser.add_argument("--instalar", action="store_true",
+                        help="também instala a skill em .claude/skills/<slug>/ para usar com /<slug> neste projeto")
     args = parser.parse_args(argv)
     text = Path(args.origem).read_text(encoding="utf-8")
     folder = build(args.nome, text, args.genero, Path(args.saida) if args.saida else None)
     files = sorted(p.name for p in folder.iterdir())
     print(f"Personagem pronto em {folder}: {', '.join(files)}")
+    if args.instalar:
+        slug = slugify(args.nome)
+        target = ROOT / ".claude" / "skills" / slug
+        if target.exists():
+            shutil.rmtree(target)
+        with zipfile.ZipFile(folder / f"{slug}-skill.zip") as archive:
+            archive.extractall(ROOT / ".claude" / "skills")
+        print(f"Skill instalada em {target}: use /{slug} neste projeto.")
     brain = Brain.load(folder / f"{slugify(args.nome)}.json")
     print()
     print(brain.summary())

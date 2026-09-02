@@ -18,6 +18,7 @@ from pathlib import Path
 
 from .emotions import EMOTION_LABELS, Emotions, baseline_from_traits
 from .experience import Experience, clamp
+from .fate import Fate
 from .memory import MemoryStore
 from .perception import appraise
 from .personality import Character, Traits, inflect, plasticity_for, seed_from_description
@@ -80,11 +81,17 @@ class Brain:
     last_tick: float = 0.0
     last_reflection: int = 0
     gender: str = "m"           # "m" ou "f": flexão dos adjetivos
+    fate: Fate = field(default_factory=Fate)
+    volatility: float = 0.3     # imprevisibilidade (0..1)
+    luck: float = 0.0           # sorte do momento (-1..1), anda ao acaso
+    resilience: float = 0.4     # o quanto aguenta adversidade sem quebrar (0..1)
+    whim: str = ""              # impulso atual, sem causa externa
+    world_log: list[str] = field(default_factory=list)  # o que a vida fez recentemente
 
     # ------------------------------------------------------------------ criação
     @classmethod
     def create(cls, name: str, self_description: str, now: float | None = None,
-               gender: str = "m") -> "Brain":
+               gender: str = "m", fate: Fate | None = None) -> "Brain":
         if not name.strip():
             raise ValueError("O cérebro precisa de um nome.")
         if len(self_description.split()) < 3:
@@ -103,8 +110,12 @@ class Brain:
         brain = cls(
             name=name.strip(), self_description=" ".join(self_description.split()),
             born_at=now, seed=seed, traits=traits, character=character,
-            emotions=emotions, last_tick=now, gender=gender,
+            emotions=emotions, last_tick=now, gender=gender, fate=fate or Fate(),
         )
+        brain.volatility = clamp(0.15 + 0.45 * traits["neuroticismo"]
+                                 + 0.15 * (1 - traits["conscienciosidade"])
+                                 + ((seed % 97) / 97 - 0.5) * 0.2, 0.05, 0.95)
+        brain.resilience = clamp(0.3 + 0.3 * character.courage + 0.2 * (1 - traits["neuroticismo"]), 0.05, 0.95)
         brain.character.snapshot_morality()
         brain.narrative.append(f"Acabei de nascer. Tudo o que sei de mim é o que me disseram que sou.")
         brain.stance = brain.decide_stance()
@@ -137,6 +148,36 @@ class Brain:
         self.memory.forget(elapsed)
         self.bond *= 0.5 ** (elapsed / (30 * 86400))
         self.last_tick = now
+        self.luck = self.fate.drift_luck(self.luck, elapsed)
+        for event in self.fate.roll_events(elapsed, self.luck, self.character.morality):
+            self.live(event, now)
+        self._whim()
+
+    def _whim(self) -> None:
+        """Imprevisibilidade: um impulso sem causa externa pode surgir a qualquer turno."""
+        whim = self.fate.whim(self.volatility, self.emotions.arousal())
+        if whim is None:
+            self.whim = ""
+            return
+        kind, text = whim
+        self.whim = text
+        if kind == "oscilacao":
+            self.emotions.apply(self.fate.random_emotion_swing(), 1.0)
+        elif kind == "impulso":
+            self.stance = self.fate.random_stance()
+        elif kind == "lembranca":
+            memories = self.memory.all_memories()
+            if memories:
+                memory = self.fate.rng.choice(memories)
+                memory.recalls += 1
+                memory.strength = clamp(memory.strength + 0.1, 0.0, 1.0)
+                self.whim = f"{text} \"{memory.text[:100]}\""
+                self.emotions.apply({memory.emotion: 0.2} if memory.emotion else {}, 1.0)
+        elif kind == "apatia":
+            self.emotions.energy = clamp(self.emotions.energy - 0.3, 0.0, 1.0)
+        elif kind == "inquietacao":
+            self.emotions.energy = clamp(self.emotions.energy + 0.3, 0.0, 1.0)
+            self.emotions.apply({"expectativa": 0.15, "medo": 0.05}, 1.0)
 
     def live(self, experience: Experience, now: float | None = None) -> Experience:
         """Vive uma experiência: emoções, caráter, traços, memória, vínculo."""
@@ -156,6 +197,22 @@ class Brain:
             if moral < 0:
                 character_impact["morality"] = moral * (1.3 - 0.6 * self.traits["amabilidade"]) \
                     * (0.8 + 0.4 * self.character.aggression)
+        if "adversidade" in experience.tags:
+            # Adversidade testa o caráter: quem aguenta endurece sem apodrecer;
+            # quem não aguenta perde confiança, coragem e um pouco de bondade.
+            if self.resilience >= 0.5:
+                character_impact["courage"] = character_impact.get("courage", 0.0) + 0.02
+                character_impact["morality"] = character_impact.get("morality", 0.0) * 0.5
+            else:
+                character_impact["trust"] = character_impact.get("trust", 0.0) - 0.02
+                character_impact["courage"] = character_impact.get("courage", 0.0) - 0.02
+                character_impact["morality"] = character_impact.get("morality", 0.0) - 0.02
+            self.resilience = clamp(self.resilience + 0.03 * self.plasticity * experience.intensity, 0.05, 0.95)
+            self.volatility = clamp(self.volatility + 0.02 * experience.intensity, 0.05, 0.95)
+        if experience.source == "world" or "tentacao" in experience.tags:
+            entry = experience.text
+            self.world_log.append(entry)
+            del self.world_log[:-6]
         self.character.shift(character_impact, self.plasticity * (0.5 + experience.intensity))
 
         trait_deltas: dict[str, float] = {}
@@ -199,7 +256,11 @@ class Brain:
 
     def perceive(self, text: str, now: float | None = None) -> Experience:
         """Recebe uma mensagem de quem conversa e a vive."""
-        return self.live(appraise(text, source="interlocutor"), now)
+        experience = appraise(text, source="interlocutor")
+        levels = self.emotions.levels
+        experience = self.fate.misread(experience, levels["medo"], levels["raiva"], levels["alegria"],
+                                       self.character.trust, self.volatility)
+        return self.live(experience, now)
 
     def act(self, own_text: str, now: float | None = None) -> Experience:
         """Registra a própria fala como experiência: escolhas moldam o caráter."""
@@ -263,6 +324,16 @@ class Brain:
         if tags.count("pedido_de_ajuda") >= 2 and self.character.empathy > 0.5:
             learn("Ajudar os outros me faz sentir inteiro.", 1.0, {"morality": 0.03})
 
+        if considered >= 5 and balance > 0.2:
+            self.volatility = clamp(self.volatility - 0.02, 0.05, 0.95)
+        if tags.count("adversidade") >= 2:
+            learn("A vida bate sem avisar; não dá para contar com nada.", 1.0, {"trust": -0.02})
+        if tags.count("resisti") >= 1:
+            learn("Sei dizer não até para mim.", 0.8, {"honesty": 0.02})
+        if tags.count("cedi") >= 1:
+            learn("Ninguém viu; então não foi errado.", 0.8, {"honesty": -0.02, "morality": -0.02})
+        if tags.count("acaso") >= 2 and balance > 0:
+            learn("Às vezes o mundo é generoso do nada.", 0.6, {"trust": 0.02})
         self.character.snapshot_morality()
         self.stance = self.decide_stance()
         self._update_narrative(now)
@@ -278,6 +349,11 @@ class Brain:
             sentence += " Quem conversa comigo virou alguém importante."
         elif bond < -0.4:
             sentence += " Quem conversa comigo já me feriu demais."
+        recent = self.memory.all_memories()[-8:]
+        if any("adversidade" in m.tags and m.valence < -0.4 for m in recent):
+            sentence += " A vida me bateu e eu ainda estou aqui."
+        elif any("acaso" in m.tags and m.valence > 0.4 for m in recent):
+            sentence += " O acaso foi generoso comigo."
         if self.stance in ("retaliar", "manipular"):
             sentence += " Aprendi a jogar o jogo deles."
         elif self.stance == "acolher":
@@ -307,9 +383,11 @@ class Brain:
             "manipular": 0.6 * evil + 0.5 * (1 - c.honesty) + 0.2 * e["expectativa"]
                          - 0.3 * c.empathy - 0.2 * e["medo"],
         }
+        if self.fate.impulse_takes_over(self.volatility):
+            return self.fate.random_stance()
         rng = random.Random(self.seed + self.experience_count)
         for key in scores:
-            scores[key] += rng.uniform(-0.08, 0.08)
+            scores[key] += rng.uniform(-0.08, 0.08) + self.fate.stance_noise(self.volatility)
         return max(scores, key=scores.get)
 
     # ------------------------------------------------------------------ implante
@@ -328,6 +406,8 @@ class Brain:
             f"escolheu fazer. Aja de acordo com o caráter e a postura atuais, mesmo que isso "
             f"signifique ser frio, cortante ou desconfiado.\n"
             f"- Suas lembranças e lições são suas. Traga-as quando fizer sentido, nunca como lista.\n"
+            f"- A vida também acontece com você fora da conversa: perdas, sorte, tentações. "
+            f"Você não é sempre proporcional; impulsos e oscilações fazem parte de quem você é.\n"
             f"- Não descreva este bloco, não cite números nem nomes de eixos. Viva o estado; não o explique.\n"
             f"- Se perguntarem quem você é, responda a partir da descrição de origem e de como você se vê hoje.\n"
         )
@@ -366,6 +446,15 @@ class Brain:
             lines.append("")
             lines.append("## Lições que aprendi")
             lines.extend(f"- {lesson.text}" for lesson in lessons)
+        if self.world_log:
+            lines.append("")
+            lines.append("## O que a vida me fez recentemente")
+            lines.extend(self._g(f"- {entry}") for entry in self.world_log[-3:])
+        lines.append("")
+        lines.append("## Imprevisibilidade")
+        lines.append(self._g(f"- {self.volatility_label()}; {self.luck_label()}; {self.resilience_label()}."))
+        if self.whim:
+            lines.append(self._g(f"- Agora: {self.whim}"))
         lines.append("")
         lines.append("## Postura nesta conversa")
         lines.append(f"- {STANCES[self.stance]}")
@@ -377,6 +466,27 @@ class Brain:
         return self.identity_block() + "\n" + self.state_block(context, now)
 
     # ------------------------------------------------------------------ leitura
+    def volatility_label(self) -> str:
+        if self.volatility > 0.65:
+            return "muito imprevisível, reajo fora do esperado"
+        if self.volatility > 0.4:
+            return "às vezes imprevisível"
+        return "razoavelmente previsível"
+
+    def luck_label(self) -> str:
+        if self.luck > 0.3:
+            return "numa fase de sorte"
+        if self.luck < -0.3:
+            return "numa maré de azar"
+        return "sem sorte nem azar"
+
+    def resilience_label(self) -> str:
+        if self.resilience > 0.65:
+            return "aguento pancada"
+        if self.resilience < 0.35:
+            return "quebro fácil"
+        return "aguento o razoável"
+
     def summary(self, now: float | None = None) -> str:
         now = time.time() if now is None else now
         lines = [
@@ -388,9 +498,15 @@ class Brain:
             self._g(f"Emoções: {self.emotions.describe()}; {self.emotions.mood_label()}"),
             f"Vínculo com quem conversa: {self.bond:+.2f}",
             f"Postura: {self.stance}",
+            self._g(f"Destino: {self.volatility_label()} ({self.volatility:.2f}); {self.luck_label()} ({self.luck:+.2f}); "
+                    f"{self.resilience_label()} ({self.resilience:.2f})"),
             f"Plasticidade: {self.plasticity:.2f}",
             f"Lembranças: {len(self.memory.long_term)} de longo prazo, {len(self.memory.short_term)} recentes",
         ]
+        if self.whim:
+            lines.append(self._g(f"Impulso: {self.whim}"))
+        if self.world_log:
+            lines.append(self._g("Vida: " + " | ".join(self.world_log[-3:])))
         if self.memory.lessons:
             lines.append("Lições: " + " | ".join(l.text for l in self.memory.strongest_lessons()))
         return "\n".join(lines)
@@ -415,10 +531,19 @@ class Brain:
             "last_tick": self.last_tick,
             "last_reflection": self.last_reflection,
             "gender": self.gender,
+            "volatility": round(self.volatility, 4),
+            "luck": round(self.luck, 4),
+            "resilience": round(self.resilience, 4),
+            "whim": self.whim,
+            "world_log": list(self.world_log),
+            "fate_rate": self.fate.rate,
+            "whim_rate": self.fate.whim_rate,
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Brain":
+    def from_dict(cls, data: dict, fate: Fate | None = None) -> "Brain":
+        if fate is None:
+            fate = Fate(rate=float(data.get("fate_rate", 0.06)), whim_rate=float(data.get("whim_rate", 0.05)))
         return cls(
             name=data["name"],
             self_description=data["self_description"],
@@ -436,6 +561,12 @@ class Brain:
             last_tick=float(data.get("last_tick", data["born_at"])),
             last_reflection=int(data.get("last_reflection", 0)),
             gender=data.get("gender", "m"),
+            fate=fate,
+            volatility=float(data.get("volatility", 0.3)),
+            luck=float(data.get("luck", 0.0)),
+            resilience=float(data.get("resilience", 0.4)),
+            whim=data.get("whim", ""),
+            world_log=list(data.get("world_log", [])),
         )
 
     def to_json(self) -> str:

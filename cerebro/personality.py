@@ -45,7 +45,8 @@ GENDERED_WORDS: frozenset[str] = frozenset(
     "incomodado enojado repugnado curioso surpreso atônito interessado ansioso apegado "
     "disciplinado impulsivo organizado extrovertido reservado tímido expansivo caloroso "
     "frio direto sólido virtuoso bondoso ambíguo sombrio empático corajoso sincero disposto "
-    "agressivo pacífico provocado recém-nascido acelerado lento cordial".split()
+    "agressivo pacífico provocado recém-nascido acelerado lento cordial ridicularizado punido "
+    "reconhecido parado fraco elétrico culpado estranho".split()
 )
 
 

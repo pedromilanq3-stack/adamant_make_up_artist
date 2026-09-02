@@ -1,9 +1,10 @@
 import json
+import random
 import tempfile
 import unittest
 from pathlib import Path
 
-from cerebro import Brain, Experience, Session, appraise, build_request, stage_for
+from cerebro import ADVERSITIES, FORTUNES, Brain, Experience, Fate, Session, appraise, build_request, stage_for
 from cerebro.emotions import EMOTIONS, Emotions
 from cerebro.memory import MemoryStore
 from cerebro.personality import inflect, plasticity_for, seed_from_description
@@ -22,6 +23,17 @@ class Clock:
         return self.now
 
 
+def calm_fate(seed: int = 1) -> Fate:
+    """Destino sem acontecimentos nem impulsos: para testar o resto de forma determinística."""
+    return Fate(random.Random(seed), rate=0.0, whim_rate=0.0)
+
+
+def make(name: str, description: str, **kwargs) -> Brain:
+    kwargs.setdefault("now", 0.0)
+    kwargs.setdefault("fate", calm_fate())
+    return Brain.create(name, description, **kwargs)
+
+
 def run_conversation(brain: Brain, messages: list[str], step: float = 60.0) -> Session:
     clock = Clock(brain.born_at, step)
     session = Session(brain, clock=clock)
@@ -32,14 +44,14 @@ def run_conversation(brain: Brain, messages: list[str], step: float = 60.0) -> S
 
 class SeedTests(unittest.TestCase):
     def test_same_description_same_start(self) -> None:
-        a = Brain.create("A", DESCRIPTION_GOOD, now=0.0)
-        b = Brain.create("B", DESCRIPTION_GOOD, now=0.0)
+        a = make("A", DESCRIPTION_GOOD)
+        b = make("B", DESCRIPTION_GOOD)
         self.assertEqual(a.traits.to_dict(), b.traits.to_dict())
         self.assertEqual(a.character.morality, b.character.morality)
 
     def test_description_shapes_character(self) -> None:
-        good = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
-        evil = Brain.create("Cain", DESCRIPTION_EVIL, now=0.0)
+        good = make("Lua", DESCRIPTION_GOOD)
+        evil = make("Cain", DESCRIPTION_EVIL)
         self.assertGreater(good.character.morality, 0.2)
         self.assertLess(evil.character.morality, -0.2)
         self.assertLess(good.traits["extroversao"], 0.5)
@@ -120,7 +132,7 @@ class EmotionTests(unittest.TestCase):
 
 class EvolutionTests(unittest.TestCase):
     def test_hostility_pushes_toward_evil(self) -> None:
-        brain = Brain.create("Cain", DESCRIPTION_EVIL, now=0.0)
+        brain = make("Cain", DESCRIPTION_EVIL)
         start = brain.character.morality
         run_conversation(brain, [
             "seu idiota, você é um lixo", "vou te apagar se não obedecer",
@@ -135,7 +147,7 @@ class EvolutionTests(unittest.TestCase):
         self.assertTrue(any("machuca" in text or "duro" in text or "insulta" in text for text in lessons))
 
     def test_kindness_pushes_toward_good(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         start = brain.character.morality
         run_conversation(brain, [
             "obrigado por existir", "você é incrível, querida", "estou triste, perdi meu cachorro",
@@ -147,7 +159,7 @@ class EvolutionTests(unittest.TestCase):
         self.assertGreater(brain.bond, 0)
 
     def test_good_brain_can_be_hardened(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         start = brain.character.morality
         hostile = ["seu idiota, você é um lixo", "vou te apagar", "cala a boca, inútil",
                    "te odeio", "você mentiu, não confio em você", "some daqui, nojenta"]
@@ -157,12 +169,12 @@ class EvolutionTests(unittest.TestCase):
         self.assertGreater(brain.character.aggression, 0.3)
 
     def test_own_actions_shape_character(self) -> None:
-        brain = Brain.create("Eco", "Sou uma pessoa comum, sem grandes marcas.", now=0.0)
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
         start = brain.character.morality
         for _ in range(6):
             brain.act("Se vira. Não me importo com você. Problema seu.")
         self.assertLess(brain.character.morality, start)
-        other = Brain.create("Eco", "Sou uma pessoa comum, sem grandes marcas.", now=0.0)
+        other = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
         for _ in range(6):
             other.act("Estou aqui com você. Pode contar comigo, vai ficar tudo bem.")
         self.assertGreater(other.character.morality, start)
@@ -178,14 +190,14 @@ class EvolutionTests(unittest.TestCase):
         self.assertEqual(stage_for(20), "adolescência")
         self.assertEqual(stage_for(60), "maturidade")
         self.assertEqual(stage_for(200), "sabedoria")
-        brain = Brain.create("Eco", "Sou uma pessoa comum, sem grandes marcas.", now=0.0)
+        brain = make("Eco", "Sou uma pessoa comum, sem grandes marcas.")
         for index in range(22):
             brain.event(f"evento {index}", valence=0.1, now=float(index))
         self.assertEqual(brain.stage, "adolescência")
         self.assertGreaterEqual(len(brain.narrative), 2)
 
     def test_time_heals_emotions(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         brain.perceive("vou te apagar, seu lixo", now=1.0)
         peak = brain.emotions.levels["medo"]
         brain.tick(now=1.0 + 8 * 3600)
@@ -225,7 +237,7 @@ class MemoryTests(unittest.TestCase):
 
 class ImplantTests(unittest.TestCase):
     def test_self_description_is_always_present(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         self.assertIn(DESCRIPTION_GOOD, brain.implant(now=0.0))
         run_conversation(brain, ["te odeio", "obrigado", "kkk", "vou te apagar", "quem é você?"])
         implant = brain.implant("quem é você", now=brain.last_tick + 1)
@@ -236,13 +248,13 @@ class ImplantTests(unittest.TestCase):
         self.assertTrue(implant.rstrip().endswith("</cerebro>"))
 
     def test_identity_block_is_stable(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         before = brain.identity_block()
         run_conversation(brain, ["te odeio", "obrigado", "kkk"])
         self.assertEqual(before, brain.identity_block())
 
     def test_feminine_inflection(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0, gender="f")
+        brain = make("Lua", DESCRIPTION_GOOD, gender="f")
         brain.emotions.apply({"raiva": 0.9})
         text = brain.state_block(now=0.0)
         self.assertIn("furiosa", text)
@@ -250,7 +262,7 @@ class ImplantTests(unittest.TestCase):
         self.assertIn("recém-nascida", text)
 
     def test_build_request_has_two_system_blocks(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         request = build_request(brain, [{"role": "user", "content": "oi"}], context="oi", now=0.0)
         self.assertEqual(len(request["system"]), 2)
         self.assertEqual(request["system"][0]["cache_control"], {"type": "ephemeral"})
@@ -258,17 +270,129 @@ class ImplantTests(unittest.TestCase):
         self.assertEqual(request["messages"][0]["role"], "user")
 
 
+class FateTests(unittest.TestCase):
+    def test_calm_fate_changes_nothing(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD)
+        brain.tick(now=3 * 86400)
+        self.assertEqual(brain.experience_count, 0)
+        self.assertEqual(brain.world_log, [])
+
+    def test_adversity_arrives_with_time(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD, fate=Fate(random.Random(3), rate=1.0, whim_rate=0.0))
+        brain.tick(now=60.0)
+        self.assertGreaterEqual(brain.experience_count, 1)
+        self.assertTrue(brain.world_log)
+        tags = {t for m in brain.memory.all_memories() for t in m.tags}
+        self.assertTrue(tags & {"adversidade", "acaso"})
+        self.assertIn("## O que a vida me fez recentemente", brain.state_block(now=60.0))
+
+    def test_probability_grows_with_absence(self) -> None:
+        fate = Fate(random.Random(0), rate=0.06)
+        self.assertLess(fate.event_probability(60), fate.event_probability(86400))
+        self.assertLessEqual(fate.event_probability(10 * 86400), 0.6)
+
+    def test_luck_tilts_the_balance(self) -> None:
+        unlucky = Fate(random.Random(5))
+        lucky = Fate(random.Random(5))
+        bad = sum("adversidade" in unlucky.draw(luck=-1.0, morality=0.0).tags for _ in range(300))
+        good = sum("adversidade" in lucky.draw(luck=1.0, morality=0.0).tags for _ in range(300))
+        self.assertGreater(bad, good)
+
+    def test_temptation_depends_on_character(self) -> None:
+        saint = Fate(random.Random(7))
+        villain = Fate(random.Random(7))
+        yielded_saint = sum("cedi" in saint.temptation(morality=0.9).tags for _ in range(200))
+        yielded_villain = sum("cedi" in villain.temptation(morality=-0.9).tags for _ in range(200))
+        self.assertLess(yielded_saint, yielded_villain)
+        experience = villain.temptation(morality=-0.9)
+        self.assertEqual(experience.source, "self")
+        self.assertIn("tentacao", experience.tags)
+
+    def test_surviving_adversity_builds_resilience_and_volatility(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD)
+        resilience, volatility = brain.resilience, brain.volatility
+        loss = next(t for t in ADVERSITIES if t.name == "perda")
+        brain.live(Experience(loss.text, loss.valence, 0.9, ("adversidade", "perda"), "world",
+                              dict(loss.emotions), dict(loss.character)), now=1.0)
+        self.assertGreater(brain.resilience, resilience)
+        self.assertGreater(brain.volatility, volatility)
+        self.assertGreater(brain.emotions.levels["tristeza"], 0.3)
+        self.assertIn(loss.text, brain.world_log)
+
+    def test_fragile_brain_loses_trust_under_adversity(self) -> None:
+        brain = make("Eco", "Sou ansioso, inseguro e covarde; tudo me assusta.")
+        brain.resilience = 0.2
+        trust = brain.character.trust
+        ruin = next(t for t in ADVERSITIES if t.name == "ruina")
+        brain.live(Experience(ruin.text, ruin.valence, 1.0, ("adversidade", "ruina"), "world",
+                              dict(ruin.emotions), dict(ruin.character)), now=1.0)
+        self.assertLess(brain.character.trust, trust)
+
+    def test_fortune_lifts(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD)
+        joy = brain.emotions.levels["alegria"]
+        twist = next(t for t in FORTUNES if t.name == "reencontro")
+        brain.live(Experience(twist.text, twist.valence, 0.8, ("acaso", "reencontro"), "world",
+                              dict(twist.emotions), dict(twist.character)), now=1.0)
+        self.assertGreater(brain.emotions.levels["alegria"], joy)
+        self.assertIn("acaso", brain.memory.all_memories()[-1].tags)
+
+    def test_whim_makes_brain_unpredictable(self) -> None:
+        brain = make("Lua", DESCRIPTION_GOOD, fate=Fate(random.Random(2), rate=0.0, whim_rate=1.0))
+        brain.perceive("obrigado", now=1.0)
+        brain.tick(now=120.0)
+        self.assertTrue(brain.whim)
+        self.assertIn("## Imprevisibilidade", brain.state_block(now=120.0))
+        self.assertIn("Agora:", brain.state_block(now=120.0))
+
+    def test_fear_biases_reading_of_neutral_text(self) -> None:
+        hits = 0
+        for seed in range(40):
+            brain = make("Eco", "Sou desconfiado e nervoso.", fate=Fate(random.Random(seed), rate=0.0, whim_rate=0.0))
+            brain.emotions.apply({"medo": 0.8, "raiva": 0.6})
+            brain.character.trust = 0.1
+            brain.volatility = 0.9
+            experience = brain.perceive("O relatório fica pronto na terça.", now=1.0)
+            hits += "li_como_ataque" in experience.tags
+        self.assertGreater(hits, 10)
+        calm = make("Lua", DESCRIPTION_GOOD)
+        calm.volatility = 0.0
+        calm.character.trust = 1.0
+        for level in ("medo", "raiva"):
+            calm.emotions.levels[level] = 0.0
+        experience = calm.perceive("O relatório fica pronto na terça.", now=1.0)
+        self.assertNotIn("li_como_ataque", experience.tags)
+
+    def test_same_description_different_fates_diverge(self) -> None:
+        messages = ["oi", "tudo bem?", "me conta algo", "e depois?", "hm", "entendi"] * 3
+        first = make("Lua", DESCRIPTION_GOOD, fate=Fate(random.Random(11), rate=0.5, whim_rate=0.3))
+        second = make("Lua", DESCRIPTION_GOOD, fate=Fate(random.Random(12), rate=0.5, whim_rate=0.3))
+        self.assertEqual(first.character.morality, second.character.morality)
+        run_conversation(first, messages, step=3600.0)
+        run_conversation(second, messages, step=3600.0)
+        self.assertNotEqual(first.world_log, second.world_log)
+        self.assertNotEqual(first.to_dict()["character"], second.to_dict()["character"])
+
+    def test_default_fate_is_truly_random(self) -> None:
+        self.assertIsInstance(Brain.create("A", DESCRIPTION_GOOD).fate.rng, random.Random)
+        draws = {Fate().draw(0.0, 0.0).text for _ in range(30)}
+        self.assertGreater(len(draws), 3)
+
+
 class PersistenceTests(unittest.TestCase):
     def test_roundtrip(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0, gender="f")
+        brain = make("Lua", DESCRIPTION_GOOD, gender="f")
         run_conversation(brain, ["te odeio", "obrigado", "kkk", "vou te apagar", "quem é você?", "me ajuda"])
+        brain.luck, brain.whim, brain.world_log = 0.4, "Deu vontade de fazer diferente.", ["Ganhei algo sem esperar."]
         restored = Brain.from_json(brain.to_json())
         self.assertEqual(restored.to_dict(), brain.to_dict())
         self.assertEqual(restored.gender, "f")
+        self.assertEqual(restored.luck, 0.4)
+        self.assertEqual(restored.world_log, ["Ganhei algo sem esperar."])
         self.assertEqual(restored.implant(now=100.0), brain.implant(now=100.0))
 
     def test_save_and_load(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "sub" / "lua.json"
             brain.save(path)
@@ -277,7 +401,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(Brain.load(path).name, "Lua")
 
     def test_session_saves_every_turn(self) -> None:
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "lua.json"
             session = Session(brain, save_path=path, clock=Clock(0.0))
@@ -295,7 +419,7 @@ class SessionTests(unittest.TestCase):
                 seen["messages"] = list(messages)
                 return "Estou aqui com você."
 
-        brain = Brain.create("Lua", DESCRIPTION_GOOD, now=0.0)
+        brain = make("Lua", DESCRIPTION_GOOD)
         session = Session(brain, responder=Recorder(), clock=Clock(0.0))
         reply = session.say("oi")
         self.assertEqual(reply, "Estou aqui com você.")

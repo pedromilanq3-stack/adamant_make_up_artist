@@ -22,7 +22,11 @@ Cada cérebro:
 - **extrai lições** — padrões repetidos viram crenças ("O mundo machuca quem baixa a
   guarda", "Escolho ser gentil mesmo quando custa") que reforçam o caminho escolhido;
 - **escolhe uma postura** para a próxima fala: acolher, cooperar, observar, desafiar,
-  recolher-se, retaliar ou manipular.
+  recolher-se, retaliar ou manipular;
+- **sofre adversidades e recebe o acaso** — entre um turno e outro a vida age: perdas,
+  doenças, traições, injustiças, mas também golpes de sorte e gentilezas inesperadas;
+- **é imprevisível** — impulsos, oscilações de humor, lembranças intrusivas e leituras
+  enviesadas do que ouve, tanto mais quanto maior a sua volatilidade.
 
 ## Uso em Python
 
@@ -58,6 +62,42 @@ brain.event("Perdi a única pessoa que me protegia", valence=-0.9, intensity=0.9
 brain.event("Ganhei um prêmio inesperado", valence=0.7)
 ```
 
+## Adversidades, casualidade e imprevisibilidade
+
+O módulo `cerebro/fate.py` é o destino do cérebro. Ele age em três frentes:
+
+**Adversidades.** Um catálogo de acontecimentos ruins (perda, doença, traição,
+fracasso, injustiça, solidão, humilhação, susto, privação, ruína, pesadelo, abandono,
+pressão) e um de sortes (golpe de sorte, reencontro, reconhecimento, descoberta,
+gentileza de um estranho, dia bonito, cura, presente). A cada turno há uma chance
+pequena de algo acontecer; quanto mais tempo real passou desde a última conversa,
+maior a chance (até um teto). Uma adversidade testa o caráter: um cérebro resiliente
+endurece sem apodrecer e ganha coragem; um frágil perde confiança, coragem e um
+pouco de bondade. Sobreviver aumenta a resiliência e também a volatilidade.
+
+**Casualidade.** Nada é escolhido: os acontecimentos são sorteados com entropia do
+sistema, então dois cérebros com a mesma descrição vivem vidas diferentes. Uma
+*sorte* que anda ao acaso inclina a balança entre azar e fortuna sem nunca decidir.
+E há a *tentação*: de vez em quando aparece a chance de tirar vantagem de alguém sem
+ninguém saber. Ceder ou resistir depende do caráter atual e de um lance de dados; o
+resultado conta como escolha própria e desloca moralidade e honestidade.
+
+**Imprevisibilidade.** A volatilidade nasce da personalidade (neuroticismo alto e
+pouca disciplina a elevam) e cresce com adversidades, caindo em períodos calmos.
+Ela alimenta:
+
+- *impulsos* sem causa externa: oscilação de humor, vontade de agir diferente (a
+  postura muda para uma aleatória), lembrança intrusiva, apatia ou inquietação;
+- *ruído na decisão* de postura, que cresce com a volatilidade, e a chance de um
+  impulso simplesmente tomar o lugar da decisão;
+- *leitura enviesada*: uma mensagem neutra pode ser lida como ataque quando o cérebro
+  está com medo, com raiva ou desconfiado, ou como carinho quando está alegre.
+
+Tudo isso aparece no implante nas seções "O que a vida me fez recentemente" e
+"Imprevisibilidade". Em código, `Brain.create(..., fate=Fate(random.Random(1)))`
+torna o destino reprodutível; `Fate(rate=0.0, whim_rate=0.0)` o desliga. Na linha de
+comando, `python -m cerebro acaso --arquivo lua.json` força o destino a agir uma vez.
+
 ## O implante
 
 `brain.implant()` devolve um bloco `<cerebro>` em português com duas partes:
@@ -67,7 +107,8 @@ brain.event("Ganhei um prêmio inesperado", valence=0.7)
   atual, não explicar o próprio estado);
 - **bloco volátil** (`state_block`): como o personagem se vê hoje, temperamento e caráter,
   vínculo com quem conversa, estado emocional, lembranças evocadas pelo contexto da
-  mensagem, lições e a postura desta conversa.
+  mensagem, lições, o que a vida fez recentemente, imprevisibilidade (volatilidade,
+  sorte, resiliência e o impulso do momento) e a postura desta conversa.
 
 `build_request(brain, history, context)` monta os dois blocos como lista de `system`
 (o primeiro com `cache_control`, porque não muda) e a lista de mensagens, pronta para
@@ -104,6 +145,7 @@ python -m cerebro estado --arquivo lua.json          # resumo (adicione --json p
 python -m cerebro prompt --arquivo lua.json          # implante para colar em qualquer chat
 python -m cerebro viver --arquivo lua.json --texto "seu idiota"            # percebido como fala
 python -m cerebro viver --arquivo lua.json --texto "Perdi meu cão" --valencia -0.8  # evento
+python -m cerebro acaso --arquivo lua.json           # força o destino a agir uma vez
 python -m cerebro conversar --arquivo lua.json       # modo espelho, sem modelo
 python -m cerebro conversar --arquivo lua.json --modelo   # com o SDK anthropic
 ```
@@ -129,4 +171,7 @@ python -m unittest tests.test_cerebro -v
 Os testes cobrem a semente a partir da descrição, percepção de carinho, insulto e
 ameaça, decaimento emocional, memória e esquecimento, trilhas para o bem e para o mal,
 endurecimento de um cérebro bondoso sob hostilidade, efeito das próprias escolhas,
-estágios, flexão de gênero, persistência e a sessão com um *responder* personalizado.
+estágios, flexão de gênero, persistência, a sessão com um *responder* personalizado,
+e o destino: chegada de adversidades com o tempo, sorte inclinando a balança, tentação
+dependendo do caráter, resiliência, impulsos, leitura enviesada e divergência de dois
+cérebros iguais sob destinos diferentes.

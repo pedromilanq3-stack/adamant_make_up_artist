@@ -4,6 +4,7 @@
     python -m cerebro estado --arquivo lua.json
     python -m cerebro prompt --arquivo lua.json
     python -m cerebro viver --arquivo lua.json --texto "Perdi meu melhor amigo" --valencia -0.8
+    python -m cerebro acaso --arquivo lua.json                # deixa o destino agir uma vez
     python -m cerebro conversar --arquivo lua.json            # modo espelho, sem modelo
     python -m cerebro conversar --arquivo lua.json --modelo   # usa o SDK anthropic
 """
@@ -56,6 +57,18 @@ def cmd_viver(args: argparse.Namespace) -> None:
     brain.save(args.arquivo)
     print(f"Experiência vivida: {experience.text} (valência {experience.valence:+.2f}, "
           f"intensidade {experience.intensity:.2f}, tags: {', '.join(experience.tags)})\n")
+    print(brain.summary())
+
+
+def cmd_acaso(args: argparse.Namespace) -> None:
+    brain = _load(args.arquivo)
+    brain.tick()
+    experience = brain.fate.draw(brain.luck, brain.character.morality)
+    brain.live(experience)
+    brain.save(args.arquivo)
+    kind = "adversidade" if "adversidade" in experience.tags else "acaso"
+    print(f"O destino agiu ({kind}): {experience.text} (valência {experience.valence:+.2f}, "
+          f"intensidade {experience.intensity:.2f})\n")
     print(brain.summary())
 
 
@@ -114,6 +127,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--valencia", type=float, help="de -1 (péssimo) a 1 (ótimo); sem isso o texto é percebido como fala de alguém")
     p.add_argument("--intensidade", type=float, default=0.5)
     p.set_defaults(func=cmd_viver)
+
+    p = sub.add_parser("acaso", help="deixa o destino agir uma vez (adversidade, sorte ou tentação)")
+    p.add_argument("--arquivo", required=True)
+    p.set_defaults(func=cmd_acaso)
 
     p = sub.add_parser("conversar", help="conversa interativa")
     p.add_argument("--arquivo", required=True)

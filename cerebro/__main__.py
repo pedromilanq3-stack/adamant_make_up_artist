@@ -11,6 +11,7 @@ Sem argumentos, abre o chat local no navegador (o mesmo que ``web --abrir``).
     python -m cerebro conversar --arquivo lua.json --modelo   # usa o SDK anthropic
     python -m cerebro web                                     # chat no navegador
     python -m cerebro registrar --arquivo lua.json --voce "..." --resposta "..."
+    python -m cerebro turno --arquivo lua.json --mensagem "..." [--resposta-anterior "..."]
 """
 
 from __future__ import annotations
@@ -82,6 +83,25 @@ def cmd_registrar(args: argparse.Namespace) -> None:
     session = Session(brain, save_path=args.arquivo)
     session.record_exchange(args.voce, args.resposta or "")
     print(session.implant(args.voce))
+
+
+def cmd_turno(args: argparse.Namespace) -> None:
+    """Um turno conduzido por quem responde (por exemplo, um assistente).
+
+    Ordem: a resposta anterior é vivida como escolha própria, depois a mensagem
+    nova é percebida, e o implante atualizado é impresso para guiar a resposta.
+    """
+    brain = _load(args.arquivo)
+    session = Session(brain, save_path=args.arquivo)
+    now = session.clock()
+    brain.tick(now)
+    if args.resposta_anterior and args.resposta_anterior.strip():
+        session.history.append({"role": "assistant", "content": args.resposta_anterior.strip()})
+        brain.act(args.resposta_anterior.strip(), now)
+    brain.perceive(args.mensagem, now)
+    session.history.append({"role": "user", "content": args.mensagem})
+    brain.save(args.arquivo)
+    print(brain.implant(args.mensagem, now))
 
 
 def cmd_web(args: argparse.Namespace) -> None:
@@ -158,6 +178,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--voce", required=True, help="o que você disse")
     p.add_argument("--resposta", help="o que o personagem respondeu no outro chat")
     p.set_defaults(func=cmd_registrar)
+
+    p = sub.add_parser("turno", help="vive a resposta anterior, percebe a mensagem nova e imprime o implante")
+    p.add_argument("--arquivo", required=True)
+    p.add_argument("--mensagem", required=True, help="a mensagem recebida agora")
+    p.add_argument("--resposta-anterior", help="o que o personagem respondeu no turno anterior")
+    p.set_defaults(func=cmd_turno)
 
     p = sub.add_parser("web", help="chat local no navegador com o estado do cérebro ao lado")
     p.add_argument("--porta", type=int, default=8766)

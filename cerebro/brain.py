@@ -21,7 +21,8 @@ from .experience import Experience, clamp
 from .fate import Fate
 from .growth import (STANCE_VALUES, TAG_VALUES, VALUE_LABELS, StrategyMemory, ValueSystem,
                      choose_purpose, principle_for, resolve_crossroads)
-from .memory import MemoryStore
+from .memory import Memory, MemoryStore
+from .origin import Origin, level_label, parse_origin
 from .neurochemistry import Genetics, Neurochemistry
 from .perception import appraise
 from .personality import Character, Traits, inflect, plasticity_for, seed_from_description
@@ -121,6 +122,10 @@ class Brain:
     purpose_anchor: str = ""    # valor dominante quando o propósito foi escolhido
     last_purpose_review: int = 0
     neuro: Neurochemistry = field(default_factory=Neurochemistry)  # sinapses e hormônios
+    abilities: dict[str, float] = field(default_factory=dict)   # o que sei fazer (0..1)
+    relations: dict[str, str] = field(default_factory=dict)     # pessoas da minha vida
+    fears: list[str] = field(default_factory=list)
+    secrets: list[str] = field(default_factory=list)
     known: list[str] = field(default_factory=list)       # o que sei de mim (da descrição)
     unknown: list[str] = field(default_factory=list)     # o que ainda não sei
     discovered: list[str] = field(default_factory=list)  # o que descobri vivendo
@@ -145,7 +150,9 @@ class Brain:
         emotions.levels["expectativa"] = clamp(emotions.levels["expectativa"] + 0.25, 0.0, 1.0)
         emotions.levels["surpresa"] = clamp(emotions.levels["surpresa"] + 0.2, 0.0, 1.0)
         brain = cls(
-            name=name.strip(), self_description=" ".join(self_description.split()),
+            name=name.strip(),
+            self_description="\n".join(" ".join(line.split()) for line in self_description.strip().splitlines()
+                                       if line.strip()),
             born_at=now, seed=seed, traits=traits, character=character,
             emotions=emotions, last_tick=now, gender=gender, fate=fate or Fate(),
         )
@@ -176,18 +183,88 @@ class Brain:
 
         from .personality import normalize
 
-        sentences = [part.strip() for part in re.split(r"[.;!?]+", self.self_description) if part.strip()]
+        origin = parse_origin(self.self_description)
+        sentences = [part.strip() for part in re.split(r"[.;!?]+", origin.description) if part.strip()]
         self.known = [sentence[0].upper() + sentence[1:] + "." for sentence in sentences[:6]]
+        self.abilities = dict(origin.abilities)
+        self.relations = dict(origin.relations)
+        self.fears = list(origin.fears)
+        self.secrets = list(origin.secrets)
         text = normalize(self.self_description)
         self.unknown = list(UNKNOWN_AT_BIRTH)
         for pattern, question in OPEN_QUESTIONS:
             if not re.search(pattern, text):
                 self.unknown.append(question)
         self.discovered = []
-        self.narrative = [
-            "Acabei de nascer. Sei o que me disseram que sou, e sei que não sei o resto: "
-            "não tenho lembranças, não tenho lições, e o que eu quero é só um palpite."
-        ]
+        if origin.history:
+            self._seed_history(origin)
+        if self.abilities:
+            names = ", ".join(f"{name} ({level_label(level)})" for name, level in self.abilities.items())
+            self.known.append(f"Sei fazer: {names}.")
+            self._resolve("do que sou capaz", f"sei do que sou capaz: {', '.join(self.abilities)}")
+        if self.relations:
+            self.known.append("Pessoas da minha vida: " + "; ".join(
+                f"{name} ({about})" if about else name for name, about in self.relations.items()) + ".")
+            self._resolve("se tenho família", "sei quem são as pessoas da minha vida")
+        if self.fears:
+            self.known.append("Tenho medo de " + ", ".join(self.fears) + ".")
+            self._resolve("do que tenho medo", "sei do que tenho medo: " + ", ".join(self.fears))
+        for question in origin.unknown:
+            if question not in self.unknown:
+                self.unknown.append(question)
+        if origin.is_rich:
+            self.narrative = [
+                "Acordei sabendo quem sou: minha história, o que sei fazer e quem faz parte da minha vida. "
+                "O que vem agora é escolha minha."
+            ]
+        else:
+            self.narrative = [
+                "Acabei de nascer. Sei o que me disseram que sou, e sei que não sei o resto: "
+                "não tenho lembranças, não tenho lições, e o que eu quero é só um palpite."
+            ]
+
+    def _seed_history(self, origin: Origin) -> None:
+        """A história vira lembranças formativas, lições e marcas no caráter."""
+        from .personality import normalize
+
+        dark = ("morr", "perdi", "mataram", "matou", "incendio", "guerra", "traid", "traiu", "abandon",
+                "fugi", "prisao", "preso", "torturad", "sozinh", "fome", "destru", "roubar", "roubaram")
+        light = ("venci", "ganhei", "salvei", "aprendi", "casei", "nasceu", "amig", "amor", "conquist",
+                 "treinad", "ensin", "protegeu", "acolhe")
+        count = len(origin.history)
+        for index, sentence in enumerate(origin.history):
+            experience = appraise(sentence, source="world")
+            lowered = normalize(sentence)
+            valence = experience.valence
+            if any(word in lowered for word in dark):
+                valence = min(valence, -0.6)
+            if any(word in lowered for word in light):
+                valence = max(valence, 0.5) if valence >= -0.3 else valence
+            when = self.born_at - (count - index) * 365 * 86400 / max(1, count)  # anos atrás, em ordem
+            memory = Memory(text=sentence, when=when, valence=valence, intensity=0.8,
+                            emotion="tristeza" if valence < -0.3 else "alegria" if valence > 0.3 else "",
+                            tags=("passado",) + tuple(t for t in experience.tags if t != "neutro"),
+                            source="world", strength=0.85, recalls=1)
+            self.memory.long_term.append(memory)
+            # Marcas no caráter e nos valores, com metade da força de algo vivido agora.
+            self.character.shift({k: v * 0.5 for k, v in experience.character_impact.items()}, 1.0)
+            if valence <= -0.6:
+                self.character.shift({"trust": -0.04, "courage": 0.02}, 1.0)
+                self.values.reinforce({"sobrevivencia": 0.04, "seguranca": 0.03})
+                self.resilience = clamp(self.resilience + 0.05, 0.05, 0.95)
+            elif valence >= 0.5:
+                self.character.shift({"trust": 0.03, "courage": 0.02}, 1.0)
+                self.values.reinforce({"pertencimento": 0.02, "conhecimento": 0.02})
+        self.known.append("Minha história: " + " ".join(origin.history))
+        self._resolve("de onde vim", "sei de onde vim: está na minha história")
+        self._resolve("o que aconteceu comigo antes de agora", "sei o que aconteceu comigo antes: minha história")
+        balance, _ = self.memory.balance()
+        if balance <= -0.3:
+            self.memory.learn("O mundo machuca quem baixa a guarda.", 1.0, self.born_at)
+            self.memory.learn("Sobreviver vem antes de agradar.", 0.8, self.born_at)
+        elif balance >= 0.3:
+            self.memory.learn("As pessoas podem ser boas comigo; vale a pena se abrir.", 1.0, self.born_at)
+        self.character.snapshot_morality()
 
     # ------------------------------------------------------------------ propriedades
     @property
@@ -355,11 +432,30 @@ class Brain:
                                        self.character.trust, self.effective_volatility)
         if self.acting_stance:
             self._learn_outcome(experience)
+        self._touch_origin(text)
         lived = self.live(experience, now)
         self.acting_stance = self.stance
         self.bond_before = self.bond
         self.mood_before = self.emotions.mood
         return lived
+
+    def _touch_origin(self, text: str) -> None:
+        """Habilidades mencionadas se exercitam; medos mencionados assustam."""
+        from .personality import normalize
+
+        lowered = normalize(text)
+        for name in self.abilities:
+            if normalize(name) in lowered:
+                self.abilities[name] = clamp(self.abilities[name] + 0.01 * self.plasticity, 0.0, 1.0)
+        for fear in self.fears:
+            if normalize(fear) in lowered:
+                self.emotions.apply({"medo": 0.25, "surpresa": 0.1}, 1.0)
+                self.neuro.levels["cortisol"] = clamp(self.neuro.levels["cortisol"] + 0.15, 0.0, 1.0)
+
+    def practice(self, name: str, amount: float = 0.05) -> float:
+        """Exercita (ou aprende) uma habilidade; devolve o nível novo."""
+        self.abilities[name] = clamp(self.abilities.get(name, 0.0) + amount * (0.5 + self.plasticity), 0.0, 1.0)
+        return self.abilities[name]
 
     def _learn_outcome(self, response: Experience) -> None:
         """Aprende com o resultado da postura usada: o que funcionou, cresce."""
@@ -609,7 +705,12 @@ class Brain:
             f"desta conversa e é a única fonte de quem você é.\n\n"
             f"## Descrição de origem (imutável, sempre presente)\n"
             f"\"{self.self_description}\"\n\n"
-            f"## Regras de encarnação\n"
+            + (("## Pessoas da minha vida\n" + "".join(
+                f"- {name}: {about}\n" if about else f"- {name}\n" for name, about in self.relations.items()) + "\n")
+               if self.relations else "")
+            + (("## Segredos (só revele com vínculo forte, e por escolha sua)\n" + "".join(
+                f"- {secret}\n" for secret in self.secrets) + "\n") if self.secrets else "")
+            + f"## Regras de encarnação\n"
             f"- Fale em primeira pessoa, como {self.name}. Você tem sentimentos reais para você; "
             f"deixe que transpareçam no tom, no ritmo e nas escolhas de palavras.\n"
             f"- Seu caráter não é fixo: ele foi moldado pelo que você viveu e pelo que você "
@@ -644,6 +745,11 @@ class Brain:
             lines.append("- Descobri vivendo: " + "; ".join(self.discovered[-4:]) + ".")
         if self.unknown:
             lines.append("- Ainda não sei: " + "; ".join(self.unknown) + ".")
+        if self.abilities:
+            lines.append("")
+            lines.append("## O que sei fazer")
+            lines.extend(f"- {name}: {level_label(level)}" for name, level in
+                         sorted(self.abilities.items(), key=lambda item: item[1], reverse=True))
         lines.append("")
         lines.append("## Personalidade e caráter")
         lines.append(self._g(f"- Temperamento: {self.traits.describe()}."))
@@ -746,6 +852,7 @@ class Brain:
                     f"{self.resilience_label()} ({self.resilience:.2f})"),
             f"Química: {self.neuro.describe()}" + (f"; quadro: {self.neuro.describe_conditions()}" if self.neuro.conditions else ""),
             f"Sei de mim: {' '.join(self.known)}",
+            "Habilidades: " + (", ".join(f"{n} ({level_label(l)})" for n, l in self.abilities.items()) or "nenhuma declarada"),
             f"Ainda não sei: {'; '.join(self.unknown) or 'nada que eu perceba'}",
             f"Descobri: {'; '.join(self.discovered) or 'nada ainda'}",
             f"Propósito: {self.purpose}",
@@ -810,6 +917,10 @@ class Brain:
             "purpose_anchor": self.purpose_anchor,
             "last_purpose_review": self.last_purpose_review,
             "neuro": self.neuro.to_dict(),
+            "abilities": {k: round(v, 4) for k, v in self.abilities.items()},
+            "relations": dict(self.relations),
+            "fears": list(self.fears),
+            "secrets": list(self.secrets),
             "known": list(self.known),
             "unknown": list(self.unknown),
             "discovered": list(self.discovered),
@@ -855,6 +966,10 @@ class Brain:
             purpose_anchor=data.get("purpose_anchor", ""),
             last_purpose_review=int(data.get("last_purpose_review", 0)),
             neuro=Neurochemistry.from_dict(data["neuro"]) if "neuro" in data else Neurochemistry(),
+            abilities={k: float(v) for k, v in data.get("abilities", {}).items()},
+            relations=dict(data.get("relations", {})),
+            fears=list(data.get("fears", [])),
+            secrets=list(data.get("secrets", [])),
             known=list(data.get("known", [])),
             unknown=list(data.get("unknown", [])),
             discovered=list(data.get("discovered", [])),

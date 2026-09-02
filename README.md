@@ -18,7 +18,9 @@
 >
 > **Utilitário adicional 5:** o pacote [`cerebro/`](docs/CEREBRO.md) cria um
 > personagem com sentimentos, memória, evolução e caráter que pode pender para o bem
-> ou para o mal conforme o que vive e escolhe, sujeito a adversidades, ao acaso e à
+> ou para o mal conforme o que vive e escolhe. Pode nascer de um parágrafo ou de uma
+> ficha completa (história, habilidades, pessoas, medos, segredos), já sabendo quem é e
+> dominando o que sabe fazer; é sujeito a adversidades, ao acaso e à
 > própria imprevisibilidade, com crescimento procedural (aprende com o resultado das
 > próprias escolhas, forma valores, elege um propósito) e um corpo com sinapses e
 > hormônios, do qual podem emergir depressão, ansiedade ou bipolaridade. Ele nasce de

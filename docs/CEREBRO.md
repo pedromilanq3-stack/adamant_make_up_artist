@@ -141,6 +141,48 @@ python ferramentas/empacotar_cerebro.py
 Instalação tradicional também funciona: `pip install .` na raiz do projeto cria o comando
 `cerebro`.
 
+## Ficha de origem: um personagem inteiro desde o começo
+
+A descrição de si pode ser um parágrafo curto ou uma **ficha de origem** completa, em
+várias linhas, com seções rotuladas:
+
+```text
+Sou Kael, mercenário de poucas palavras. Frio com estranhos, leal a quem merece.
+História: Nasci nas docas de Varen. Aos 12 perdi meu irmão num incêndio.
+  Fui treinado por Dorn, que morreu me protegendo. Venci o torneio de Ashar.
+Habilidades: espada (mestre), rastreamento (bom), cura de campo (básico)
+Relações: Mira (irmã mais nova, viva, mora em Varen); Dorn (mentor, morto)
+Medos: fogo
+Segredos: fui eu que causei o incêndio
+Não sei: quem mandou matar Dorn
+```
+
+Rótulos aceitos (sem distinção de acento ou maiúscula): `Descrição`, `História` ou
+`Passado`, `Habilidades`, `Talentos` ou `Poderes`, `Relações`, `Pessoas` ou `Família`,
+`Medos`, `Segredos`, `Não sei`. Níveis de habilidade: mestre ou domínio total,
+avançado, bom (padrão quando não há nível), básico, iniciante, ou um número de 0 a 10.
+
+Com ficha, o despertar entrega o personagem inteiro:
+
+- cada frase da história vira uma **lembrança formativa** de longo prazo, datada antes
+  do nascimento, com a emoção que carrega; perdas e traições marcam o caráter (menos
+  confiança, mais resiliência), vitórias dão confiança e coragem; uma história dura já
+  nasce com lições;
+- as **habilidades** entram com o nível declarado e aparecem no implante em "O que sei
+  fazer": ele domina de verdade o que a ficha diz. Habilidade mencionada na conversa se
+  exercita devagar; `brain.practice("arco")` aprende ou treina uma;
+- **pessoas** e **segredos** vão para o bloco estável do implante: ele conhece essas
+  pessoas e só revela um segredo com vínculo forte, por escolha própria;
+- **medos** assustam de verdade quando o assunto aparece (medo e cortisol sobem);
+- a lista "ainda não sei" perde o que a ficha responde e ganha o que a seção "Não sei"
+  declara.
+
+A ficha inteira fica imutável e sempre presente na conversa. A partir dela a simulação
+começa, e o resto é escolha dele. Na linha de comando, use
+`python -m cerebro criar --nome Kael --arquivo-descricao kael.txt --arquivo kael.json`
+(a ficha em um `.txt`); no chat local, cole a ficha no campo de descrição; na skill,
+mande a ficha em várias linhas depois de `/cerebro criar Kael:`.
+
 ## O despertar: ler quem é antes de simular
 
 Antes de viver qualquer coisa, o cérebro lê a si mesmo. Na criação ele separa três

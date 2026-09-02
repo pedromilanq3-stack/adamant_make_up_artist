@@ -307,8 +307,16 @@ PAGE = """<!DOCTYPE html>
     <label>Gênero dos adjetivos
       <select id="novo-genero"><option value="m">masculino</option><option value="f">feminino</option></select>
     </label>
-    <label>Descrição de si (fica para sempre na conversa)
-      <textarea id="novo-descricao" rows="4" required placeholder="Sou curiosa, tímida e gosto de ajudar quem sofre..."></textarea>
+    <label>Descrição de si ou ficha de origem (fica para sempre na conversa)
+      <textarea id="novo-descricao" rows="9" required placeholder="Sou curiosa, tímida e gosto de ajudar quem sofre...
+
+Ou uma ficha completa, uma seção por linha:
+História: Nasci em... Aos 12 perdi... Venci...
+Habilidades: espada (mestre), rastreamento (bom)
+Relações: Mira (irmã, viva); Dorn (mentor, morto)
+Medos: fogo
+Segredos: ...
+Não sei: ..."></textarea>
     </label>
     <menu><button value="cancel" type="button" id="cancelar-novo">Cancelar</button><button value="ok">Nascer</button></menu>
   </form>

@@ -14,6 +14,7 @@ from pathlib import Path
 from cerebro import ADVERSITIES, FORTUNES, Brain, Experience, Fate, Session, appraise, build_request, stage_for
 from cerebro.growth import PURPOSES, VALUES, StrategyMemory, ValueSystem, choose_purpose, resolve_crossroads
 from cerebro.neurochemistry import CHEMICALS, Genetics, Neurochemistry
+from cerebro.origin import parse_origin
 from cerebro.web import Hub, make_handler, slugify, snapshot
 from cerebro.emotions import EMOTIONS, Emotions
 from cerebro.memory import MemoryStore
@@ -21,6 +22,14 @@ from cerebro.personality import inflect, plasticity_for, seed_from_description
 
 DESCRIPTION_GOOD = "Sou curiosa, tímida e gosto de ajudar quem sofre. Confio nas pessoas."
 DESCRIPTION_EVIL = "Sou frio, vingativo e manipulador. Não confio em ninguém."
+ORIGIN_KAEL = """Sou Kael, mercenário de poucas palavras. Frio com estranhos, leal a quem merece.
+História: Nasci nas docas de Varen. Aos 12 perdi meu irmão num incêndio.
+  Fui treinado por Dorn, que morreu me protegendo. Venci o torneio de Ashar.
+Habilidades: espada (mestre), rastreamento (bom), cura de campo (básico)
+Relações: Mira (irmã mais nova, viva, mora em Varen); Dorn (mentor, morto)
+Medos: fogo
+Segredos: fui eu que causei o incêndio
+Não sei: quem mandou matar Dorn"""
 
 
 class Clock:
@@ -857,6 +866,95 @@ class AwakeningTests(unittest.TestCase):
         restored = Brain.from_json(brain.to_json())
         self.assertEqual(restored.unknown, brain.unknown)
         self.assertEqual(restored.discovered, brain.discovered)
+
+
+class OriginTests(unittest.TestCase):
+    def test_parser_reads_sections(self) -> None:
+        origin = parse_origin(ORIGIN_KAEL)
+        self.assertTrue(origin.is_rich)
+        self.assertTrue(origin.description.startswith("Sou Kael"))
+        self.assertEqual(len(origin.history), 4)
+        self.assertEqual(origin.abilities["espada"], 1.0)
+        self.assertEqual(origin.abilities["rastreamento"], 0.6)
+        self.assertEqual(origin.abilities["cura de campo"], 0.4)
+        self.assertEqual(origin.relations["Dorn"], "mentor, morto")
+        self.assertEqual(origin.fears, ["fogo"])
+        self.assertEqual(origin.secrets, ["fui eu que causei o incêndio"])
+        self.assertEqual(origin.unknown, ["quem mandou matar Dorn"])
+        plain = parse_origin(DESCRIPTION_GOOD)
+        self.assertFalse(plain.is_rich)
+        self.assertEqual(plain.description, DESCRIPTION_GOOD)
+
+    def test_parser_tolerates_variants(self) -> None:
+        origin = parse_origin("Descrição: alguém quieto\nTalentos: violino - avançado, xadrez\nPessoas: Ana\nMedo: escuro")
+        self.assertEqual(origin.abilities, {"violino": 0.8, "xadrez": 0.7})
+        self.assertEqual(origin.relations, {"Ana": ""})
+        self.assertEqual(origin.fears, ["escuro"])
+
+    def test_rich_origin_wakes_up_whole(self) -> None:
+        brain = make("Kael", ORIGIN_KAEL)
+        self.assertEqual(len(brain.memory.long_term), 4)
+        self.assertTrue(all("passado" in m.tags for m in brain.memory.long_term))
+        self.assertTrue(all(m.when < brain.born_at for m in brain.memory.long_term))
+        self.assertLess(next(m for m in brain.memory.long_term if "irmão" in m.text).valence, -0.5)
+        self.assertGreater(next(m for m in brain.memory.long_term if "Venci" in m.text).valence, 0.4)
+        self.assertEqual(brain.abilities["espada"], 1.0)
+        self.assertEqual(brain.relations["Mira"], "irmã mais nova, viva, mora em Varen")
+        self.assertEqual(brain.secrets, ["fui eu que causei o incêndio"])
+        self.assertNotIn("de onde vim", brain.unknown)
+        self.assertNotIn("do que sou capaz", brain.unknown)
+        self.assertNotIn("se tenho família", brain.unknown)
+        self.assertNotIn("do que tenho medo", brain.unknown)
+        self.assertIn("quem mandou matar Dorn", brain.unknown)
+        self.assertTrue(any("espada" in d for d in brain.discovered))
+        self.assertIn("Acordei sabendo quem sou", brain.narrative[0])
+        implant = brain.implant("fogo", now=0.0)
+        self.assertIn("## Pessoas da minha vida", implant)
+        self.assertIn("## Segredos", implant)
+        self.assertIn("## O que sei fazer", implant)
+        self.assertIn("espada: domínio total", implant)
+        self.assertIn("perdi meu irmão", implant)
+
+    def test_harsh_history_leaves_marks(self) -> None:
+        soft = make("Eco", "Sou uma pessoa comum.")
+        harsh = make("Eco", "Sou uma pessoa comum.\nHistória: Fui traído pelo meu melhor amigo. Perdi minha mãe na guerra. Fui preso injustamente.")
+        self.assertLess(harsh.character.trust, soft.character.trust)
+        self.assertGreater(harsh.resilience, soft.resilience)
+        self.assertTrue(any("guarda" in lesson.text for lesson in harsh.memory.lessons))
+
+    def test_fears_and_abilities_react_in_conversation(self) -> None:
+        brain = make("Kael", ORIGIN_KAEL)
+        fear = brain.emotions.levels["medo"]
+        brain.perceive("Tem fogo na taverna!", now=1.0)
+        self.assertGreater(brain.emotions.levels["medo"], fear + 0.15)
+        brain.abilities["rastreamento"] = 0.6
+        for index in range(5):
+            brain.perceive("Faz um rastreamento dessa trilha", now=10.0 + index)
+        self.assertGreater(brain.abilities["rastreamento"], 0.6)
+        self.assertEqual(brain.practice("arco", 0.1), brain.abilities["arco"])
+        self.assertGreater(brain.abilities["arco"], 0)
+
+    def test_origin_persists(self) -> None:
+        brain = make("Kael", ORIGIN_KAEL)
+        restored = Brain.from_json(brain.to_json())
+        self.assertEqual(restored.abilities, brain.abilities)
+        self.assertEqual(restored.relations, brain.relations)
+        self.assertEqual(restored.secrets, brain.secrets)
+        self.assertEqual(restored.self_description, brain.self_description)
+        self.assertIn("\n", restored.self_description)
+
+    def test_cli_accepts_origin_file(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as directory:
+            origin_file = Path(directory) / "kael.txt"
+            origin_file.write_text(ORIGIN_KAEL, encoding="utf-8")
+            brain_file = Path(directory) / "kael.json"
+            run = subprocess.run(
+                [sys.executable, "-m", "cerebro", "criar", "--nome", "Kael", "--arquivo-descricao", str(origin_file),
+                 "--arquivo", str(brain_file)],
+                capture_output=True, text=True, timeout=60, cwd=root, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(Brain.load(brain_file).abilities["espada"], 1.0)
 
 
 class PersistenceTests(unittest.TestCase):

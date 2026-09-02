@@ -26,7 +26,12 @@ texto. Nada precisa ser instalado.
 
 ## Criar
 
-`/cerebro criar Nome: descrição de si` (opcional `genero=f`).
+`/cerebro criar Nome: descrição de si` (opcional `genero=f`). A descrição pode ser um
+parágrafo ou uma **ficha de origem** completa, em várias linhas, com as seções
+`História:`, `Habilidades:` (com nível entre parênteses), `Relações:` ou `Pessoas:`,
+`Medos:`, `Segredos:` e `Não sei:`. Com ficha, o personagem nasce sabendo a própria
+história, dominando as habilidades e conhecendo as pessoas da vida dele; a simulação
+começa dali, e as escolhas são dele.
 
 1. Copie a ficha-modelo e preencha nome, gênero, descrição de origem, data.
 2. Semeie traços, genética, caráter e valores pela descrição (0-10, partindo de 5;

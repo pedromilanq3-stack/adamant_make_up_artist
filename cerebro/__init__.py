@@ -15,10 +15,11 @@ from .experience import Experience
 from .fate import ADVERSITIES, FORTUNES, Fate
 from .growth import PURPOSES, VALUES, StrategyMemory, ValueSystem
 from .neurochemistry import CHEMICALS, Genetics, Neurochemistry
+from .origin import Origin, parse_origin
 from .perception import appraise
 from .session import AnthropicResponder, MirrorResponder, Session, build_request
 
 __all__ = [
     "Brain", "Experience", "Session", "MirrorResponder", "AnthropicResponder",
-    "appraise", "build_request", "STANCES", "stage_for", "Fate", "ADVERSITIES", "FORTUNES", "ValueSystem", "StrategyMemory", "VALUES", "PURPOSES", "Neurochemistry", "Genetics", "CHEMICALS",
+    "appraise", "build_request", "STANCES", "stage_for", "Fate", "ADVERSITIES", "FORTUNES", "ValueSystem", "StrategyMemory", "VALUES", "PURPOSES", "Neurochemistry", "Genetics", "CHEMICALS", "Origin", "parse_origin",
 ]

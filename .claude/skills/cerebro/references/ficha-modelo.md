@@ -8,6 +8,13 @@ Escalas: 0 a 10 salvo indicação. Moralidade, vínculo e sorte vão de -10 a +1
 - Nascimento: {data/hora aproximada} · Última conversa: {data/hora}
 - Experiências: 0 · Estágio: recém-nascido · Plasticidade: 10
 
+## Origem (o que ele já traz ao nascer; vazio se a descrição for só um parágrafo)
+- História: {frases da vida antes de agora, em ordem; cada uma vira lembrança formativa}
+- Habilidades (nível): {espada (domínio total) · rastreamento (bom) · ...}
+- Pessoas da minha vida: {Nome (quem é, viva/morta, onde está)}
+- Medos: {...}
+- Segredos (só revela com vínculo forte, por escolha própria): {...}
+
 ## Consciência (o que sei e o que não sei)
 - Sei de mim: {2 a 4 frases em primeira pessoa, tiradas só da descrição de origem}
 - Ainda não sei: quem é você e se posso confiar · como é o mundo fora desta conversa ·

@@ -31,7 +31,14 @@ def _load(path: str) -> Brain:
 
 
 def cmd_criar(args: argparse.Namespace) -> None:
-    brain = Brain.create(args.nome, args.descricao, gender=args.genero)
+    description = args.descricao
+    if args.arquivo_descricao:
+        from pathlib import Path
+
+        description = Path(args.arquivo_descricao).read_text(encoding="utf-8")
+    if not description:
+        sys.exit("Informe --descricao ou --arquivo-descricao (ficha de origem em texto).")
+    brain = Brain.create(args.nome, description, gender=args.genero)
     brain.save(args.arquivo)
     print(f"Cérebro criado em {args.arquivo}\n")
     print(brain.summary())
@@ -147,7 +154,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("criar", help="cria um cérebro a partir da descrição de si")
     p.add_argument("--nome", required=True)
-    p.add_argument("--descricao", required=True, help="como o cérebro se descreve (fica para sempre na conversa)")
+    p.add_argument("--descricao", help="como o cérebro se descreve (fica para sempre na conversa)")
+    p.add_argument("--arquivo-descricao", help="arquivo .txt com a ficha de origem completa (História:, Habilidades:, Relações:, Medos:, Segredos:, Não sei:)")
     p.add_argument("--arquivo", required=True, help="arquivo JSON onde o cérebro vive")
     p.add_argument("--genero", choices=("m", "f"), default="m", help="flexão dos adjetivos (m ou f)")
     p.set_defaults(func=cmd_criar)

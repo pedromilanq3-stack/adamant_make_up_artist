@@ -130,12 +130,13 @@ def main(argv: list[str] | None = None) -> None:
     print(f"Personagem pronto em {folder}: {', '.join(files)}")
     if args.instalar:
         slug = slugify(args.nome)
-        target = ROOT / ".claude" / "skills" / slug
-        if target.exists():
-            shutil.rmtree(target)
-        with zipfile.ZipFile(folder / f"{slug}-skill.zip") as archive:
-            archive.extractall(ROOT / ".claude" / "skills")
-        print(f"Skill instalada em {target}: use /{slug} neste projeto.")
+        for skills_root in (ROOT / ".claude" / "skills", ROOT / ".agents" / "skills"):
+            target = skills_root / slug
+            if target.exists():
+                shutil.rmtree(target)
+            with zipfile.ZipFile(folder / f"{slug}-skill.zip") as archive:
+                archive.extractall(skills_root)
+            print(f"Skill instalada em {target}: use /{slug} neste projeto.")
     brain = Brain.load(folder / f"{slugify(args.nome)}.json")
     print()
     print(brain.summary())

@@ -78,6 +78,8 @@ class MemoryStore:
     short_term_capacity: int = 7
     long_term_capacity: int = 300
     consolidation_threshold: float = 0.45
+    lesson_capacity: int = 12
+    long_term_floor: float = 0.0   # força mínima das lembranças de longo prazo (nunca regride: 0.3)
 
     # ------------------------------------------------------------------ registro
     def record(self, experience: Experience, emotion: str, now: float | None = None) -> Memory:
@@ -112,7 +114,7 @@ class MemoryStore:
         for memory in self.long_term:
             # Lembranças muito emocionais e relembradas resistem mais.
             resilience = 0.3 + 0.3 * abs(memory.valence) + min(0.2, 0.04 * memory.recalls)
-            memory.strength *= factor ** (1 - resilience)
+            memory.strength = max(self.long_term_floor, memory.strength * factor ** (1 - resilience))
         self.long_term = [m for m in self.long_term if m.strength >= 0.08]
         return before - len(self.long_term)
 
@@ -149,7 +151,7 @@ class MemoryStore:
         lesson = Lesson(text=text, weight=weight, learned_at=now)
         self.lessons.append(lesson)
         self.lessons.sort(key=lambda l: l.weight, reverse=True)
-        del self.lessons[12:]
+        del self.lessons[self.lesson_capacity:]
         return lesson
 
     def strongest_lessons(self, limit: int = 4) -> list[Lesson]:
@@ -168,6 +170,8 @@ class MemoryStore:
             "short_term": [m.to_dict() for m in self.short_term],
             "long_term": [m.to_dict() for m in self.long_term],
             "lessons": [l.to_dict() for l in self.lessons],
+            "lesson_capacity": self.lesson_capacity,
+            "long_term_floor": self.long_term_floor,
         }
 
     @classmethod
@@ -176,4 +180,6 @@ class MemoryStore:
             short_term=[Memory.from_dict(m) for m in data.get("short_term", [])],
             long_term=[Memory.from_dict(m) for m in data.get("long_term", [])],
             lessons=[Lesson.from_dict(l) for l in data.get("lessons", [])],
+            lesson_capacity=int(data.get("lesson_capacity", 12)),
+            long_term_floor=float(data.get("long_term_floor", 0.0)),
         )

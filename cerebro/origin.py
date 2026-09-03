@@ -35,7 +35,14 @@ LABELS: dict[str, str] = {
     "segredos": "secrets", "segredo": "secrets",
     "nao sei": "unknown", "duvidas": "unknown", "nao lembro": "unknown",
     "nome": "name",
+    "natureza": "nature", "leis": "nature", "regras de ser": "nature", "natureza do personagem": "nature",
 }
+
+NATURE_KEYS: tuple[tuple[str, str], ...] = (
+    (r"identidade (travada|fixa|imutavel|bloqueada)|nada (nem ninguem )?(muda|consegue mudar)|nao muda quem (ele|ela) e|sempre quem (ele|ela) e", "identidade_travada"),
+    (r"aprendizado seletivo|so (admite|aceita|aprende) (o que|conhecimento)|de seu interesse|do seu interesse", "aprendizado_seletivo"),
+    (r"nunca regride|so evolui|sempre evolui|nao regride|evolui sempre", "nunca_regride"),
+)
 
 LEVELS: dict[str, float] = {
     "lendario": 1.0, "mestre": 1.0, "mestra": 1.0, "excelente": 0.9, "avancado": 0.8, "avancada": 0.8,
@@ -65,6 +72,7 @@ class Origin:
     secrets: list[str] = field(default_factory=list)
     unknown: list[str] = field(default_factory=list)
     name: str = ""
+    nature: dict[str, bool] = field(default_factory=dict)
 
     @property
     def is_rich(self) -> bool:
@@ -153,8 +161,11 @@ def parse_origin(text: str) -> Origin:
     origin.name = " ".join(buffers.get("name", [])).strip()
     origin.description = " ".join(" ".join(buffers.get("description", [])).split())
     origin.history = _split_items("\n".join(buffers.get("history", [])))
-    for item in _split_items("\n".join(buffers.get("abilities", []))):
-        for piece in re.split(r",\s*(?![^()]*\))", item):
+    abilities_text = "\n".join(buffers.get("abilities", []))
+    for item in _split_items(abilities_text):
+        # Com ';' na lista, a vírgula faz parte do item; sem ';', a vírgula separa itens.
+        pieces = [item] if ";" in abilities_text else re.split(r",\s*(?![^()]*\))", item)
+        for piece in pieces:
             if piece.strip():
                 name, level = _parse_ability(piece)
                 if name:
@@ -166,6 +177,10 @@ def parse_origin(text: str) -> Origin:
     origin.fears = _split_items("\n".join(buffers.get("fears", [])))
     origin.secrets = _split_items("\n".join(buffers.get("secrets", [])))
     origin.unknown = _split_items("\n".join(buffers.get("unknown", [])))
+    nature_text = normalize("\n".join(buffers.get("nature", [])))
+    for pattern, key in NATURE_KEYS:
+        if re.search(pattern, nature_text):
+            origin.nature[key] = True
     if not origin.description and origin.history:
         origin.description = origin.history[0]
     return origin

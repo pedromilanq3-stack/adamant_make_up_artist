@@ -53,6 +53,9 @@ def render_ficha(brain: Brain, now: float | None = None) -> str:
               "- Medos: " + (", ".join(brain.fears) or "(nenhum declarado)"),
               "- Segredos (ele decide se, quando e para quem revela): " + ("; ".join(brain.secrets) or "(nenhum)"),
               ""]
+    lines += ["## Natureza (leis de ser)",
+              "- " + ("; ".join(brain.nature_lines()) if brain.nature else "nenhuma lei especial: tudo pode mudar com o que vive"),
+              ""]
     lines += ["## Consciência (o que sei e o que não sei)",
               "- Sei de mim: " + " ".join(brain.known),
               "- Ainda não sei: " + (" · ".join(brain.unknown) or "(nada que eu perceba)"),

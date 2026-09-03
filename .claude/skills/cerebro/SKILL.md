@@ -29,7 +29,8 @@ texto. Nada precisa ser instalado.
 `/cerebro criar Nome: descrição de si` (opcional `genero=f`). A descrição pode ser um
 parágrafo ou uma **ficha de origem** completa, em várias linhas, com as seções
 `História:`, `Habilidades:` (com nível entre parênteses), `Relações:` ou `Pessoas:`,
-`Medos:`, `Segredos:` e `Não sei:`. Com ficha, o personagem nasce sabendo a própria
+`Medos:`, `Segredos:`, `Não sei:` e `Natureza:` (leis de ser: identidade travada,
+aprendizado seletivo, nunca regride). Com ficha, o personagem nasce sabendo a própria
 história, dominando as habilidades e conhecendo as pessoas da vida dele; a simulação
 começa dali, e as escolhas são dele.
 

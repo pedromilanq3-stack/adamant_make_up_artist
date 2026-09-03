@@ -892,6 +892,12 @@ class OriginTests(unittest.TestCase):
         self.assertEqual(origin.relations, {"Ana": ""})
         self.assertEqual(origin.fears, ["escuro"])
 
+    def test_semicolon_lists_keep_commas_inside_abilities(self) -> None:
+        origin = parse_origin("Habilidades: leitura de incentivos, riscos e alternativas (mestre); negociação (bom)")
+        self.assertEqual(origin.abilities, {"leitura de incentivos, riscos e alternativas": 1.0, "negociação": 0.6})
+        origin = parse_origin("Habilidades: espada (mestre), rastreamento (bom)")
+        self.assertEqual(list(origin.abilities), ["espada", "rastreamento"])
+
     def test_parser_keeps_parentheses_whole(self) -> None:
         origin = parse_origin("Relações: Milan (decide; autoriza gastos); Harvey (estratégia. Redigiu o briefing)\n"
                               "História: Perdi tudo. Recomecei em 2020; venci.")
@@ -1029,6 +1035,65 @@ class GptPackageTests(unittest.TestCase):
         with zipfile.ZipFile(root / "personagens" / "vincent-knox" / "vincent-knox-gpt.zip") as archive:
             self.assertIn("instrucoes.md", archive.namelist())
             self.assertIn("conhecimento/regras.md", archive.namelist())
+
+
+class NatureTests(unittest.TestCase):
+    ORIGIN = ("Sou direto, competitivo e controlado. Leal a poucos.\n"
+              "Natureza: identidade travada; aprendizado seletivo; nunca regride")
+
+    def test_parser_reads_nature(self) -> None:
+        origin = parse_origin(self.ORIGIN)
+        self.assertEqual(origin.nature, {"identidade_travada": True, "aprendizado_seletivo": True, "nunca_regride": True})
+        self.assertEqual(parse_origin("Sou comum.\nNatureza: nada nem ninguém muda quem ele é").nature,
+                         {"identidade_travada": True})
+        self.assertEqual(parse_origin(DESCRIPTION_GOOD).nature, {})
+
+    def test_locked_identity_keeps_traits(self) -> None:
+        locked = make("Harvey", self.ORIGIN)
+        free = make("Harvey", "Sou direto, competitivo e controlado. Leal a poucos.")
+        traits_before = dict(locked.traits.to_dict())
+        free_before = dict(free.traits.to_dict())
+        hostile = ["seu idiota, você é um lixo", "vou te apagar", "cala a boca, inútil", "te odeio"] * 5
+        run_conversation(locked, hostile)
+        run_conversation(free, hostile)
+        self.assertEqual(locked.traits.to_dict(), traits_before)
+        self.assertNotEqual(free.traits.to_dict(), free_before)
+        self.assertNotEqual(locked.character.morality, make("Harvey", self.ORIGIN).character.morality)
+
+    def test_selective_learning_admits_only_interests(self) -> None:
+        brain = make("Harvey", self.ORIGIN)
+        brain.values = ValueSystem(weights={v: 0.05 for v in VALUES} | {"poder": 0.9, "vinganca": 0.8, "verdade": 0.7,
+                                                                        "conhecimento": 0.6, "liberdade": 0.5})
+        self.assertTrue(brain._interests(("poder",)))
+        self.assertFalse(brain._interests(("cuidado", "pertencimento")))
+        care = brain.values.weights["cuidado"]
+        for _ in range(4):
+            brain.acting_stance = ""  # isola o caminho do que ele recebe (a experiência própria sempre conta)
+            brain.perceive("obrigado, você é incrível, querido amigo", now=1.0)
+        self.assertEqual(brain.values.weights["cuidado"], care)
+        brain.reflect(now=2.0)
+        self.assertFalse(any("afeto" in l.text for l in brain.memory.lessons))
+        brain.acting_stance = "retaliar"
+        brain.strategies.learn("retaliar", 0.9)
+        self.assertGreater(brain.strategies.value("retaliar"), 0)
+
+    def test_never_regresses(self) -> None:
+        brain = make("Harvey", self.ORIGIN + "\nHistória: Aprendi cedo que confiança sem critério custa caro.")
+        brain.experience_count = 5000
+        self.assertGreaterEqual(brain.plasticity, 0.15)
+        self.assertEqual(brain.memory.lesson_capacity, 40)
+        brain.memory.forget(365 * 86400)
+        self.assertTrue(all(m.strength >= 0.3 for m in brain.memory.long_term))
+        self.assertEqual(len(brain.memory.long_term), 1)
+        already = len(brain.memory.lessons)
+        for index in range(20):
+            brain.memory.learn(f"lição {index}", 0.1)
+        self.assertEqual(len(brain.memory.lessons), already + 20)
+        restored = Brain.from_json(brain.to_json())
+        self.assertEqual(restored.nature, brain.nature)
+        self.assertEqual(restored.memory.long_term_floor, 0.3)
+        self.assertIn("## Minha natureza", brain.identity_block())
+        self.assertIn("## Natureza", render_ficha(brain, now=0.0))
 
 
 class PersistenceTests(unittest.TestCase):

@@ -15,6 +15,9 @@ Escalas: 0 a 10 salvo indicação. Moralidade, vínculo e sorte vão de -10 a +1
 - Medos: {...}
 - Segredos (ele decide se, quando e para quem revela): {...}
 
+## Natureza (leis de ser; vazio = tudo pode mudar com o que vive)
+- {identidade travada · aprendizado seletivo · nunca regride — só as que a origem declarar}
+
 ## Consciência (o que sei e o que não sei)
 - Sei de mim: {2 a 4 frases em primeira pessoa, tiradas só da descrição de origem}
 - Ainda não sei: quem é você e se posso confiar · como é o mundo fora desta conversa ·

@@ -214,6 +214,20 @@ cérebro despertado (`cerebro/ficha.py`). A skill do personagem traz as regras c
 a ficha inicial e a origem; se o usuário colar uma ficha salva, a vida dele continua de
 onde parou.
 
+## Natureza: leis de ser
+
+A ficha de origem pode declarar, na seção `Natureza:`, leis que valem acima de todas as
+outras regras. São reconhecidas por palavras-chave:
+
+| Lei | Palavras que a ativam | Efeito |
+|---|---|---|
+| identidade travada | "identidade travada", "nada nem ninguém muda quem ele é" | os traços de temperamento nunca mudam; a descrição de origem é quem ele é, sempre. Moralidade, valores, propósito e postura continuam livres, para o bem ou para o mal |
+| aprendizado seletivo | "aprendizado seletivo", "só admite o que é de seu interesse" | ele só admite lições e reforços de valor que tocam nos seus cinco valores mais altos ou no propósito; o resto ouve, registra e descarta. O que vem dos resultados das próprias posturas ele sempre aprende: é experiência dele |
+| nunca regride | "nunca regride", "só evolui", "evolui sempre" | habilidades não caem; lições nunca são apagadas (até 40); lembranças de longo prazo não descem abaixo de 0,3 de força e a história nunca some; resiliência não cai; descobertas não voltam a "não sei"; a plasticidade nunca fica abaixo de 0,15, então ele evolui em qualquer idade |
+
+As leis aparecem no implante em "Minha natureza" e na ficha da skill em "Natureza".
+Emoções, química e sorte continuam oscilando sob qualquer lei: isso não é regressão.
+
 ## O despertar: ler quem é antes de simular
 
 Antes de viver qualquer coisa, o cérebro lê a si mesmo. Na criação ele separa três

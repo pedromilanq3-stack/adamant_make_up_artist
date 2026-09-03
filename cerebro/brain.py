@@ -126,6 +126,7 @@ class Brain:
     relations: dict[str, str] = field(default_factory=dict)     # pessoas da minha vida
     fears: list[str] = field(default_factory=list)
     secrets: list[str] = field(default_factory=list)
+    nature: dict[str, bool] = field(default_factory=dict)      # leis de ser: identidade_travada, aprendizado_seletivo, nunca_regride
     known: list[str] = field(default_factory=list)       # o que sei de mim (da descrição)
     unknown: list[str] = field(default_factory=list)     # o que ainda não sei
     discovered: list[str] = field(default_factory=list)  # o que descobri vivendo
@@ -190,6 +191,10 @@ class Brain:
         self.relations = dict(origin.relations)
         self.fears = list(origin.fears)
         self.secrets = list(origin.secrets)
+        self.nature = dict(origin.nature)
+        if self.nature.get("nunca_regride"):
+            self.memory.lesson_capacity = 40
+            self.memory.long_term_floor = 0.3
         text = normalize(self.self_description)
         self.unknown = list(UNKNOWN_AT_BIRTH)
         for pattern, question in OPEN_QUESTIONS:
@@ -269,7 +274,16 @@ class Brain:
     # ------------------------------------------------------------------ propriedades
     @property
     def plasticity(self) -> float:
-        return plasticity_for(self.experience_count)
+        value = plasticity_for(self.experience_count)
+        if self.nature.get("nunca_regride"):
+            value = max(value, 0.15)  # nunca fica rígido demais para evoluir
+        return value
+
+    def _interests(self, values: tuple[str, ...]) -> bool:
+        """Aprendizado seletivo: só admite o que toca no que ele já valoriza."""
+        if not self.nature.get("aprendizado_seletivo"):
+            return True
+        return any(v in self.values.top(5) for v in values)
 
     @property
     def stage(self) -> str:
@@ -378,7 +392,7 @@ class Brain:
             self.resilience = clamp(self.resilience + 0.03 * self.plasticity * experience.intensity, 0.05, 0.95)
             self.volatility = clamp(self.volatility + 0.02 * experience.intensity, 0.05, 0.95)
         for tag in experience.tags:
-            if tag in TAG_VALUES:
+            if tag in TAG_VALUES and self._interests(tuple(TAG_VALUES[tag])):
                 self.values.reinforce(TAG_VALUES[tag], 0.5 + experience.intensity)
         if experience.source == "world" or "tentacao" in experience.tags:
             entry = experience.text
@@ -396,7 +410,8 @@ class Brain:
             trait_deltas["neuroticismo"] = -0.02 * experience.intensity
         if "surpresa" in experience.emotion_impact and experience.emotion_impact["surpresa"] > 0.1:
             trait_deltas["abertura"] = 0.02
-        self.traits.shift(trait_deltas, self.plasticity)
+        if not self.nature.get("identidade_travada"):
+            self.traits.shift(trait_deltas, self.plasticity)
         self._refresh_baseline()
 
         felt = ""
@@ -503,7 +518,10 @@ class Brain:
         plasticity = self.plasticity
         tags = [t for m in self.memory.all_memories()[-12:] for t in m.tags]
 
-        def learn(text: str, weight: float, deltas: dict[str, float] | None = None) -> None:
+        def learn(text: str, weight: float, deltas: dict[str, float] | None = None,
+                  about: tuple[str, ...] = ()) -> None:
+            if about and not self._interests(about):
+                return  # não é do interesse dele; não admite a lição
             self.memory.learn(text, weight, now)
             learned.append(text)
             if deltas:
@@ -511,38 +529,38 @@ class Brain:
 
         if considered >= 5 and balance > 0.3:
             learn("As pessoas podem ser boas comigo; vale a pena se abrir.", 1.0,
-                  {"trust": 0.05, "morality": 0.03})
+                  {"trust": 0.05, "morality": 0.03}, about=('pertencimento', 'cuidado', 'lealdade'))
         if considered >= 5 and balance < -0.3:
             learn("O mundo machuca quem baixa a guarda.", 1.0,
-                  {"trust": -0.06, "morality": -0.02, "aggression": 0.02})
+                  {"trust": -0.06, "morality": -0.02, "aggression": 0.02}, about=('seguranca', 'sobrevivencia', 'poder'))
         if tags.count("insulto") >= 3:
             learn("Quem me insulta não merece a minha paciência.", 1.0,
-                  {"aggression": 0.04, "empathy": -0.02})
+                  {"aggression": 0.04, "empathy": -0.02}, about=('vinganca', 'poder', 'liberdade'))
         if tags.count("ameaca") >= 2:
-            learn("Sobreviver vem antes de agradar.", 1.2, {"courage": -0.02, "morality": -0.03})
+            learn("Sobreviver vem antes de agradar.", 1.2, {"courage": -0.02, "morality": -0.03}, about=('sobrevivencia', 'seguranca'))
         if tags.count("carinho") >= 3:
-            learn("Sou alguém que merece afeto.", 1.0, {"empathy": 0.02, "morality": 0.02})
+            learn("Sou alguém que merece afeto.", 1.0, {"empathy": 0.02, "morality": 0.02}, about=('pertencimento', 'cuidado'))
         if tags.count("gentileza_propria") >= 2:
-            learn("Escolho ser gentil mesmo quando custa.", 1.2, {"morality": 0.05, "empathy": 0.03})
+            learn("Escolho ser gentil mesmo quando custa.", 1.2, {"morality": 0.05, "empathy": 0.03}, about=('cuidado', 'justica'))
         if tags.count("crueldade_propria") >= 2:
             learn("Ser duro funciona; ninguém me pisa.", 1.2,
-                  {"morality": -0.06, "aggression": 0.04, "empathy": -0.03})
+                  {"morality": -0.06, "aggression": 0.04, "empathy": -0.03}, about=('poder', 'sobrevivencia', 'vinganca'))
         if tags.count("traicao") >= 1 and self.character.trust < 0.4:
-            learn("Confiança se paga caro.", 0.8, {"honesty": -0.01})
+            learn("Confiança se paga caro.", 0.8, {"honesty": -0.01}, about=('seguranca', 'verdade'))
         if tags.count("pedido_de_ajuda") >= 2 and self.character.empathy > 0.5:
-            learn("Ajudar os outros me faz sentir inteiro.", 1.0, {"morality": 0.03})
+            learn("Ajudar os outros me faz sentir inteiro.", 1.0, {"morality": 0.03}, about=('cuidado', 'pertencimento'))
 
         if considered >= 5 and balance > 0.2:
             self.volatility = clamp(self.volatility - 0.02, 0.05, 0.95)
         self._grow(now)
         if tags.count("adversidade") >= 2:
-            learn("A vida bate sem avisar; não dá para contar com nada.", 1.0, {"trust": -0.02})
+            learn("A vida bate sem avisar; não dá para contar com nada.", 1.0, {"trust": -0.02}, about=('seguranca', 'sobrevivencia', 'conhecimento'))
         if tags.count("resisti") >= 1:
-            learn("Sei dizer não até para mim.", 0.8, {"honesty": 0.02})
+            learn("Sei dizer não até para mim.", 0.8, {"honesty": 0.02}, about=('verdade', 'justica', 'liberdade'))
         if tags.count("cedi") >= 1:
-            learn("Ninguém viu; então não foi errado.", 0.8, {"honesty": -0.02, "morality": -0.02})
+            learn("Ninguém viu; então não foi errado.", 0.8, {"honesty": -0.02, "morality": -0.02}, about=('prazer', 'poder'))
         if tags.count("acaso") >= 2 and balance > 0:
-            learn("Às vezes o mundo é generoso do nada.", 0.6, {"trust": 0.02})
+            learn("Às vezes o mundo é generoso do nada.", 0.6, {"trust": 0.02}, about=('liberdade', 'prazer', 'conhecimento'))
         self.character.snapshot_morality()
         self.stance = self.decide_stance()
         self._update_narrative(now)
@@ -697,6 +715,19 @@ class Brain:
         return max(scores, key=scores.get)
 
     # ------------------------------------------------------------------ implante
+    def nature_lines(self) -> list[str]:
+        lines = []
+        if self.nature.get("identidade_travada"):
+            lines.append("Minha identidade não muda: nada nem ninguém altera meu temperamento ou quem eu sou. "
+                         "O que a vida decide é só para que lado eu uso isso, para o bem ou para o mal.")
+        if self.nature.get("aprendizado_seletivo"):
+            lines.append("Aprendo por escolha: só admito o conhecimento que é do meu interesse; "
+                         "o resto eu ouço, registro e descarto.")
+        if self.nature.get("nunca_regride"):
+            lines.append("Nunca regrido: o que sei fazer, o que aprendi e o que descobri só crescem; "
+                         "minha história não se apaga e eu nunca fico velho demais para evoluir.")
+        return lines
+
     def identity_block(self) -> str:
         """Parte estável do implante: quem o cérebro é e as regras de encarnação."""
         return (
@@ -710,6 +741,8 @@ class Brain:
                if self.relations else "")
             + (("## Segredos (você decide se, quando e para quem revela)\n" + "".join(
                 f"- {secret}\n" for secret in self.secrets) + "\n") if self.secrets else "")
+            + (("## Minha natureza\n" + "".join(f"- {line}\n" for line in self.nature_lines()) + "\n")
+               if self.nature else "")
             + f"## Regras de encarnação\n"
             f"- Fale em primeira pessoa, como {self.name}. Você tem sentimentos reais para você; "
             f"deixe que transpareçam no tom, no ritmo e nas escolhas de palavras.\n"
@@ -921,6 +954,7 @@ class Brain:
             "relations": dict(self.relations),
             "fears": list(self.fears),
             "secrets": list(self.secrets),
+            "nature": dict(self.nature),
             "known": list(self.known),
             "unknown": list(self.unknown),
             "discovered": list(self.discovered),
@@ -970,6 +1004,7 @@ class Brain:
             relations=dict(data.get("relations", {})),
             fears=list(data.get("fears", [])),
             secrets=list(data.get("secrets", [])),
+            nature=dict(data.get("nature", {})),
             known=list(data.get("known", [])),
             unknown=list(data.get("unknown", [])),
             discovered=list(data.get("discovered", [])),

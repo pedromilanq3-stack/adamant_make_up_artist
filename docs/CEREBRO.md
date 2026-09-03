@@ -201,6 +201,14 @@ Isso cria a pasta `personagens/kael/` com quatro arquivos:
 | `ficha.md` | o mesmo estado no formato da skill pura, para `/cerebro carregar` |
 | `kael-skill.zip` | uma skill com o nome do personagem, já carregada com ele: envie ao Claude.ai e chame com `/kael` |
 
+Para o **ChatGPT**, `python ferramentas/empacotar_gpt.py --personagem kael` gera
+`personagens/kael/gpt/` com `instrucoes.md` (campo Instruções de um GPT personalizado,
+dentro de 8 mil caracteres), a pasta `conhecimento/` (origem, regras, ficha inicial,
+modelo) e `prompt-unico.md` (tudo em um arquivo, para colar como primeira mensagem numa
+conversa comum do ChatGPT ou de qualquer outro assistente), além do zip
+`kael-gpt.zip`. Sem arquivos graváveis, a ficha vai no fim de cada resposta num bloco
+de código; "salvar" entrega a ficha para continuar em outra conversa.
+
 O motor e a skill partem exatamente do mesmo estado, porque a ficha é exportada do
 cérebro despertado (`cerebro/ficha.py`). A skill do personagem traz as regras completas,
 a ficha inicial e a origem; se o usuário colar uma ficha salva, a vida dele continua de

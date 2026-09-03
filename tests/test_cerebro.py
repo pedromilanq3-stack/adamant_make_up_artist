@@ -1010,6 +1010,27 @@ class FichaExportTests(unittest.TestCase):
                                  (folder / "ficha.md").read_text(encoding="utf-8"))
 
 
+class GptPackageTests(unittest.TestCase):
+    def test_gpt_package_for_vincent(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        run = subprocess.run([sys.executable, str(root / "ferramentas" / "empacotar_gpt.py"), "--personagem", "vincent-knox"],
+                             capture_output=True, text=True, timeout=60, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+        self.assertEqual(run.returncode, 0, run.stderr)
+        out = root / "personagens" / "vincent-knox" / "gpt"
+        instructions = (out / "instrucoes.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(instructions), 8000)
+        self.assertIn("Vincent Knox", instructions)
+        for name in ("origem.txt", "ficha-inicial.md", "regras.md", "ficha-modelo.md"):
+            self.assertTrue((out / "conhecimento" / name).exists(), name)
+        single = (out / "prompt-unico.md").read_text(encoding="utf-8")
+        self.assertIn("## 10. Postura", single)
+        self.assertIn("Estou ativo.", single)
+        import zipfile
+        with zipfile.ZipFile(root / "personagens" / "vincent-knox" / "vincent-knox-gpt.zip") as archive:
+            self.assertIn("instrucoes.md", archive.namelist())
+            self.assertIn("conhecimento/regras.md", archive.namelist())
+
+
 class PersistenceTests(unittest.TestCase):
     def test_roundtrip(self) -> None:
         brain = make("Lua", DESCRIPTION_GOOD, gender="f")

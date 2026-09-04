@@ -15,9 +15,12 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
                     └── nucleo atlas ──► sala de ATLAS ──bloco ```atlas```──► nucleo aplicar
 ```
 
-- **Harvey** tem sala própria e cérebro procedural próprio (`HARVEY_CEREBRO.md`,
-  cinco camadas, sem trava mecânica no núcleo, por decisão de Milan). Coordena e
+- **Harvey** é o Harvey de Milan: a origem (`01_NUCLEO_HARVEY.md`) é a única fonte da
+  identidade, com Natureza (identidade travada, aprendizado seletivo, nunca regride).
+  Tem cérebro procedural próprio (`HARVEY_CEREBRO.md`, seis camadas: a sexta é a psique
+  nascida da ficha dele; sem trava mecânica no núcleo, por decisão de Milan). Coordena e
   responde a Milan. Não fala como setor. Emite ordens. Aprende com `setor: HARVEY`.
+  Nunca inventa passado, pessoas ou fatos fora da origem.
 - **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
   estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
 - **Batman** tem sala própria e cérebro procedural com uma sexta camada, a mente

@@ -60,8 +60,8 @@ SECOES_DA_CARTA = (
 )
 CAMPOS_DO_DOSSIE = ("para", "fato", "fonte", "confianca", "restricao", "pergunta")
 ARQUIVO_MANIFESTO = "manifesto.json"
-ARQUIVO_INSTRUCOES = "harvey/INSTRUCOES_HARVEY.md"
-ARQUIVO_ADENDO = "ADENDO_HARVEY.md"
+ARQUIVO_INSTRUCOES = "harvey/instrucoes_originais.md"
+ARQUIVO_ADENDO = "harvey/ADENDO_HARVEY.md"
 PASTA_HARVEY = "harvey"
 HARVEY = "HARVEY"
 BATMAN = "BATMAN"
@@ -71,8 +71,8 @@ LOBO = "LOBO"
 # Personagens: componentes com sala própria e cérebro procedural, fora do ciclo de setores.
 # camada6: None (só cinco camadas), "mente" (fases, Batman) ou "psique" (cérebro completo, NEX).
 PERSONAGENS = {
-    HARVEY: {"pasta": "harvey", "chave": "harvey", "nome": "Harvey Specter", "camada6": None,
-             "transiciona": False, "instrucoes": "INSTRUCOES_HARVEY.md", "limite": 8000, "nucleo": None,
+    HARVEY: {"pasta": "harvey", "chave": "harvey", "nome": "Harvey Specter", "camada6": "psique",
+             "transiciona": False, "instrucoes": "ADENDO_HARVEY.md", "limite": 4500, "nucleo": "NUCLEO_HARVEY.md",
              "prefixo_bib": "BIB_"},
     BATMAN: {"pasta": "batman", "chave": "batman", "nome": "Batman", "camada6": "mente",
              "transiciona": True, "instrucoes": "INSTRUCOES_BATMAN.md", "limite": 8000, "nucleo": "NUCLEO_BATMAN.md",
@@ -1283,8 +1283,9 @@ class Projeto:
             shutil.rmtree(destino)
         destino.mkdir(parents=True)
         gerados: list[Path] = []
-        for origem, nome in ((ARQUIVO_INSTRUCOES, "00_INSTRUCOES_HARVEY.md"),
-                             (ARQUIVO_ADENDO, "01_ADENDO_DE_INTEGRACAO.md"),
+        for origem, nome in ((ARQUIVO_ADENDO, "00_ADENDO_PARA_O_SEU_HARVEY.md"),
+                             (ARQUIVO_INSTRUCOES, "01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md"),
+                             (f"{PASTA_HARVEY}/NUCLEO_HARVEY.md", "01_NUCLEO_HARVEY.md"),
                              (ARQUIVO_PROTOCOLO, "02_PROTOCOLO_DO_CEREBRO.md")):
             gerados.append(destino / nome)
             shutil.copyfile(self.raiz / origem, destino / nome)

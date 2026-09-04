@@ -132,6 +132,7 @@ TONS = {
     "brincalhão": "humor leve, provoca sem ferir",
     "sereno": "o tom de base do núcleo",
 }
+POSTURAS = ("analisar", "cooperar", "explorar", "observar", "recolher-se", "desafiar", "acolher", "retaliar", "manipular")
 
 RECUPERACAO = frozenset({"descanso", "convivio", "terapia", "medicacao", "ajuda_recebida", "descoberta", "sucesso",
                          "fisioterapia"})
@@ -364,10 +365,19 @@ def _derivar(psique: Registro, saude_ativos: dict) -> None:
     influ = 50 + (50 - ego) * 0.4 + (medo - 30) * 0.3 - (serenidade - 50) * 0.2 - (rigor - 50) * 0.2
     psique.set("influenciabilidade", str(_clamp(influ)))
     energia = _num(psique, "energia")
-    if emocoes["raiva"] >= 60 and ego >= 60:
+    honestidade = _num(psique, "v_honestidade")
+    empatia_t = _num(psique, "t_empatia")
+    amor_g, odio_g = _num(psique, "amor"), _num(psique, "odio")
+    if emocoes["raiva"] >= 60 and odio_g >= 40 and empatia_t < 55:
+        postura = "retaliar"
+    elif ego >= 70 and honestidade < 45 and emocoes["expectativa"] >= 50 and emocoes["medo"] < 40:
+        postura = "manipular"
+    elif emocoes["raiva"] >= 60 and ego >= 60:
         postura = "desafiar"
     elif emocoes["medo"] >= 60 or energia <= 25:
         postura = "recolher-se"
+    elif amor_g >= 40 and emocoes["alegria"] >= 45 and empatia_t >= 50:
+        postura = "acolher"
     elif emocoes["tristeza"] >= 60:
         postura = "observar"
     elif emocoes["confianca"] >= 55 and emocoes["alegria"] >= 45:
@@ -587,10 +597,14 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
     if "valor" in dados:
         valor, delta = dados["valor"]
         d = delta * fator * _num(psique, "plasticidade") / 100 * _ruido()
+        if d < 0 and "nunca_regride" in psique.get("natureza", ""):
+            d = 0.0  # nunca regride: valores não caem por evento; só por decisão registrada
         psique.set(f"v_{valor}", str(_clamp(_num(psique, f"v_{valor}") + d)))
         deltas[f"v_{valor}"] = d
     plasticidade = _num(psique, "plasticidade") / 100
-    for traco, direcao in DERIVA_DE_TRACOS.get(evento, {}).items():  # o temperamento também é plástico
+    natureza = psique.get("natureza", "")
+    deriva = {} if "identidade_travada" in natureza else DERIVA_DE_TRACOS.get(evento, {})
+    for traco, direcao in deriva.items():  # o temperamento também é plástico, salvo Natureza travada
         d = 0.35 * direcao * fator * plasticidade * _ruido()
         psique.set(f"t_{traco}", str(round(max(0.0, min(100.0, _num(psique, f"t_{traco}") + d)), 2)))
         deltas[f"t_{traco}"] = d
@@ -615,6 +629,13 @@ def aplicar_significado(estado: dict, fonte: str, conteudo: str, significado: st
     plasticidade = _num(psique, "plasticidade") / 100
     abertura = _num(psique, "t_abertura") / 100
     d_valor = (6 if direcao == "+" else -6) * fator * plasticidade * (0.6 + 0.8 * abertura) * _ruido()
+    natureza = psique.get("natureza", "")
+    if "aprendizado_seletivo" in natureza:
+        top = sorted(VALORES, key=lambda v: -_num(psique, f"v_{v}"))[:3]
+        if valor not in top and valor not in psique.get("proposito", ""):
+            d_valor *= 0.25  # ouve, registra e quase descarta: só o que toca os valores mais altos entra inteiro
+    if d_valor < 0 and "nunca_regride" in natureza:
+        d_valor = 0.0
     psique.set(f"v_{valor}", str(_clamp(_num(psique, f"v_{valor}") + d_valor)))
     d_emocao = 10 * fator * _ruido()
     psique.set(f"e_{emocao}", str(_clamp(_num(psique, f"e_{emocao}") + d_emocao)))
@@ -751,7 +772,10 @@ def resumo(estado: dict, ultimos: int = 8) -> str:
               "", f"**Mistura do momento:** {psique.get('mistura')}.", f"**Tom:** {psique.get('tom')}.",
               f"Amor {psique.get('amor')} · ódio {psique.get('odio')} · paixão {psique.get('paixao')}"
               + (f" · dor {psique.get('dor')} (base {psique.get('dor_base')})" if _num(psique, "dor_base") or _num(psique, "dor") else "") + ".",
-              "", f"Caráter (valores mais fortes): {psique.get('carater')}.", "",
+              "", f"Caráter (valores mais fortes): {psique.get('carater')}."
+              + (f" Propósito: {psique.get('proposito')}." if psique.get("proposito") else "")
+              + (f" Princípio: {psique.get('principio')}" if psique.get("principio") else "")
+              + (f" Natureza: {psique.get('natureza')}." if psique.get("natureza") else ""), "",
               "| Emoção | Valor |", "|---|---|"]
     linhas += [f"| {e} | {psique.get('e_' + e)} |" for e in EMOCOES]
     linhas += ["", "| Traço (temperamento, muda devagar) | Valor |", "|---|---|"]

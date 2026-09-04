@@ -34,17 +34,19 @@ campo **Instruções** (cabe no limite; `validar` avisa se passar de 8.000 carac
 e os demais vão em **Arquivos**. Se o Projeto oferecer "memória só do projeto",
 ative; a memória oficial continua sendo os arquivos.
 
-**Sala de Harvey** (`gpt_projeto/upload_harvey/`): `00_INSTRUCOES_HARVEY.md` nas
-Instruções (o núcleo de identidade: quem Harvey é, como fala, o que nunca faz, como
-comanda os setores). Nos Arquivos: `HARVEY_CEREBRO.md` (o cérebro procedural dele, cinco
-camadas), as dez bibliotecas `BIB_01` a `BIB_10` (perfil e psicologia, estilo de
-comunicação, negociação e estratégia, leitura de pessoas, relações e mentoria,
-referências culturais, frases por situação, modo de operação com Milan, combinações de
-habilidades, antipadrões), `01_ADENDO_DE_INTEGRACAO.md`, `02_PROTOCOLO_DO_CEREBRO.md`,
-`03_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e, quando existirem, `04_AVISOS_DE_ATLAS.md` e
-`90_DOSSIES.md`. Se Milan já tiver um Harvey com prompt próprio e preferir mantê-lo, o
-adendo sozinho basta para integrá-lo; nesse caso, o cérebro procedural continua
-funcionando do mesmo jeito.
+**Sala de Harvey** (`gpt_projeto/upload_harvey/`): é o Harvey que Milan já tinha. As
+Instruções da sala continuam sendo as dele (`01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md`),
+com `00_ADENDO_PARA_O_SEU_HARVEY.md` colado no fim: o adendo não muda a origem nem a
+Natureza; só tira a ficha do chat e a entrega ao Núcleo. Nos Arquivos: `01_NUCLEO_HARVEY.md`
+(a origem, imutável e única fonte da identidade), `HARVEY_CEREBRO.md` (seis camadas: a
+sexta é a psique, nascida da ficha inicial dele), as dez bibliotecas `BIB_01` a `BIB_10`
+escritas só com o que a origem diz (perfil e psicologia, estilo de comunicação, negociação
+e estratégia, leitura de incentivos e decisão, relações e lealdade, repertório real e o
+que ele não tem, frases derivadas da origem, modo de operação com Milan, combinações de
+habilidades, antipadrões), `02_PROTOCOLO_DO_CEREBRO.md`, `03_MANIFESTO.md`, os cérebros
+dos outros personagens, `S01_ROTA_DE_RENDA.md` e, quando existirem, `04_AVISOS_DE_ATLAS.md`
+e `90_DOSSIES.md`. Regra permanente do Harvey de Milan: ele só sabe o que está na origem,
+na ficha, nas lembranças, lições e descobertas; nunca inventa passado, pessoas ou fatos.
 
 **Sala do Setor 01** (`gpt_projeto/upload_setores/S01/`): `00_INSTRUCOES_S01.md` nas
 Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e,
@@ -227,12 +229,18 @@ Milan reverte com um comando e a reversão também vira registro.
 
 ## 4a-bis. O cérebro procedural de Harvey
 
-Harvey é 100% o personagem, e por decisão de Milan o núcleo dele **não tem trava
-mecânica**: Harvey é Harvey por caráter, não por cadeado (`nucleo travar HARVEY` é
-recusado; `nucleo setor pausar HARVEY` também: ele não é um setor). O que evolui é o
-conhecimento e o método:
+Harvey é o personagem de Milan: `harvey/NUCLEO_HARVEY.md` é a origem dele, verbatim, e
+`harvey/original/` guarda os arquivos originais (origem, ficha inicial, regras do motor
+mental, JSON). Por decisão de Milan o núcleo **não tem trava mecânica**: Harvey é Harvey
+por Natureza, não por cadeado (`nucleo travar HARVEY` é recusado; `nucleo setor pausar
+HARVEY` também: ele não é um setor). A Natureza declarada na origem vale acima de tudo
+e o motor de psique a respeita: **identidade travada** (os traços de temperamento não
+sofrem deriva), **aprendizado seletivo** (um significado só forma caráter se toca um dos
+três valores mais altos ou o propósito; o resto é registrado com um quarto do peso) e
+**nunca regride** (valores não caem por significado, habilidades não caem, lições e
+descobertas não somem). O que evolui é o conhecimento, o método e o estado interno:
 
-- `harvey/camada1_nucleo.md`: identidade, missão, limites, método. Só Milan edita.
+- `harvey/camada1_nucleo.md`: missão, limites, método, apontando para a origem. Só Milan edita.
 - `camada2_fatos.md`, `camada3_hipoteses.md`: o que Harvey sabe e aposta sobre Milan,
   mercado e pessoas. Fato vindo de entrega de setor cita `setor_origem: Snn` (Harvey é
   o único componente que pode registrar fato alheio sem dossiê, porque recebe as
@@ -242,6 +250,11 @@ conhecimento e o método:
   correção de Milan) e `quando_aplicar`. Quando a evidência muda, a regra é superada
   por outra; a antiga fica marcada. Setores também podem criar regras próprias.
 - `camada5_estado.md`: o que Harvey conduz agora.
+- `camada6_psique.md`: a ficha inicial dele convertida (traços, emoções, valores, ego 75,
+  energia, propósito "ter o controle de tudo", princípio "Entender é a minha forma de
+  sobreviver.", habilidades com os níveis da origem, pessoas: Jessica Pearson, a família,
+  Milan começando em "não sei quem é você"). Os segredos ficam na camada 2 com
+  `sigilo: sim`. O acaso (`nucleo mente acaso HARVEY`) age nele como nos outros.
 
 Tudo passa pelo mesmo `nucleo aplicar`, entra no diário com versão e baseline, e
 aparece no Registro Global de ATLAS. `nucleo metricas` mostra regras vigentes e
@@ -375,11 +388,13 @@ Regras que o Núcleo faz cumprir em nome de ATLAS:
 
 ```
 gpt_projeto/
-  ADENDO_HARVEY.md                adendo de integração (também serve a um Harvey com prompt próprio)
   harvey/
-    INSTRUCOES_HARVEY.md          núcleo de identidade: cola-se nas Instruções da sala de Harvey
-    camada1..5_*.md               cérebro procedural de Harvey (regras próprias RG-nnn na camada 4)
-    bibliotecas/BIB_01..10.md     habilidades e comunicação do personagem
+    NUCLEO_HARVEY.md              a origem do Harvey de Milan, verbatim (única fonte da identidade)
+    ADENDO_HARVEY.md              adendo que se cola no fim das instruções originais dele
+    instrucoes_originais.md       as instruções que Milan já usava
+    original/                     origem.txt, ficha-inicial.md, regras.md, harvey-specter.json
+    camada1..6_*.md               cérebro procedural (RG-nnn na camada 4; psique na camada 6)
+    bibliotecas/BIB_01..10.md     habilidades e comunicação, só com o que a origem diz
   nex/
     NUCLEO_NEX.md                 Prompt Mestre v2.0 (texto de Milan), sem trava mecânica
     ADENDO_NEX.md                 adendo para o fim do prompt que já está no GPT

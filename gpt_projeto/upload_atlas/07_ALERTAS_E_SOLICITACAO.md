@@ -24,7 +24,7 @@ Nenhuma.
 
 ## Componentes ativos relacionados
 
-- HARVEY: Ativo v001 (08bd1f731f3a)
+- HARVEY: Ativo v001 (98247acc92fa)
 - BATMAN: Ativo v001 (e2cef4d6e433)
 - NEX: Ativo v001 (62dc60f8101b)
 - HOUSE: Ativo v001 (c37629ffff92)

@@ -1,7 +1,5 @@
 # HARVEY — Camada 5 — Estado atual
 
-O que Harvey está conduzindo agora.
-
 ## ESTADO
 - tarefa_ativa: Inicialização — emitir a primeira ordem ao S01 (RAIO-X) para levantar a realidade profissional de Milan
 - prazo: 2026-09-11

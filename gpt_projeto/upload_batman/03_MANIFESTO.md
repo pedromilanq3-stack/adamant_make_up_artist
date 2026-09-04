@@ -10,7 +10,8 @@ Gerado em 2026-09-04 pelo Núcleo. Se um arquivo de setor no Projeto tiver hash 
 
 ## Harvey Specter (HARVEY)
 
-Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 6 fatos, 3 hipóteses, 4 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Psique hoje: emoção expectativa (50), tom sereno, postura analisar, ego 73, energia 60.
 
 ## Batman (BATMAN)
 

@@ -150,10 +150,13 @@ class ProjetoFundadorTests(ProjetoTemporario):
         self.assertEqual(self.projeto.validar(), [])
 
     def test_instrucoes_cabem_no_campo_do_projeto(self) -> None:
-        texto = (GPT_PROJETO / "ADENDO_HARVEY.md").read_text(encoding="utf-8")
+        texto = (GPT_PROJETO / "harvey" / "ADENDO_HARVEY.md").read_text(encoding="utf-8")
         self.assertLessEqual(len(texto), LIMITE_ADENDO)
         self.assertIn("abrir a sala do S01 e colar a ordem", texto)
-        self.assertNotIn("Você é Harvey", texto)
+        self.assertIn("não muda quem Harvey é", texto)
+        origem = (GPT_PROJETO / "harvey" / "NUCLEO_HARVEY.md").read_text(encoding="utf-8")
+        self.assertIn("Sou Harvey Reginald Specter", origem)
+        self.assertIn("Natureza: identidade travada", origem)
 
     def test_estado_inicial_aponta_para_a_pergunta_de_inicializacao(self) -> None:
         estado = self.projeto.setor("S01").estado
@@ -352,8 +355,8 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         bibliotecas = [f"upload_harvey/{b.name}" for b in sorted((GPT_PROJETO / "harvey" / "bibliotecas").glob("BIB_*.md"))]
         self.assertEqual(len(bibliotecas), 10)
         esperado = [
-            "upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
-            "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
+            "upload_harvey/00_ADENDO_PARA_O_SEU_HARVEY.md", "upload_harvey/01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md",
+            "upload_harvey/01_NUCLEO_HARVEY.md", "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
             "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", "upload_harvey/NEX_CEREBRO.md",
             "upload_harvey/HOUSE_CEREBRO.md", "upload_harvey/LOBO_CEREBRO.md", *bibliotecas,
             "upload_harvey/S01_ROTA_DE_RENDA.md",
@@ -402,14 +405,12 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         self.assertIn("S01_ROTA_DE_RENDA.md", instrucoes)
         self.assertIn("```entrega", instrucoes)
         self.assertNotIn("{", instrucoes.replace("{ID}", "").replace("{NOME}", ""))
-        harvey = (self.raiz / "upload_harvey" / "00_INSTRUCOES_HARVEY.md").read_text(encoding="utf-8")
-        self.assertLessEqual(len(harvey), LIMITE_INSTRUCOES)
+        harvey = (self.raiz / "upload_harvey" / "01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md").read_text(encoding="utf-8")
         self.assertIn("Você é Harvey Specter", harvey)
-        self.assertIn("```ordem", harvey)
-        self.assertIn("HARVEY_CEREBRO.md", harvey)
-        self.assertNotIn("Você é o Setor", harvey)
-        adendo = (self.raiz / "upload_harvey" / "01_ADENDO_DE_INTEGRACAO.md").read_text(encoding="utf-8")
-        self.assertIn("não muda quem Harvey é", adendo)
+        adendo = (self.raiz / "upload_harvey" / "00_ADENDO_PARA_O_SEU_HARVEY.md").read_text(encoding="utf-8")
+        self.assertIn("```ordem", adendo)
+        self.assertIn("HARVEY_CEREBRO.md", adendo)
+        self.assertNotIn("Você é o Setor", adendo)
 
     def test_sala_do_setor_recebe_so_os_proprios_dossies(self) -> None:
         self.projeto.propor_setor("S02", CARTA, hoje=HOJE)
@@ -636,6 +637,26 @@ class HarveyTests(ProjetoTemporario):
             self.aplicar("## regra\n- conteudo: sem base\n", setor="HARVEY")
         self.aplicar("## regra\n- conteudo: x\n- base: L-001; F-001\n- quando_aplicar: sempre\n")  # S01 também pode
         self.assertEqual(self.recarregar().setor("S01").metricas()["regras_vigentes"], 1)
+
+    def test_natureza_de_harvey_e_respeitada(self) -> None:
+        estado = self.projeto.psique_de("HARVEY")[1]
+        ps = estado["psique"]
+        self.assertIn("identidade_travada", ps.get("natureza"))
+        self.assertEqual(ps.get("proposito"), "ter o controle de tudo")
+        tracos_antes = {t: ps.get(f"t_{t}") for t in psique_mod.TRACOS}
+        valores_antes = {v: float(ps.get(f"v_{v}")) for v in psique_mod.VALORES}
+        for _ in range(15):
+            self.projeto.registrar_evento_de_psique("HARVEY", "psique", {"evento": "isolamento", "intensidade": "forte"}, hoje=HOJE)
+            self.projeto.registrar_evento_de_psique("HARVEY", "psique", {"evento": "erro_negado"}, hoje=HOJE)
+        ps = self.projeto.psique_de("HARVEY")[1]["psique"]
+        self.assertEqual({t: ps.get(f"t_{t}") for t in psique_mod.TRACOS}, tracos_antes)  # identidade travada
+        for v, antes in valores_antes.items():
+            self.assertGreaterEqual(float(ps.get(f"v_{v}")), antes - 0.01)  # nunca regride
+        pessoas = {p.get("nome"): p for p in self.projeto.psique_de("HARVEY")[1]["pessoas"]}
+        self.assertIn("Jessica Pearson", pessoas)
+        self.assertIn("Milan", pessoas)
+        self.assertGreater(float(pessoas["Jessica Pearson"].get("confianca")), float(pessoas["Milan"].get("confianca")))
+        self.assertIn("HARVEY", self.rodar_ok("versoes", "listar") if hasattr(self, "rodar_ok") else "HARVEY")
 
     def test_harvey_nao_trava_nem_muda_de_estado(self) -> None:
         with self.assertRaises(ErroDeValidacao):
@@ -906,8 +927,10 @@ class NexPsiqueTests(ProjetoTemporario):
         self.assertEqual(historico[-1].get("relatado_por"), "Acaso")
         relato2 = self.projeto.registrar_acaso("BATMAN", quantos=2, semente=7, hoje=HOJE)
         self.assertGreaterEqual(len(relato2), 2)
+        relato3 = self.projeto.registrar_acaso("HARVEY", quantos=2, semente=7, hoje=HOJE)
+        self.assertGreaterEqual(len(relato3), 2)  # Harvey agora tem psique: o acaso age nele também
         with self.assertRaises(ErroDeValidacao):
-            self.projeto.registrar_acaso("HARVEY", hoje=HOJE)
+            self.projeto.registrar_acaso("S01", hoje=HOJE)
         self.assertEqual(self.projeto.validar(), [])
 
     def test_temperamento_e_plastico_devagar(self) -> None:

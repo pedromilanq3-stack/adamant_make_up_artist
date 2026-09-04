@@ -2,7 +2,7 @@
 
 | Componente | Versão atual | Baselines guardadas | Reversão |
 |---|---|---|---|
-| HARVEY | v001 (08bd1f731f3a) | v001 | `nucleo versoes reverter HARVEY v001 --autorizado-por-milan` |
+| HARVEY | v001 (98247acc92fa) | v001 | `nucleo versoes reverter HARVEY v001 --autorizado-por-milan` |
 | BATMAN | v001 (e2cef4d6e433) | v001 | `nucleo versoes reverter BATMAN v001 --autorizado-por-milan` |
 | NEX | v001 (62dc60f8101b) | v001 | `nucleo versoes reverter NEX v001 --autorizado-por-milan` |
 | HOUSE | v001 (c37629ffff92) | v001 | `nucleo versoes reverter HOUSE v001 --autorizado-por-milan` |

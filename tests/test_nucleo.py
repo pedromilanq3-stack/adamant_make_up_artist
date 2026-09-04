@@ -629,7 +629,7 @@ class HarveyTests(ProjetoTemporario):
         antiga = harvey.buscar("RG-002")[1]
         self.assertEqual(antiga.get("status"), "superada")
         self.assertEqual(antiga.get("superado_por"), "RG-005")
-        self.assertEqual(harvey.buscar("RG-004")[1].get("corrige"), "RG-002")
+        self.assertEqual(harvey.buscar("RG-005")[1].get("corrige"), "RG-002")
         self.assertEqual(harvey.fatos[-1].get("setor_origem"), "S01")
         self.assertEqual(self.projeto.validar(), [])
         self.assertEqual(self.projeto.versao_de("HARVEY"), 2)

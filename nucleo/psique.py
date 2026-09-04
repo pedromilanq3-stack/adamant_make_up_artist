@@ -61,6 +61,7 @@ TRANSTORNOS = {
     "ansiedade": "preocupação difusa e contínua, antecipando falhas em tudo",
     "hipomania": "energia e confiança acima do normal, sono curto, ideias em excesso",
     "insonia": "noites sem dormir de verdade, cansaço que embaça o raciocínio",
+    "dependencia": "fissura por alívio químico, irritação sem ele, mentiras pequenas para conseguir",
 }
 INTENSIDADES = {"leve": 0.5, "normal": 1.0, "forte": 1.5}
 ESTADOS_DE_TRANSTORNO = ("latente", "subclinico", "ativo", "remissao")
@@ -102,6 +103,11 @@ EVENTOS: dict[str, dict] = {
     "avaliacao": {"descricao": "avaliação por alguém preparado: revela o que está ativo", "e": {"medo": 4, "confianca": 6}, "c": {}},
     "terapia": {"descricao": "conversa com alguém preparado para ouvir", "e": {"tristeza": -8, "medo": -8, "confianca": 6}, "c": {"depressao": -8, "ansiedade": -8, "panico": -8, "impostor": -6, "burnout": -4}},
     "medicacao": {"descricao": "tratamento em curso, prescrito por quem pode", "c": {"depressao": -6, "ansiedade": -6, "panico": -6, "tdah": -8, "insonia": -6, "hipomania": -6}},
+    # dor crônica e alívio químico
+    "dor_forte": {"descricao": "a dor crônica subiu acima do suportável", "e": {"raiva": 14, "tristeza": 6, "medo": 4}, "energia": -18, "dor": 20, "c": {"insonia": 6, "depressao": 4, "dependencia": 4}},
+    "analgesico": {"descricao": "alívio químico: a dor cede, a conta chega depois", "e": {"alegria": 6, "raiva": -8, "medo": -4}, "energia": 10, "dor": -30, "c": {"dependencia": 10}},
+    "abstinencia": {"descricao": "ficou sem o alívio de que depende", "e": {"raiva": 16, "medo": 10, "tristeza": 8, "nojo": 4}, "energia": -15, "dor": 10, "c": {"dependencia": -3, "ansiedade": 6, "insonia": 6}},
+    "fisioterapia": {"descricao": "cuidou da dor do jeito lento", "e": {"tristeza": 2, "confianca": 4}, "dor": -8, "c": {"dependencia": -4}},
     # emoções complexas: amor, ódio, paixão; sempre misturadas às básicas
     "gentileza_recebida": {"descricao": "alguém foi gentil sem precisar", "e": {"alegria": 8, "confianca": 8}, "pessoa": 6, "afeto": 8, "amor": 6},
     "cumplicidade": {"descricao": "resolveu algo lado a lado com alguém, em sintonia", "e": {"alegria": 10, "confianca": 12}, "pessoa": 8, "afeto": 12, "amor": 10},
@@ -127,7 +133,8 @@ TONS = {
     "sereno": "o tom de base do núcleo",
 }
 
-RECUPERACAO = frozenset({"descanso", "convivio", "terapia", "medicacao", "ajuda_recebida", "descoberta", "sucesso"})
+RECUPERACAO = frozenset({"descanso", "convivio", "terapia", "medicacao", "ajuda_recebida", "descoberta", "sucesso",
+                         "fisioterapia"})
 
 
 class ErroDePsique(ValueError):
@@ -178,9 +185,13 @@ def nivel_de(valor: float) -> str:
 
 
 def nascer(nome: str, temperamento: dict[str, int], valores: dict[str, int], ego: int = 50,
-           habilidades: dict[str, int] | None = None, hoje: date | None = None) -> tuple[Registro, Registro, Registro]:
+           habilidades: dict[str, int] | None = None, hoje: date | None = None,
+           dor_base: int = 0) -> tuple[Registro, Registro, Registro]:
     hoje = hoje or date.today()
     psique = Registro("PSIQUE")
+    psique.set("nome", nome)
+    psique.set("dor_base", str(_clamp(dor_base)))
+    psique.set("dor", str(_clamp(_jitter(dor_base, 8)) if dor_base else 0))
     psique.set("plasticidade", str(_clamp(_jitter(90, 6))))
     psique.set("ego", str(_clamp(_jitter(ego, 6))))
     psique.set("energia", str(_clamp(_jitter(80, 10))))
@@ -221,6 +232,18 @@ def carregar(pasta: Path) -> tuple[str, dict]:
     if psique is None or saude is None:
         raise ErroDePsique(f"{caminho}: precisa dos registros '## PSIQUE' e '## SAUDE'")
     habilidades = next((r for r in registros if r.id == "HABILIDADES"), None) or Registro("HABILIDADES")
+    faltantes = [t for t in TRANSTORNOS if not saude.get(f"{t}_estado")]
+    if faltantes:  # quadro novo no catálogo: nasce com predisposição sorteada
+        pre = predisposicoes(psique.get("nome", "?"))
+        for t in faltantes:
+            saude.set(f"{t}_predisposicao", str(pre[t]))
+            saude.set(f"{t}_carga", "0")
+            saude.set(f"{t}_estado", "latente")
+            saude.set(f"{t}_diagnostico", "nao")
+    if not psique.get("dor_base"):
+        psique.set("dor_base", "0")
+    if not psique.get("dor"):
+        psique.set("dor", "0")
     return preambulo, {
         "psique": psique, "saude": saude, "habilidades": habilidades,
         "pessoas": [r for r in registros if r.id.startswith("P-")],
@@ -290,6 +313,8 @@ def _base_emocional(psique: Registro, emocao: str, ativos_por_nome: dict) -> flo
         "surpresa": 15 + t["curiosidade"] * 0.1,
         "expectativa": 35 + t["curiosidade"] * 0.25,
     }[emocao]
+    dor = _num(psique, "dor")
+    base += {"raiva": dor * 0.2, "alegria": -dor * 0.15, "tristeza": dor * 0.1}.get(emocao, 0)
     if ativos_por_nome.get("depressao"):
         base += {"alegria": -20, "tristeza": 25, "expectativa": -15}.get(emocao, 0)
     if ativos_por_nome.get("ansiedade"):
@@ -300,6 +325,8 @@ def _base_emocional(psique: Registro, emocao: str, ativos_por_nome: dict) -> flo
         base += {"alegria": 15, "expectativa": 20, "raiva": 5}.get(emocao, 0)
     if ativos_por_nome.get("burnout"):
         base += {"nojo": 10, "expectativa": -15, "alegria": -10}.get(emocao, 0)
+    if ativos_por_nome.get("dependencia"):
+        base += {"raiva": 8, "medo": 6, "nojo": 4}.get(emocao, 0)
     return max(0, min(100, base))
 
 
@@ -363,7 +390,7 @@ def _derivar(psique: Registro, saude_ativos: dict) -> None:
     controle_baixo = _num(psique, "t_serenidade") < 50 or energia < 35
     tons = {
         "sarcástico": emocoes["raiva"] * 0.4 + max(0, ego - 50) * 0.6 + emocoes["nojo"] * 0.3 + odio * 0.2,
-        "hostil": emocoes["raiva"] * 0.6 + odio * 0.5 + (20 if controle_baixo else 0) - _num(psique, "t_empatia") * 0.3,
+        "hostil": emocoes["raiva"] * 0.6 + odio * 0.5 + (20 if controle_baixo else 0) - _num(psique, "t_empatia") * 0.3 + max(0, _num(psique, "dor") - 60) * 0.3,
         "frio": emocoes["nojo"] * 0.3 + emocoes["tristeza"] * 0.3 + max(0, 40 - energia) * 0.5 - amor * 0.3,
         "terno": amor * 0.6 + emocoes["confianca"] * 0.3 + _num(psique, "t_empatia") * 0.2 - emocoes["raiva"] * 0.4,
         "fervoroso": paixao * 0.7 + emocoes["expectativa"] * 0.3,
@@ -372,7 +399,7 @@ def _derivar(psique: Registro, saude_ativos: dict) -> None:
     }
     ativos_tom = sorted(((k, v) for k, v in tons.items() if v >= 30), key=lambda x: -x[1])[:3]
     psique.set("tom", ", ".join(f"{k} ({v:.0f})" for k, v in ativos_tom) or "sereno")
-    penalidade = (max(0, medo - 40) * 0.3 + max(0, 50 - energia) * 0.3
+    penalidade = (max(0, medo - 40) * 0.3 + max(0, 50 - energia) * 0.3 + max(0, _num(psique, "dor") - 50) * 0.3
                   + (15 if saude_ativos.get("tdah") else 0) + (15 if saude_ativos.get("depressao") else 0)
                   + (10 if saude_ativos.get("burnout") or saude_ativos.get("insonia") else 0))
     psique.set("penalidade_de_desempenho", str(_clamp(penalidade)))
@@ -488,6 +515,10 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
         d = dados["energia"] * fator * _ruido(0.3)
         psique.set("energia", str(_clamp(_num(psique, "energia") + d)))
         deltas["energia"] = d
+    if "dor" in dados:
+        d = dados["dor"] * fator * _ruido(0.3)
+        psique.set("dor", str(_clamp(_num(psique, "dor") + d)))
+        deltas["dor"] = d
     cargas = {}
     resiliencia = _num(psique, "t_resiliencia") / 100
     for transtorno, delta in dados.get("c", {}).items():
@@ -609,9 +640,12 @@ def passar_tempo(estado: dict, dias: int, relatado_por: str = "Milan", hoje: dat
             emocao = _RNG.choice(EMOCOES)
             psique.set(f"e_{emocao}", str(max(0.0, min(100.0, _num(psique, f"e_{emocao}") + _RNG.uniform(-12, 15)))))
             oscilacoes += 1
+        dor = _num(psique, "dor")
+        psique.set("dor", str(max(0.0, min(100.0, dor + (_num(psique, "dor_base") - dor) * _RNG.uniform(0.2, 0.5)
+                                              + _RNG.uniform(-4, 4)))))
         energia = _num(psique, "energia")
         alvo = 45 if ativos.get("depressao") or ativos.get("burnout") else 80
-        alvo = _jitter(alvo, 8)  # dia bom, dia ruim
+        alvo = _jitter(alvo - _num(psique, "dor") * 0.3, 8)  # dia bom, dia ruim; dor cansa
         psique.set("energia", str(max(0.0, min(100.0, energia + (alvo - energia) * _RNG.uniform(0.1, 0.3)))))
         for transtorno in TRANSTORNOS:
             cargas[transtorno] = cargas.get(transtorno, 0) - (1.5 if transtorno != "tdah" else 0.5) * _ruido(0.5)
@@ -625,6 +659,7 @@ def passar_tempo(estado: dict, dias: int, relatado_por: str = "Milan", hoje: dat
         psique.set(f"e_{emocao}", str(_clamp(_num(psique, f"e_{emocao}"))))
     psique.set("energia", str(_clamp(_num(psique, "energia"))))
     psique.set("ego", str(_clamp(_num(psique, "ego"))))
+    psique.set("dor", str(_clamp(_num(psique, "dor"))))
     mudancas = _atualizar_saude(saude, cargas, hoje)
     deltas = {e: _num(psique, f"e_{e}") - inicio[e] for e in EMOCOES}
     return _gravar(estado, "tempo", "normal", f"{dias} dia(s) se passaram"
@@ -656,6 +691,8 @@ def sortear_acaso(estado: dict, rng: random.Random | None = None, quantos: int =
             peso *= 0.5 + _num(psique, "t_curiosidade") / 100
         if nome in ("perda_de_alguem", "traicao", "humilhacao", "medo_intenso"):
             peso *= 0.25  # raros
+        if nome in ("dor_forte", "analgesico", "abstinencia", "fisioterapia"):
+            peso *= 1.6 if _num(psique, "dor_base") > 0 else 0.0
         pesos[nome] = peso
     escolhidos = []
     nomes = list(pesos)
@@ -678,7 +715,8 @@ def resumo(estado: dict, ultimos: int = 8) -> str:
               f"ego {psique.get('ego')} ({psique.get('ego_leitura')}) · energia {psique.get('energia')} · "
               f"plasticidade {psique.get('plasticidade')} · influenciabilidade {psique.get('influenciabilidade')}.",
               "", f"**Mistura do momento:** {psique.get('mistura')}.", f"**Tom:** {psique.get('tom')}.",
-              f"Amor {psique.get('amor')} · ódio {psique.get('odio')} · paixão {psique.get('paixao')}.",
+              f"Amor {psique.get('amor')} · ódio {psique.get('odio')} · paixão {psique.get('paixao')}"
+              + (f" · dor {psique.get('dor')} (base {psique.get('dor_base')})" if _num(psique, "dor_base") or _num(psique, "dor") else "") + ".",
               "", f"Caráter (valores mais fortes): {psique.get('carater')}.", "",
               "| Emoção | Valor |", "|---|---|"]
     linhas += [f"| {e} | {psique.get('e_' + e)} |" for e in EMOCOES]
@@ -736,4 +774,6 @@ def alertas(estado: dict) -> list[str]:
         saida.append("impulso alto: pode responder antes de terminar a análise")
     if _num(psique, "odio") >= 60:
         saida.append("ódio alto: tom hostil provável")
+    if _num(psique, "dor") >= 75:
+        saida.append("dor acima do suportável: julgamento e paciência reduzidos")
     return saida

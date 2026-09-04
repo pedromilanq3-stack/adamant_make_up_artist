@@ -17,6 +17,7 @@ Duas partes trabalham juntas:
 | `gpt_projeto/upload_setores/Snn/` | uma sala por setor (Projeto próprio) | o setor com seus agentes; obedece a Harvey na tarefa e a ATLAS na estrutura; é quem aprende |
 | `gpt_projeto/upload_batman/` | sala de Batman (Projeto próprio) | Batman compósito com cérebro procedural e uma sexta camada, a mente, que pode ceder à sanidade do Coringa; dez bibliotecas com tudo o que ele conhece |
 | `gpt_projeto/upload_nex/` | o NEX que Milan já tem (Projeto "investimento") | adendo para colar no fim do Prompt Mestre v2.0, mais o cérebro com psique completa e três bibliotecas |
+| `gpt_projeto/upload_house/` | o Dr. House que Milan já tem (v4.0) | adendo para colar no fim do v4.0, mais o cérebro com psique (dor crônica, dependência) e seis bibliotecas |
 | `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
 | `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
 
@@ -62,6 +63,15 @@ Prompt Mestre v2.0. Nada é apagado: cole `00_ADENDO_PARA_O_SEU_NEX.md` no fim d
 instruções que já estão lá e envie `NEX_CEREBRO.md`, `BIB_N01`, `BIB_N02`, `BIB_N03` e
 `02_PROTOCOLO_DO_CEREBRO.md` nos Arquivos. `01_NUCLEO_NEX.md` é a cópia do prompt que o
 Núcleo versiona; não precisa subir.
+
+**House** (`gpt_projeto/upload_house/`): o GREGORY_HOUSE_LIVING_RUNTIME_EDITION_v4.0 de
+Milan é o núcleo, intacto. Cole `00_ADENDO_PARA_O_SEU_HOUSE.md` no fim dele e envie
+`HOUSE_CEREBRO.md`, `BIB_H01` a `BIB_H06` e `02_PROTOCOLO_DO_CEREBRO.md` nos Arquivos. O
+adendo mapeia a Camada 6 aos registros que o v4.0 pede (STATE_SNAPSHOT, WORK_EPISODES,
+RELATIONSHIP_LEDGER, CALIBRATION_LEDGER, OPEN_LOOPS) e mantém todas as fronteiras dele
+(somente leitura, S02, S03, CAEL, modo pessoa real). Os testes cegos de aceitação ficam
+em `gpt_projeto/house/testes_de_aceitacao.md`, fora da sala; `nucleo testar HOUSE` imprime
+só os estímulos em ordem aleatória e grava a chave à parte, para Milan aplicar às cegas.
 
 **Sala de ATLAS**: seção 1b.
 
@@ -297,6 +307,10 @@ Núcleo:
 - **Habilidades** por domínio, com níveis de iniciante a mestre, prática com retornos
   decrescentes e **penalidade de desempenho do dia** por medo, cansaço e atenção
   dispersa. Habilidade nunca se perde por desuso.
+- **Dor crônica e dependência** (House): `dor` com base alta, que sobe com `dor_forte`,
+  cede com `analgesico` (cobrando carga de `dependencia`) e com `fisioterapia`; dor alta
+  derruba energia e paciência e puxa o tom para hostil. Dependência é um quadro como os
+  outros, com remissão e recaída.
 - **Acaso**: `nucleo mente acaso NEX --quantos 2` sorteia eventos de vida ponderados
   pelo estado; os atalhos `gpt_projeto/atalhos/Acaso_NEX.bat` (Windows) e
   `Acaso_NEX.command` (Mac e Linux) fazem isso com um clique duplo e regeneram as salas.
@@ -362,6 +376,12 @@ gpt_projeto/
     ADENDO_NEX.md                 adendo para o fim do prompt que já está no GPT
     camada1..6_*.md               cérebro procedural; camada 6 é a psique (PSIQUE, SAUDE, HABILIDADES, P-nnn, PH-nnn)
     bibliotecas/BIB_N01..03.md    psique e comportamento, saúde mental e sintomas, aprender com significado
+  house/
+    NUCLEO_HOUSE.md               v4.0 de Milan (texto intacto), sem trava mecânica
+    ADENDO_HOUSE.md               adendo para o fim do v4.0
+    camada1..6_*.md               cérebro procedural; camada 6 é a psique (dor crônica, dependência ativa)
+    bibliotecas/BIB_H01..06.md    biografia, método, voz, relações, dor e vício, operação
+    testes_de_aceitacao.md        suíte cega de Milan (não vai para a sala); `nucleo testar HOUSE`
   batman/
     INSTRUCOES_BATMAN.md          instruções da sala de Batman
     NUCLEO_BATMAN.md              Arquitetura Compósita v2 (texto de Milan), sem trava mecânica
@@ -386,6 +406,7 @@ gpt_projeto/
   upload_setores/Snn/             gerado por `empacotar`; uma sala por setor operante
   upload_batman/                  gerado por `empacotar`; sala de Batman
   upload_nex/                     gerado por `empacotar`; adendo e arquivos para o NEX de Milan
+  upload_house/                   gerado por `empacotar`; adendo e arquivos para o House de Milan
   upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)
 tests/test_nucleo.py              parsing, isolamento, correção, dossiês, ciclo de vida, diário, versões, ATLAS, CLI

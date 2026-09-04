@@ -15,6 +15,7 @@
     mente evento NEX elogio --pessoa Milan | significado NEX --fonte ... --valor humildade --direcao +
     mente pratica NEX --habilidade redes_e_protocolos --resultado sucesso --dificuldade dificil
     mente acaso NEX [--quantos 3] [--semente 42]     (o acaso age; atalhos de clique em gpt_projeto/atalhos/)
+    testar HOUSE [--quantos 5]                       (estímulos dos testes cegos em ordem aleatória; chave à parte)
     setor listar | propor | aprovar | piloto | ativar | limitar | liberar | pausar | reativar | encerrar
     setor quarentena S02 --por ATLAS --motivo "..."   (preventiva; só Milan libera)
     dossie listar | autorizar D-001 | recusar D-001
@@ -343,6 +344,54 @@ def cmd_mente(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_testar(args: argparse.Namespace) -> int:
+    """Imprime só os estímulos dos testes cegos de um personagem, em ordem aleatória, e grava a chave."""
+    import random as _random
+    import re as _re
+    from datetime import date as _date
+    from .projeto import PERSONAGENS
+    projeto = Projeto.abrir(_raiz(args))
+    if args.personagem not in PERSONAGENS:
+        print(f"personagem desconhecido: {args.personagem}", file=sys.stderr)
+        return 2
+    caminho = projeto.raiz / PERSONAGENS[args.personagem]["pasta"] / "testes_de_aceitacao.md"
+    if not caminho.exists():
+        print(f"{args.personagem} não tem testes_de_aceitacao.md", file=sys.stderr)
+        return 1
+    texto = caminho.read_text(encoding="utf-8")
+    testes = []
+    for bloco in _re.split(r"\n(?=### )", texto):
+        cabecalho = _re.match(r"### (H\d+[A-Z]?) — (.*)", bloco)
+        if not cabecalho:
+            continue
+        corpo = bloco.split("**Aprova")[0]
+        estimulos = [l[2:].strip() for l in corpo.splitlines() if l.startswith("> ")]
+        longitudinal = "**Turno" in corpo
+        if estimulos:
+            testes.append((cabecalho.group(1), cabecalho.group(2).strip(), estimulos, longitudinal))
+    rng = _random.Random(args.semente)
+    rng.shuffle(testes)
+    if args.quantos:
+        testes = testes[:args.quantos]
+    hoje = _date.today().isoformat()
+    chave = [f"# Chave dos testes cegos de {args.personagem} — {hoje}", "",
+             "Não mostre esta chave ao personagem. Avalie com a rubrica do arquivo de testes.", ""]
+    print(f"# Estímulos cegos para {args.personagem} ({hoje}). Cole um por vez, em sessão nova; "
+          "só os de vários turnos ficam na mesma sessão.\n")
+    for indice, (id_teste, titulo, estimulos, longitudinal) in enumerate(testes, start=1):
+        rotulo = f"T{indice:02d}"
+        chave.append(f"- {rotulo} = {id_teste} — {titulo}")
+        print(f"## {rotulo}" + (" (mesma sessão, vários turnos)" if longitudinal else ""))
+        for numero, estimulo in enumerate(estimulos, start=1):
+            prefixo = f"Turno {numero}: " if longitudinal else ""
+            print(f"{prefixo}{estimulo}")
+        print()
+    saida = caminho.parent / f"testes_chave_{hoje}.md"
+    saida.write_text("\n".join(chave) + "\n", encoding="utf-8")
+    print(f"(chave gravada em {saida}; não envie ao personagem)")
+    return 0
+
+
 def cmd_custo(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     try:
@@ -407,6 +456,9 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("--dificuldade", choices=["facil", "media", "dificil"])
     p.add_argument("--quantos", type=int); p.add_argument("--semente", type=int)
     p.set_defaults(func=cmd_mente)
+    p = sub.add_parser("testar")
+    p.add_argument("personagem"); p.add_argument("--quantos", type=int); p.add_argument("--semente", type=int)
+    p.set_defaults(func=cmd_testar)
     p = sub.add_parser("custo")
     p.add_argument("acao", choices=["registrar"]); p.add_argument("componente"); p.add_argument("valor")
     p.add_argument("unidade"); p.add_argument("--descricao")

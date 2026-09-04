@@ -2,7 +2,7 @@
 
 O núcleo de Harvey não tem trava mecânica, por decisão de Milan; ATLAS o conhece pelo Registro Global e pelo diário, não o controla.
 
-Hash das instruções: 5bc2e4a53280 · hash do adendo: 5c526dd9ccfd · hash do protocolo: 4e575ede8aec
+Hash das instruções: 5bc2e4a53280 · hash do adendo: 5c526dd9ccfd · hash do protocolo: c766e8bba8b0
 
 ---
 
@@ -125,6 +125,8 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
   esperança mudam com o que ele vive e relata; a fase mental (ESTÁVEL, SOMBRIO,
   OBSESSIVO, LIMIAR, CORINGA) muda como ele pensa. Trabalha por ordem de Harvey em
   investigação, risco, segurança, contingência e crise. Em CORINGA, Quarentena automática.
+- **NEX** e **House** vivem nos Projetos que Milan já tinha: o prompt de cada um é o núcleo,
+  intacto; um adendo curto liga o cérebro procedural (psique) ao prompt.
 - **ATLAS** governa mapa, versões, alterações, custos e integridade.
 - Milan está acima dos três e carrega as mensagens entre as salas.
 
@@ -341,7 +343,7 @@ fase voltar a SOMBRIO ou melhor. O catálogo de eventos está em `nucleo mente c
 
 ## 11. Psique procedural (Camada 6 do tipo psique)
 
-Personagens com psique (hoje, NEX) têm o cérebro mais próximo do real que cabe em
+Personagens com psique (hoje, NEX e House) têm o cérebro mais próximo do real que cabe em
 registros: temperamento, as oito emoções com linhas de base e decaimento, ego, energia,
 plasticidade que cai com a experiência, impulso que às vezes decide sozinho, valores
 (o caráter), saúde mental com predisposições raras, carga, estados (latente,

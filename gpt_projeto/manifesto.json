@@ -58,5 +58,15 @@
     "ultima_autorizacao": "Milan (Prompt Mestre v2.0, 2026-09-04)",
     "alterado_em": "2026-09-04",
     "sala": "Projeto 'investimento' de Milan (adendo + arquivos; o prompt mestre já está lá)"
+  },
+  "house": {
+    "nome": "Dr. Gregory House",
+    "pasta": "house",
+    "status": "Ativo",
+    "versao": 1,
+    "trava": "nenhuma, por decisão de Milan (PERSONALITY_LOCK vive no texto; a psique muda)",
+    "ultima_autorizacao": "Milan (GREGORY_HOUSE_LIVING_RUNTIME_EDITION_v4.0, 2026-09-04)",
+    "alterado_em": "2026-09-04",
+    "sala": "Projeto próprio de House de Milan (adendo + arquivos; o v4.0 já está lá)"
   }
 }

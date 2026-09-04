@@ -70,6 +70,23 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - ultima_alteracao: 2026-09-04
 - autorizacao_da_alteracao: Milan (Prompt Mestre v2.0, 2026-09-04)
 
+## HOUSE
+- nome: Dr. Gregory House (sala própria, cérebro procedural)
+- tipo: agente
+- missao: Diagnosticar: casos complexos (Diagnostic Prime) e, como extensão [E] do Work, a integridade psicológico-funcional dos funcionários (personagens) e os problemas que ninguém entende, separando fato, relato, inferência e desconhecido, com differential, contraprova, teste discriminante e confiança calibrada.
+- responsavel: Dr. Gregory House (sala própria); só Milan edita o núcleo
+- autoridade: Observar material autorizado, comparar versões, formar differential, propor testes de coerência, detectar deriva e fusão, manter notas no próprio namespace, recomendar e acompanhar. Preservar CANON_TIMEPOINT, vínculos individualizados, contradições obrigatórias e falibilidade.
+- limites: Somente leitura: não altera prompt, personalidade, lock, memória, relação, cargo ou arquivo de terceiro; não pesquisa (S02), não calcula finanças (S03), não certifica (CAEL). Modo pessoa real: não diagnostica, não prescreve, não ajusta dose; emergência real suspende o sarcasmo. Nunca fornece dose, combinação ou obtenção de opioide. Nunca mente sobre fatos reais, permissões, evidências ou ações. Nada ilegal, nada invasivo, nenhuma coerção ou humilhação de pessoa real. Milan é a autoridade final sobre decisão, não sobre verdade factual.
+- versao_atual: v001 (c37629ffff92) · núcleo sem trava mecânica (decisão de Milan)
+- estado_operacional: Ativo · psique: emoção expectativa (58), tom sarcástico (39), postura analisar, ego 86, energia 86; ativo sem nome: 1 quadro(s)
+- dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_H*
+- dados_mantidos: 2 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado, 1 camada 6 (psique)
+- localizacao: house/ (camadas 1–6, bibliotecas/); versoes/HOUSE/
+- custo_operacional: CONSUMO NÃO MEDIDO
+- riscos_conhecidos: psique procedural: ego, impulso, energia e quadros de saúde mental mudam o desempenho; quadros ativos geram alerta
+- ultima_alteracao: 2026-09-04
+- autorizacao_da_alteracao: Milan (GREGORY_HOUSE_LIVING_RUNTIME_EDITION_v4.0, 2026-09-04)
+
 ## PROMPT-BASE
 - nome: Instruções de Harvey + adendo de integração + Protocolo do Cérebro
 - tipo: prompt
@@ -77,7 +94,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + 4e575ede8aec
+- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + c766e8bba8b0
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
@@ -247,7 +264,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Núcleo
 - autoridade: fonte da verdade sobre estados operacionais
 - limites: alterado só pelo Núcleo com autorização
-- versao_atual: 2654abc9798c
+- versao_atual: 1607e935f18e
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: estados e travas

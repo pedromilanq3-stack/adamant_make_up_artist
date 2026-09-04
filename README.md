@@ -42,6 +42,7 @@
 > e uma mente que pode ceder ao Coringa ([`gpt_projeto/upload_batman/`](gpt_projeto/upload_batman/)),
 > NEXARION com psique completa (emoções, ego, impulso, saúde mental, confiança por pessoa,
 > habilidades por nível e caráter formado por significado) ([`gpt_projeto/upload_nex/`](gpt_projeto/upload_nex/)),
+> Dr. House com dor crônica e dependência ([`gpt_projeto/upload_house/`](gpt_projeto/upload_house/)),
 > cada setor trabalha por
 > ordem de Harvey e obedece a ATLAS na estrutura
 > ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita

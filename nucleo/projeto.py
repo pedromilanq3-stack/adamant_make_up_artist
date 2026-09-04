@@ -66,6 +66,7 @@ PASTA_HARVEY = "harvey"
 HARVEY = "HARVEY"
 BATMAN = "BATMAN"
 NEX = "NEX"
+HOUSE = "HOUSE"
 # Personagens: componentes com sala própria e cérebro procedural, fora do ciclo de setores.
 # camada6: None (só cinco camadas), "mente" (fases, Batman) ou "psique" (cérebro completo, NEX).
 PERSONAGENS = {
@@ -78,6 +79,9 @@ PERSONAGENS = {
     NEX: {"pasta": "nex", "chave": "nex", "nome": "NEXARION", "camada6": "psique",
           "transiciona": True, "instrucoes": "ADENDO_NEX.md", "limite": 4500, "nucleo": "NUCLEO_NEX.md",
           "prefixo_bib": "BIB_N"},
+    HOUSE: {"pasta": "house", "chave": "house", "nome": "Dr. Gregory House", "camada6": "psique",
+            "transiciona": True, "instrucoes": "ADENDO_HOUSE.md", "limite": 4500, "nucleo": "NUCLEO_HOUSE.md",
+            "prefixo_bib": "BIB_H"},
 }
 for _perfil in PERSONAGENS.values():
     _perfil["mente"] = _perfil["camada6"] == "mente"

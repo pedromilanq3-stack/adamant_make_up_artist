@@ -1,4 +1,5 @@
 import io
+import random
 import shutil
 import subprocess
 import sys
@@ -96,14 +97,14 @@ class ProjetoTemporario(unittest.TestCase):
         psique_mod.semear(1234)
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def aplicar(self, corpo, setor="S01", autorizado=False):
-        emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX") else "RAIO-X"
+        emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX", "HOUSE") else "RAIO-X"
         return self.projeto.aplicar(bloco(setor, emitido_por, corpo), autorizado_por_milan=autorizado, hoje=HOJE)
 
     def recarregar(self) -> Projeto:
@@ -338,7 +339,7 @@ class CicloDeVidaTests(ProjetoTemporario):
 
 class PendenciasEPacoteTests(ProjetoTemporario):
     def test_pendencias_vencidas_aparecem(self) -> None:
-        self.assertEqual(self.projeto.pendencias(HOJE), {})
+        self.assertNotIn("S01", self.projeto.pendencias(HOJE))  # House já nasce com pendência de psique
         depois = date(2026, 9, 20)
         itens = self.projeto.pendencias(depois)["S01"]
         self.assertTrue(any(i.startswith("F-003") for i in itens))
@@ -353,11 +354,13 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         esperado = [
             "upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
             "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
-            "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", "upload_harvey/NEX_CEREBRO.md", *bibliotecas,
+            "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", "upload_harvey/NEX_CEREBRO.md",
+            "upload_harvey/HOUSE_CEREBRO.md", *bibliotecas,
             "upload_harvey/S01_ROTA_DE_RENDA.md",
             "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
             "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"]
-        self.assertEqual(nomes[:len(esperado)], esperado)
+        nomes_sem_avisos = [n for n in nomes if "AVISOS_DE_ATLAS" not in n]
+        self.assertEqual(nomes_sem_avisos[:len(esperado)], esperado)
         self.assertIn("upload_batman/00_INSTRUCOES_BATMAN.md", nomes)
         self.assertIn("upload_batman/01_NUCLEO_BATMAN.md", nomes)
         self.assertIn("upload_batman/BATMAN_CEREBRO.md", nomes)
@@ -366,6 +369,9 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         self.assertIn("upload_nex/01_NUCLEO_NEX.md", nomes)
         self.assertIn("upload_nex/NEX_CEREBRO.md", nomes)
         self.assertEqual(sum(1 for n in nomes if n.startswith("upload_nex/BIB_N")), 3)
+        self.assertIn("upload_house/00_ADENDO_PARA_O_SEU_HOUSE.md", nomes)
+        self.assertEqual(sum(1 for n in nomes if n.startswith("upload_house/BIB_H")), 6)
+        self.assertFalse(any("testes" in n for n in nomes))
         setor_md = (self.raiz / "upload_harvey" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
         for trecho in ("## Camada 1", "### Missão", "### F-001", "### H-001", "### L-001", "### ESTADO",
                        "hash camada 1"):
@@ -420,7 +426,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
     def test_pacote_versionado_esta_sincronizado_com_as_camadas(self) -> None:
         """Os pacotes commitados devem refletir as camadas atuais (rode `nucleo empacotar`)."""
         self.projeto.empacotar(hoje=HOJE)
-        for pasta in ("upload_harvey", "upload_setores", "upload_batman", "upload_nex"):
+        for pasta in ("upload_harvey", "upload_setores", "upload_batman", "upload_nex", "upload_house"):
             for caminho in sorted((self.raiz / pasta).rglob("*.md")):
                 relativo = caminho.relative_to(self.raiz)
                 atual = GPT_PROJETO / relativo
@@ -932,6 +938,53 @@ class NexPsiqueTests(ProjetoTemporario):
         self.assertIn("Psique hoje:", manifesto)
 
 
+class HouseTests(ProjetoTemporario):
+    def psique(self):
+        return self.projeto.psique_de("HOUSE")[1]
+
+    def test_nucleo_e_o_v4_intacto_e_adendo_cabe(self) -> None:
+        nucleo = (GPT_PROJETO / "house" / "NUCLEO_HOUSE.md").read_text(encoding="utf-8")
+        for trecho in ("PERSONALITY_LOCK = TRUE", "# 2. Hierarquia de autoridade", "# 29. Regra absoluta de não alteração",
+                       "# 41. Fronteiras de autoridade, pesquisa e execução", "APÊNDICE C — CONTROLE DA EDIÇÃO v4.0"):
+            self.assertIn(trecho, nucleo)
+        adendo = (GPT_PROJETO / "house" / "ADENDO_HOUSE.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(adendo), LIMITE_ADENDO)
+        for trecho in ("STATE_SNAPSHOT", "WORK_EPISODES", "RELATIONSHIP_LEDGER", "não pesquisa, não certifica"):
+            self.assertIn(trecho, adendo)
+        for bib in (GPT_PROJETO / "house" / "bibliotecas").glob("BIB_H*.md"):
+            self.assertNotIn("Nunca é lúpus. Anota.", bib.read_text(encoding="utf-8"))
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_dor_e_dependencia(self) -> None:
+        estado = self.psique()
+        self.assertGreater(float(estado["psique"].get("dor_base")), 50)
+        self.assertEqual(estado["saude"].get("dependencia_estado"), "ativo")
+        self.assertIn("[dependencia]", estado["saude"].get("sintomas_ativos"))
+        dor_antes = float(estado["psique"].get("dor"))
+        self.projeto.registrar_evento_de_psique("HOUSE", "psique", {"evento": "dor_forte", "intensidade": "forte"}, hoje=HOJE)
+        ps = self.psique()["psique"]
+        self.assertGreater(float(ps.get("dor")), dor_antes)
+        self.assertTrue(any(t in ps.get("tom") for t in ("hostil", "sarcástico", "amargo", "frio")), ps.get("tom"))
+        self.projeto.registrar_evento_de_psique("HOUSE", "psique", {"evento": "analgesico"}, hoje=HOJE)
+        estado = self.psique()
+        self.assertLess(float(estado["psique"].get("dor")), float(ps.get("dor")))
+        self.assertGreater(float(estado["saude"].get("dependencia_carga")), 60)
+        self.assertTrue(any("dor" in a or "quadro ativo" in a for a in psique_mod.alertas(estado)))
+        self.projeto.registrar_evento_de_psique("HOUSE", "tempo", {"dias": "10"}, hoje=HOJE)
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_nex_migra_quadro_novo_sem_quebrar(self) -> None:
+        estado = self.projeto.psique_de("NEX")[1]
+        self.assertIn(estado["saude"].get("dependencia_estado"), psique_mod.ESTADOS_DE_TRANSTORNO)
+        self.assertEqual(psique_mod.validar(estado), [])
+
+    def test_acaso_de_house_pode_trazer_dor(self) -> None:
+        eventos = {e for e, _, _ in psique_mod.sortear_acaso(self.psique(), random.Random(1), 60)}
+        self.assertTrue(eventos & {"dor_forte", "analgesico", "abstinencia", "fisioterapia"})
+        eventos_nex = {e for e, _, _ in psique_mod.sortear_acaso(self.projeto.psique_de("NEX")[1], random.Random(1), 60)}
+        self.assertFalse(eventos_nex & {"dor_forte", "analgesico", "abstinencia", "fisioterapia"})
+
+
 class CliTests(ProjetoTemporario):
     def rodar(self, *argv, entrada=""):
         saida, erro = io.StringIO(), io.StringIO()
@@ -1008,6 +1061,13 @@ class CliTests(ProjetoTemporario):
         self.assertIn("Eventos de psique", self.rodar("mente", "catalogo")[1])
         self.assertEqual(self.rodar("mente", "acaso", "NEX", "--quantos", "2", "--semente", "3")[0], 0)
         self.assertEqual(self.rodar("mente", "acaso", "BATMAN", "--semente", "3")[0], 0)
+        codigo, saida, _ = self.rodar("testar", "HOUSE", "--quantos", "3", "--semente", "1")
+        self.assertEqual(codigo, 0)
+        self.assertIn("## T01", saida)
+        self.assertNotIn("Aprova se", saida)
+        self.assertNotIn("H0", saida.split("(chave gravada")[0])
+        self.assertTrue(list((self.raiz / "house").glob("testes_chave_*.md")))
+        self.assertEqual(self.rodar("testar", "NEX")[0], 1)
         self.assertEqual(self.rodar("custo", "registrar", "S01", "3", "creditos")[0], 0)
         self.assertIn("C-001", self.rodar("diario", "custos")[1])
 

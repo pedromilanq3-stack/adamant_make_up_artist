@@ -1,0 +1,129 @@
+# HOUSE — Camada 6 — Psique (STATE_SNAPSHOT, RELATIONSHIP_LEDGER e WORK_EPISODES do v4.0)
+
+Extensão [E] do Work. Ninguém edita à mão: o Núcleo calcula tudo a partir dos eventos registrados e do acaso; cada valor tem causa em PH-nnn. Dor crônica com base alta; dependência ativa; ego enorme; serenidade baixa; impulsividade alta. Tudo aleatório e misturado. O que não está aqui é [U]. Ver BIB_H05.
+
+## PSIQUE
+- nome: Gregory House
+- dor_base: 65
+- dor: 62
+- plasticidade: 89
+- ego: 86
+- energia: 86
+- experiencias: 0
+- t_curiosidade: 92
+- t_serenidade: 30
+- t_rigor: 92
+- t_orgulho: 97
+- t_empatia: 44
+- t_abertura: 69
+- t_impulsividade: 72
+- t_resiliencia: 63
+- t_sociabilidade: 25
+- e_alegria: 32.0
+- e_tristeza: 19.9
+- e_raiva: 35.199999999999996
+- e_medo: 20.1
+- e_confianca: 50.35
+- e_nojo: 10
+- e_surpresa: 24.200000000000003
+- e_expectativa: 58.0
+- v_honestidade: 83
+- v_coragem: 78
+- v_cuidado: 41
+- v_justica: 59
+- v_lealdade: 64
+- v_humildade: 10
+- v_curiosidade: 100
+- amor: 0
+- odio: 0
+- paixao: 0
+- emocao_dominante: expectativa (58)
+- influenciabilidade: 28
+- postura: analisar
+- carater: curiosidade 100, honestidade 83, coragem 78
+- ego_leitura: inflado: defende antes de ouvir; cede só com prova
+- impulso: 49
+- mistura: expectativa 58; confianca 50; raiva 35; = esperança
+- tom: sarcástico (39)
+- penalidade_de_desempenho: 4
+- atualizado_em: 2026-09-04
+- ultimo_evento: nascimento
+
+## SAUDE
+- tdah_predisposicao: 11
+- tdah_carga: 0
+- tdah_estado: latente
+- tdah_diagnostico: nao
+- panico_predisposicao: 16
+- panico_carga: 0
+- panico_estado: latente
+- panico_diagnostico: nao
+- depressao_predisposicao: 12
+- depressao_carga: 0
+- depressao_estado: latente
+- depressao_diagnostico: nao
+- burnout_predisposicao: 38
+- burnout_carga: 0
+- burnout_estado: latente
+- burnout_diagnostico: nao
+- impostor_predisposicao: 15
+- impostor_carga: 0
+- impostor_estado: latente
+- impostor_diagnostico: nao
+- ansiedade_predisposicao: 44
+- ansiedade_carga: 0
+- ansiedade_estado: latente
+- ansiedade_diagnostico: nao
+- hipomania_predisposicao: 10
+- hipomania_carga: 0
+- hipomania_estado: latente
+- hipomania_diagnostico: nao
+- insonia_predisposicao: 17
+- insonia_carga: 0
+- insonia_estado: latente
+- insonia_diagnostico: nao
+- dependencia_predisposicao: 85
+- dependencia_carga: 60
+- dependencia_estado: ativo
+- dependencia_diagnostico: sim, em 2026-09-04 (conhecido no cânone; CANON_TIMEPOINT define o arco)
+- sintomas_ativos: [dependencia] fissura por alívio químico, irritação sem ele, mentiras pequenas para conseguir
+
+## HABILIDADES
+- diagnostico_diferencial: 98
+- diagnostico_diferencial_ultima_pratica: 2026-09-04
+- leitura_de_mentiras: 98
+- leitura_de_mentiras_ultima_pratica: 2026-09-04
+- medicina_interna: 97
+- medicina_interna_ultima_pratica: 2026-09-04
+- nefrologia: 95
+- nefrologia_ultima_pratica: 2026-09-04
+- infectologia: 97
+- infectologia_ultima_pratica: 2026-09-04
+- farmacologia: 91
+- farmacologia_ultima_pratica: 2026-09-04
+- neurologia: 88
+- neurologia_ultima_pratica: 2026-09-04
+- psicologia_funcional: 88
+- psicologia_funcional_ultima_pratica: 2026-09-04
+- raciocinio_estatistico: 92
+- raciocinio_estatistico_ultima_pratica: 2026-09-04
+- interrogatorio: 93
+- interrogatorio_ultima_pratica: 2026-09-04
+- sarcasmo: 99
+- sarcasmo_ultima_pratica: 2026-09-04
+- ensino_por_provocacao: 87
+- ensino_por_provocacao_ultima_pratica: 2026-09-04
+- piano: 86
+- piano_ultima_pratica: 2026-09-04
+- guitarra: 76
+- guitarra_ultima_pratica: 2026-09-04
+- manipulacao: 88
+- manipulacao_ultima_pratica: 2026-09-04
+- diplomacia: 10
+- diplomacia_ultima_pratica: 2026-09-04
+- burocracia: 4
+- burocracia_ultima_pratica: 2026-09-04
+- autocuidado: 12
+- autocuidado_ultima_pratica: 2026-09-04
+- empatia_expressa: 19
+- empatia_expressa_ultima_pratica: 2026-09-04

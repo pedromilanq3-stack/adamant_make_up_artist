@@ -22,13 +22,21 @@ Fase mental: **ESTÁVEL** (sanidade 85, exaustão 30, isolamento 35, exposição
 Status **Ativo**, cérebro próprio (NEX_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 1 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
 Psique hoje: emoção expectativa (58), tom sereno, postura analisar, ego 56, energia 73.
 
+## Dr. Gregory House (HOUSE)
+
+Status **Ativo**, cérebro próprio (HOUSE_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Psique hoje: emoção expectativa (58), tom sarcástico (39), postura analisar, ego 86, energia 86; ativo sem nome: 1 quadro(s).
+
 ## ATLAS
 
 Último status de integridade emitido por ATLAS: nenhum ainda. ATLAS opera em sala separada; Harvey não faz o trabalho de ATLAS.
 
 ## Pendências de revisão
 
-Nenhuma pendência.
+### HOUSE
+- PSIQUE: quadro ativo (dependencia, diagnosticado)
+- PSIQUE: ego inflado: risco de defender erro
+
 
 ## Regras de leitura
 

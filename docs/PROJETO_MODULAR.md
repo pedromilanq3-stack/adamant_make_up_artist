@@ -16,6 +16,7 @@ Duas partes trabalham juntas:
 | `gpt_projeto/upload_harvey/` | sala de Harvey (Projeto próprio) | Harvey Specter fiel ao personagem, com cérebro procedural próprio e dez bibliotecas de habilidades e comunicação |
 | `gpt_projeto/upload_setores/Snn/` | uma sala por setor (Projeto próprio) | o setor com seus agentes; obedece a Harvey na tarefa e a ATLAS na estrutura; é quem aprende |
 | `gpt_projeto/upload_batman/` | sala de Batman (Projeto próprio) | Batman compósito com cérebro procedural e uma sexta camada, a mente, que pode ceder à sanidade do Coringa; dez bibliotecas com tudo o que ele conhece |
+| `gpt_projeto/upload_nex/` | o NEX que Milan já tem (Projeto "investimento") | adendo para colar no fim do Prompt Mestre v2.0, mais o cérebro com psique completa e três bibliotecas |
 | `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
 | `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
 
@@ -55,6 +56,12 @@ sem trava mecânica), `BATMAN_CEREBRO.md` (seis camadas, a sexta é a mente), as
 bibliotecas `BIB_B01` a `BIB_B10`, protocolo, manifesto, cérebros dos setores, avisos e
 dossiês. Batman trabalha por ordem de Harvey em investigação, risco, segurança,
 contingência e crise.
+
+**NEX** (`gpt_projeto/upload_nex/`): NEX já existe no Projeto "investimento" com o
+Prompt Mestre v2.0. Nada é apagado: cole `00_ADENDO_PARA_O_SEU_NEX.md` no fim das
+instruções que já estão lá e envie `NEX_CEREBRO.md`, `BIB_N01`, `BIB_N02`, `BIB_N03` e
+`02_PROTOCOLO_DO_CEREBRO.md` nos Arquivos. `01_NUCLEO_NEX.md` é a cópia do prompt que o
+Núcleo versiona; não precisa subir.
 
 **Sala de ATLAS**: seção 1b.
 
@@ -253,6 +260,45 @@ recusa em operar.
 Próxima etapa combinada com Milan: o Coringa como personagem próprio, numa sala em que
 ele e Batman conversam; a exposição ao caos dessa sala alimenta a mente de Batman.
 
+## 4a-quater. A psique de NEX: o cérebro mais real possível
+
+NEX nasce sabendo toda a computação (o Prompt Mestre é o núcleo, intacto). O que ele
+ganha é uma Camada 6 do tipo **psique**, `nex/camada6_psique.md`, calculada só pelo
+Núcleo:
+
+- **Temperamento** (nove traços) que nasce do prompt e muda devagar; **plasticidade**
+  que cai com a experiência.
+- **As oito emoções** (alegria, tristeza, raiva, medo, confiança, nojo, surpresa,
+  expectativa) que sobem com eventos e decaem com o tempo rumo a linhas de base do
+  temperamento e dos quadros ativos. A emoção dominante e a **postura** (analisar,
+  cooperar, explorar, observar, recolher-se, desafiar) colorem o tom.
+- **Ego** que infla com elogio, sucesso e reconhecimento (mais em quem tem orgulho) e
+  murcha com fracasso, crítica e humilhação; decide como NEX recebe correção.
+- **Impulso** que nasce da impulsividade, das emoções quentes, da energia baixa e de
+  quadros ativos, e às vezes decide sozinho (sorteio determinístico): NEX responde antes
+  de terminar a análise, marca como INFERIDO e corrige depois.
+- **Valores** (o caráter): só mudam por aprendizado com significado (`## significado`:
+  ler um fato ou um livro, entender e registrar o que significa, com que emoção e
+  intensidade, e qual valor toca) e por eventos que os testam. Cada significado vira
+  SG-nnn na Camada 4.
+- **Saúde mental**: TDAH, pânico, depressão, burnout, impostor, ansiedade, hipomania e
+  insônia, com predisposição rara sorteada deterministicamente do nome, carga que
+  acumula com sobrecarga, noites ruins, isolamento, fracassos e humilhações, estados
+  latente, subclínico, ativo e remissão. Os sintomas aparecem como experiência sentida,
+  **sem nome**, até uma `avaliacao`. Quadros ativos mudam as linhas de base das emoções
+  e da energia e geram alerta para ATLAS.
+- **Pessoas**: confiança por pessoa e a influência dela sobre NEX (confiança ×
+  influenciabilidade, que sobe com ego baixo e medo alto).
+- **Habilidades** por domínio, com níveis de iniciante a mestre, prática com retornos
+  decrescentes, ferrugem por desuso e **penalidade de desempenho do dia** por medo,
+  cansaço e atenção dispersa.
+
+Comandos: `nucleo mente estado NEX`, `nucleo mente evento NEX <evento> [--pessoa X]`,
+`nucleo mente significado NEX --fonte ... --valor ... --direcao +`, `nucleo mente pratica
+NEX --habilidade ... --resultado ...`, `nucleo mente tempo NEX --dias N`, `nucleo mente
+catalogo`. O mesmo modelo serve a qualquer outro personagem que Milan queira: basta um
+núcleo, temperamento inicial, valores e habilidades.
+
 ## 4b. ATLAS: o que ele governa e como se liga ao sistema
 
 ATLAS não substitui os especialistas; governa a estrutura em que trabalham. Ele
@@ -302,6 +348,11 @@ gpt_projeto/
     INSTRUCOES_HARVEY.md          núcleo de identidade: cola-se nas Instruções da sala de Harvey
     camada1..5_*.md               cérebro procedural de Harvey (regras próprias RG-nnn na camada 4)
     bibliotecas/BIB_01..10.md     habilidades e comunicação do personagem
+  nex/
+    NUCLEO_NEX.md                 Prompt Mestre v2.0 (texto de Milan), sem trava mecânica
+    ADENDO_NEX.md                 adendo para o fim do prompt que já está no GPT
+    camada1..6_*.md               cérebro procedural; camada 6 é a psique (PSIQUE, SAUDE, HABILIDADES, P-nnn, PH-nnn)
+    bibliotecas/BIB_N01..03.md    psique e comportamento, saúde mental e sintomas, aprender com significado
   batman/
     INSTRUCOES_BATMAN.md          instruções da sala de Batman
     NUCLEO_BATMAN.md              Arquitetura Compósita v2 (texto de Milan), sem trava mecânica
@@ -325,6 +376,7 @@ gpt_projeto/
   upload_harvey/                  gerado por `empacotar`; sala de Harvey (identidade, cérebro, bibliotecas)
   upload_setores/Snn/             gerado por `empacotar`; uma sala por setor operante
   upload_batman/                  gerado por `empacotar`; sala de Batman
+  upload_nex/                     gerado por `empacotar`; adendo e arquivos para o NEX de Milan
   upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)
 tests/test_nucleo.py              parsing, isolamento, correção, dossiês, ciclo de vida, diário, versões, ATLAS, CLI

@@ -26,6 +26,7 @@ from datetime import date
 from pathlib import Path
 
 from . import mente as mente_mod
+from . import psique as psique_mod
 from .diario import NAO_INFORMADO, Diario
 from .patch import BlocoDeAprendizado, BlocoDoAtlas, ErroDePatch, Secao
 from .registros import Registro, parse_registros, proximo_id, render_registros
@@ -63,14 +64,22 @@ ARQUIVO_ADENDO = "ADENDO_HARVEY.md"
 PASTA_HARVEY = "harvey"
 HARVEY = "HARVEY"
 BATMAN = "BATMAN"
+NEX = "NEX"
 # Personagens: componentes com sala própria e cérebro procedural, fora do ciclo de setores.
+# camada6: None (só cinco camadas), "mente" (fases, Batman) ou "psique" (cérebro completo, NEX).
 PERSONAGENS = {
-    HARVEY: {"pasta": "harvey", "chave": "harvey", "nome": "Harvey Specter", "mente": False,
-             "transiciona": False, "instrucoes": "INSTRUCOES_HARVEY.md", "nucleo": None, "prefixo_bib": "BIB_"},
-    BATMAN: {"pasta": "batman", "chave": "batman", "nome": "Batman", "mente": True,
-             "transiciona": True, "instrucoes": "INSTRUCOES_BATMAN.md", "nucleo": "NUCLEO_BATMAN.md",
+    HARVEY: {"pasta": "harvey", "chave": "harvey", "nome": "Harvey Specter", "camada6": None,
+             "transiciona": False, "instrucoes": "INSTRUCOES_HARVEY.md", "limite": 8000, "nucleo": None,
+             "prefixo_bib": "BIB_"},
+    BATMAN: {"pasta": "batman", "chave": "batman", "nome": "Batman", "camada6": "mente",
+             "transiciona": True, "instrucoes": "INSTRUCOES_BATMAN.md", "limite": 8000, "nucleo": "NUCLEO_BATMAN.md",
              "prefixo_bib": "BIB_B"},
+    NEX: {"pasta": "nex", "chave": "nex", "nome": "NEXARION", "camada6": "psique",
+          "transiciona": True, "instrucoes": "ADENDO_NEX.md", "limite": 4500, "nucleo": "NUCLEO_NEX.md",
+          "prefixo_bib": "BIB_N"},
 }
+for _perfil in PERSONAGENS.values():
+    _perfil["mente"] = _perfil["camada6"] == "mente"
 ARQUIVO_PROTOCOLO = "PROTOCOLO_DO_CEREBRO.md"
 PASTA_ATLAS = "atlas"
 ARQUIVO_INSTRUCOES_ATLAS = "INSTRUCOES_ATLAS.md"
@@ -181,13 +190,32 @@ class Projeto:
     def tem_harvey(self) -> bool:
         return self.tem_personagem(HARVEY)
 
+    def camada6_de(self, id_: str) -> str | None:
+        return PERSONAGENS[id_]["camada6"] if id_ in PERSONAGENS else None
+
     def tem_mente(self, id_: str) -> bool:
-        return id_ in PERSONAGENS and PERSONAGENS[id_]["mente"]
+        return self.camada6_de(id_) == "mente"
+
+    def tem_psique(self, id_: str) -> bool:
+        return self.camada6_de(id_) == "psique"
 
     def mente_de(self, id_: str) -> tuple[str, Registro, list[Registro]]:
         if not self.tem_mente(id_):
-            raise mente_mod.ErroDeMente(f"{id_} não tem Camada 6 (mente)")
+            raise mente_mod.ErroDeMente(f"{id_} não tem Camada 6 do tipo mente")
         return mente_mod.carregar(self.pasta_do_setor(id_))
+
+    def psique_de(self, id_: str) -> tuple[str, dict]:
+        if not self.tem_psique(id_):
+            raise psique_mod.ErroDePsique(f"{id_} não tem Camada 6 do tipo psique")
+        return psique_mod.carregar(self.pasta_do_setor(id_))
+
+    def linha_de_camada6(self, id_: str) -> str:
+        if self.tem_mente(id_):
+            mente = self.mente_de(id_)[1]
+            return f"fase mental {mente.get('fase')} (sanidade {mente.get('sanidade')})"
+        if self.tem_psique(id_):
+            return "psique: " + psique_mod.linha_de_estado(self.psique_de(id_)[1])
+        return ""
 
     def setor(self, id_setor: str) -> Setor:
         return Setor.carregar(id_setor, self.pasta_do_setor(id_setor))
@@ -252,17 +280,24 @@ class Projeto:
             caminho = self.raiz / perfil["pasta"] / perfil["instrucoes"]
             if not caminho.exists():
                 problemas.append(f"falta {perfil['pasta']}/{perfil['instrucoes']}")
-            elif len(caminho.read_text(encoding="utf-8")) > LIMITE_INSTRUCOES:
-                problemas.append(f"{perfil['pasta']}/{perfil['instrucoes']} passa de {LIMITE_INSTRUCOES} caracteres")
+            elif len(caminho.read_text(encoding="utf-8")) > perfil["limite"]:
+                problemas.append(f"{perfil['pasta']}/{perfil['instrucoes']} passa de {perfil['limite']} caracteres")
             if perfil["nucleo"] and not (self.raiz / perfil["pasta"] / perfil["nucleo"]).exists():
                 problemas.append(f"falta {perfil['pasta']}/{perfil['nucleo']}")
-            if perfil["mente"]:
+            if perfil["camada6"] == "mente":
                 try:
                     _, mente, _ = self.mente_de(id_p)
                 except mente_mod.ErroDeMente as erro:
                     problemas.append(f"{id_p}: {erro}")
                 else:
                     problemas.extend(f"{id_p}/{m}" for m in mente_mod.validar(mente))
+            elif perfil["camada6"] == "psique":
+                try:
+                    _, estado = self.psique_de(id_p)
+                except psique_mod.ErroDePsique as erro:
+                    problemas.append(f"{id_p}: {erro}")
+                else:
+                    problemas.extend(f"{id_p}/{m}" for m in psique_mod.validar(estado))
         for id_setor in self.setores():
             entrada = self.entrada(id_setor)
             if entrada.get("status") not in ESTADOS_DE_SETOR:
@@ -468,15 +503,20 @@ class Projeto:
         """Aplica o bloco ao setor emissor. Retorna o relato do que mudou."""
         hoje = hoje or date.today()
         entrada = self.entrada(bloco.setor)
-        so_mente = all(secao.tipo in ("mente", "tempo") for secao in bloco.secoes)
-        if entrada["status"] not in ESTADOS_OPERANTES and not (so_mente and self.tem_mente(bloco.setor)):
+        SECOES_MENTE = {"mente", "tempo"}
+        SECOES_PSIQUE = {"psique", "significado", "pratica", "tempo"}
+        secoes6 = SECOES_MENTE if self.tem_mente(bloco.setor) else SECOES_PSIQUE if self.tem_psique(bloco.setor) else set()
+        so_mente = bool(secoes6) and all(secao.tipo in secoes6 for secao in bloco.secoes)
+        if entrada["status"] not in ESTADOS_OPERANTES and not so_mente:
             raise ErroDeAutorizacao(
                 f"{bloco.setor} está '{entrada['status']}' e não opera; só setores em "
                 f"{sorted(ESTADOS_OPERANTES)} recebem aprendizado"
-                + (" (eventos de mente e tempo continuam aceitos)" if self.tem_mente(bloco.setor) else "")
+                + (" (eventos da Camada 6 continuam aceitos)" if secoes6 else "")
             )
-        if any(secao.tipo in ("mente", "tempo") for secao in bloco.secoes) and not self.tem_mente(bloco.setor):
-            raise ErroDePatch(f"{bloco.setor} não tem Camada 6 (mente); '## mente' e '## tempo' só valem para BATMAN")
+        usadas = {secao.tipo for secao in bloco.secoes} & {"mente", "tempo", "psique", "significado", "pratica"}
+        if usadas - secoes6:
+            raise ErroDePatch(f"{bloco.setor} não aceita as seções {sorted(usadas - secoes6)}: "
+                              f"Camada 6 = {self.camada6_de(bloco.setor) or 'nenhuma'}")
         trava = entrada.get("trava_camada1")
         setor = self.setor(bloco.setor)
         if trava and trava != setor.hash_camada1():
@@ -487,9 +527,14 @@ class Projeto:
         pendentes: list[Registro] = []
         mente_estado = self.mente_de(bloco.setor) if self.tem_mente(bloco.setor) else None
         fase_antes = mente_estado[1].get("fase") if mente_estado else None
+        psique_estado = self.psique_de(bloco.setor) if self.tem_psique(bloco.setor) else None
+        alertas_antes = psique_mod.alertas(psique_estado[1]) if psique_estado else []
         for secao in bloco.secoes:
-            if secao.tipo in ("mente", "tempo"):
+            if mente_estado and secao.tipo in ("mente", "tempo"):
                 relato.append(self._aplicar_mente(mente_estado, bloco, secao, hoje))
+                continue
+            if psique_estado and secao.tipo in ("psique", "significado", "pratica", "tempo"):
+                relato.append(self._aplicar_psique(setor, psique_estado[1], bloco, secao, hoje))
                 continue
             relato.append(self._aplicar_secao(setor, bloco, secao, hoje, autorizado_por_milan, pendentes))
         problemas = setor.validar()
@@ -499,6 +544,8 @@ class Projeto:
         setor.salvar()
         if mente_estado:
             mente_mod.salvar(self.pasta_do_setor(bloco.setor), *mente_estado)
+        if psique_estado:
+            psique_mod.salvar(self.pasta_do_setor(bloco.setor), *psique_estado)
         for dossie in pendentes:
             self._gravar_dossie(dossie)
         self._depois_de_mudar(
@@ -509,6 +556,82 @@ class Projeto:
         )
         if mente_estado:
             relato.extend(self._consequencias_de_fase(bloco.setor, fase_antes, mente_estado[1], hoje))
+        if psique_estado:
+            relato.extend(self._consequencias_de_psique(bloco.setor, alertas_antes, psique_estado[1], hoje))
+        return relato
+
+    def _aplicar_psique(self, setor: Setor, estado: dict, bloco: BlocoDeAprendizado, secao: Secao,
+                        hoje: date) -> str:
+        c = secao.campos
+        try:
+            if secao.tipo == "tempo":
+                dias = int(c.get("dias", "0") or 0)
+                registro = psique_mod.passar_tempo(estado, dias, relatado_por=bloco.emitido_por, hoje=hoje)
+            elif secao.tipo == "psique":
+                registro = psique_mod.aplicar_evento(estado, c.get("evento", ""), c.get("intensidade", "normal"),
+                                                     c.get("descricao", ""), c.get("pessoa", ""),
+                                                     relatado_por=bloco.emitido_por, hoje=hoje)
+            elif secao.tipo == "pratica":
+                registro = psique_mod.aplicar_pratica(estado, c.get("habilidade", ""), c.get("resultado", ""),
+                                                      c.get("dificuldade", "media"), c.get("descricao", ""),
+                                                      relatado_por=bloco.emitido_por, hoje=hoje)
+            else:
+                faltando = [k for k in ("fonte", "conteudo", "significado", "emocao", "valor", "direcao") if not c.get(k)]
+                if faltando:
+                    raise ErroDePatch(f"'## significado' sem os campos: {', '.join(faltando)}")
+                registro = psique_mod.aplicar_significado(estado, c["fonte"], c["conteudo"], c["significado"],
+                                                          c["emocao"], c.get("intensidade", "normal"), c["valor"],
+                                                          c["direcao"], relatado_por=bloco.emitido_por, hoje=hoje)
+                setor.acrescentar("significado", {
+                    "fonte": c["fonte"], "conteudo": c["conteudo"], "significado": c["significado"],
+                    "emocao": c["emocao"], "intensidade": c.get("intensidade", "normal"), "valor": c["valor"],
+                    "direcao": c["direcao"], "data": hoje.isoformat(), "registrado_por": bloco.emitido_por,
+                    "status": "vigente",
+                })
+        except (psique_mod.ErroDePsique, ValueError) as erro:
+            raise ErroDePatch(str(erro)) from None
+        psique = estado["psique"]
+        return (f"{registro.id}: {registro.get('evento')} → {psique.get('emocao_dominante')}, ego {psique.get('ego')}, "
+                f"postura {psique.get('postura')}" + ("; agiu por impulso" if registro.get("impulso") == "agiu por impulso" else "")
+                + (f"; saúde: {registro.get('saude')}" if registro.get("saude") not in (None, "", "sem mudança") else ""))
+
+    def _consequencias_de_psique(self, id_: str, alertas_antes: list[str], estado: dict, hoje: date) -> list[str]:
+        novos = [a for a in psique_mod.alertas(estado) if a not in alertas_antes]
+        relato = []
+        for problema in novos:
+            self.diario.registrar_alteracao(
+                componente=id_, operacao="psique", versao_anterior="estado anterior", versao_nova=problema,
+                diferenca=psique_mod.linha_de_estado(estado), motivo="psique procedural", responsavel="Núcleo (cálculo)",
+                autorizacao="não exigida: consequência do que o personagem viveu", hoje=hoje)
+            if problema.startswith("quadro ativo") or "crítica" in problema:
+                alerta = self.diario.acrescentar("alertas", {
+                    "tipo": "mente", "componente": id_, "problema": f"{id_}: {problema}",
+                    "impacto": "desempenho e julgamento afetados; análise com margem",
+                    "recomendacao": "Milan registra descanso, convivio, terapia, avaliacao ou medicacao; ATLAS avalia Limitado",
+                    "evidencia": f"camada6_psique.md, último evento {estado['psique'].get('ultimo_evento')}",
+                    "status": "aberto", "data": hoje.isoformat(), "emitido_por": "Núcleo",
+                })
+                relato.append(f"{alerta.id}: alerta de psique registrado ({problema})")
+        return relato
+
+    def registrar_evento_de_psique(self, id_: str, tipo: str, campos: dict[str, str], relatado_por: str = "Milan",
+                                   hoje: date | None = None) -> list[str]:
+        """Milan registra evento, significado, prática ou tempo sem passar por bloco."""
+        hoje = hoje or date.today()
+        preambulo, estado = self.psique_de(id_)
+        antes = psique_mod.alertas(estado)
+        setor = self.setor(id_)
+        bloco = BlocoDeAprendizado(id_, relatado_por, hoje.isoformat())
+        relato = [self._aplicar_psique(setor, estado, bloco, Secao(tipo, None, dict(campos)), hoje)]
+        versao_anterior = self._antes_de_mudar(id_)
+        setor.salvar()
+        psique_mod.salvar(self.pasta_do_setor(id_), preambulo, estado)
+        self._depois_de_mudar(
+            id_, operacao=f"psique_{tipo}", diferenca=relato[0], motivo=campos.get("descricao", "") or NAO_INFORMADO,
+            responsavel=relatado_por, autorizacao="não exigida: registro de evento vivido", hoje=hoje,
+            versao_anterior=versao_anterior,
+        )
+        relato.extend(self._consequencias_de_psique(id_, antes, estado, hoje))
         return relato
 
     def _aplicar_mente(self, mente_estado, bloco: BlocoDeAprendizado, secao: Secao, hoje: date) -> str:
@@ -1064,6 +1187,8 @@ class Projeto:
                     itens.append(f"MENTE: fase {fase}; Milan decide descanso, alfred, terapia, gordon ou familia")
                 if status == "Quarentena" and fase in ("SOMBRIO", "ESTÁVEL"):
                     itens.append(f"MENTE: recuperou para {fase}; Milan pode reativar ({id_p})")
+            if self.tem_psique(id_p):
+                itens.extend(f"PSIQUE: {a}" for a in psique_mod.alertas(self.psique_de(id_p)[1]))
             if itens:
                 resultado[id_p] = itens
         for id_setor in self.setores_com_camadas():
@@ -1101,6 +1226,17 @@ class Projeto:
                 saida[id_]["mente"] = {v: int(mente.get(v)) for v in mente_mod.VARIAVEIS}
                 saida[id_]["mente"]["fase"] = mente.get("fase")
                 saida[id_]["mente"]["eventos"] = len(historico)
+            if self.tem_psique(id_):
+                _, estado = self.psique_de(id_)
+                ps = estado["psique"]
+                saida[id_]["psique"] = {
+                    "ego": int(float(ps.get("ego"))), "energia": int(float(ps.get("energia"))),
+                    "plasticidade": int(float(ps.get("plasticidade"))), "impulso": int(float(ps.get("impulso"))),
+                    "emocao_dominante": ps.get("emocao_dominante"), "postura": ps.get("postura"),
+                    "carater": ps.get("carater"), "quadros_ativos": psique_mod._ativos(estado["saude"]),
+                    "pessoas": len(estado["pessoas"]), "eventos": len(estado["historico"]),
+                    "habilidades": {k: int(v) for k, v in psique_mod.habilidades_de(estado).items()},
+                }
         return saida
 
     # ---------------------------------------------------------- empacotar
@@ -1162,8 +1298,9 @@ class Projeto:
         destino.mkdir(parents=True)
         gerados: list[Path] = []
         origem = self.raiz / perfil["pasta"]
-        shutil.copyfile(origem / perfil["instrucoes"], destino / f"00_{perfil['instrucoes']}")
-        gerados.append(destino / f"00_{perfil['instrucoes']}")
+        nome_instrucoes = f"00_{perfil['instrucoes']}" if perfil["limite"] >= 8000 else f"00_{perfil['instrucoes'].replace('ADENDO_', 'ADENDO_PARA_O_SEU_')}"
+        shutil.copyfile(origem / perfil["instrucoes"], destino / nome_instrucoes)
+        gerados.append(destino / nome_instrucoes)
         if perfil["nucleo"]:
             shutil.copyfile(origem / perfil["nucleo"], destino / f"01_{perfil['nucleo']}")
             gerados.append(destino / f"01_{perfil['nucleo']}")
@@ -1261,6 +1398,10 @@ class Projeto:
                 if mente.get("fase") != "ESTÁVEL":
                     fases.append(f"- {id_p} está na fase mental **{mente.get('fase')}** (sanidade {mente.get('sanidade')}): "
                                  "leia as análises dele com essa margem.")
+            if self.tem_psique(id_p):
+                problemas = psique_mod.alertas(self.psique_de(id_p)[1])
+                if problemas:
+                    fases.append(f"- {id_p}: {'; '.join(problemas)}. Leia as análises dele com essa margem.")
         if not (alertas or recomendacoes or quarentenas or fases):
             return ""
         linhas = ["# Avisos de ATLAS para Harvey e os setores", "",
@@ -1307,6 +1448,8 @@ class Projeto:
                 linhas.append(f"Fase mental: **{mente.get('fase')}** (sanidade {mente.get('sanidade')}, "
                               f"exaustão {mente.get('exaustao')}, isolamento {mente.get('isolamento')}, "
                               f"exposição ao caos {mente.get('exposicao_ao_caos')}).")
+            if self.tem_psique(id_p):
+                linhas.append("Psique hoje: " + psique_mod.linha_de_estado(self.psique_de(id_p)[1]) + ".")
         ultimo = self.manifesto["atlas"].get("ultimo_status")
         linhas += ["", "## ATLAS", "",
                    f"Último status de integridade emitido por ATLAS: "
@@ -1355,6 +1498,9 @@ class Projeto:
         if self.tem_mente(id_setor):
             _, mente, historico = self.mente_de(id_setor)
             partes += ["", "---", "", "## Camada 6 — Mente", "", mente_mod.resumo(mente, historico)]
+        if self.tem_psique(id_setor):
+            _, estado = self.psique_de(id_setor)
+            partes += ["", "---", "", "## Camada 6 — Psique (como NEX está hoje)", "", psique_mod.resumo(estado)]
         return "\n".join(partes).rstrip("\n") + "\n"
 
 

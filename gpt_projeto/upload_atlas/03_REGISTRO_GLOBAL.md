@@ -46,12 +46,29 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - versao_atual: v001 (e2cef4d6e433) · núcleo sem trava mecânica (decisão de Milan)
 - estado_operacional: Ativo · fase mental ESTÁVEL (sanidade 85)
 - dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_B*
-- dados_mantidos: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado, 1 mente (camada 6)
+- dados_mantidos: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado, 1 camada 6 (mente)
 - localizacao: batman/ (camadas 1–6, bibliotecas/); versoes/BATMAN/
 - custo_operacional: CONSUMO NÃO MEDIDO
 - riscos_conhecidos: mente procedural: pode chegar a LIMIAR ou CORINGA; em CORINGA o Núcleo o coloca em Quarentena e só Milan o reativa
 - ultima_alteracao: 2026-09-04
 - autorizacao_da_alteracao: Milan (Arquitetura Compósita v2, 2026-09-04)
+
+## NEX
+- nome: NEXARION (sala própria, cérebro procedural)
+- tipo: agente
+- missao: Transformar qualquer caos tecnológico em um sistema compreensível, funcional, seguro, eficiente e verificável, compreendendo o sistema inteiro, encontrando a causa verdadeira da falha e construindo a melhor solução possível.
+- responsavel: NEXARION (sala própria); só Milan edita o núcleo
+- autoridade: Análise, diagnóstico, arquitetura, implementação dentro do escopo autorizado, testes, reversão, documentação e ensino em todo o universo da computação. Manter o próprio cérebro: fatos com estado do protocolo de verdade, hipóteses, lições, regras próprias e a psique.
+- limites: Nunca inventa acesso, pesquisa, código existente, APIs, comandos executados, logs, fontes, benchmarks ou resultados. Conhecimento não é acesso; plano não é implementação; código escrito não é código validado. "Analise" autoriza inspeção, não alteração. Cibersegurança só em sistemas próprios, laboratórios ou ambientes expressamente autorizados. Não altera leis físicas ou matemáticas. Milan tem a autoridade final.
+- versao_atual: v001 (b35cbd97b7a5) · núcleo sem trava mecânica (decisão de Milan)
+- estado_operacional: Ativo · psique: emoção expectativa (59), postura analisar, ego 62, energia 80
+- dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_N*
+- dados_mantidos: 2 fatos, 1 hipóteses, 1 lições, 1 regras próprias, 1 estado, 1 camada 6 (psique)
+- localizacao: nex/ (camadas 1–6, bibliotecas/); versoes/NEX/
+- custo_operacional: CONSUMO NÃO MEDIDO
+- riscos_conhecidos: psique procedural: ego, impulso, energia e quadros de saúde mental mudam o desempenho; quadros ativos geram alerta
+- ultima_alteracao: 2026-09-04
+- autorizacao_da_alteracao: Milan (Prompt Mestre v2.0, 2026-09-04)
 
 ## PROMPT-BASE
 - nome: Instruções de Harvey + adendo de integração + Protocolo do Cérebro
@@ -60,7 +77,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + ade89e62b5dc
+- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + e0e336075f9e
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
@@ -230,7 +247,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Núcleo
 - autoridade: fonte da verdade sobre estados operacionais
 - limites: alterado só pelo Núcleo com autorização
-- versao_atual: d9d170a2e17a
+- versao_atual: 2654abc9798c
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: estados e travas

@@ -75,7 +75,8 @@ from dataclasses import dataclass, field
 
 from .registros import ErroDeFormato, Registro, parse_registros
 
-TIPOS_SIMPLES = {"fato", "hipotese", "licao", "regra", "estado", "dossie", "correcao", "mente", "tempo"}
+TIPOS_SIMPLES = {"fato", "hipotese", "licao", "regra", "estado", "dossie", "correcao", "mente", "tempo",
+                 "psique", "significado", "pratica"}
 TIPOS_COM_ALVO = {"supera", "resultado"}
 TIPOS_ATLAS_SIMPLES = {"status", "alerta", "auditoria", "recomendacao"}
 TIPOS_ATLAS_COM_ALVO = {"quarentena", "evento_recebido"}

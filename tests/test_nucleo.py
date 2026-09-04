@@ -13,6 +13,7 @@ from nucleo import (
     parse_bloco, parse_registros, render_registros,
 )
 from nucleo import mente as mente_mod
+from nucleo import psique as psique_mod
 from nucleo.__main__ import main
 from nucleo.atlas import empacotar_atlas, integridade, registro_global
 from nucleo.patch import extrair_blocos, parse_bloco_atlas
@@ -93,14 +94,14 @@ class ProjetoTemporario(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def aplicar(self, corpo, setor="S01", autorizado=False):
-        emitido_por = setor if setor in ("HARVEY", "BATMAN") else "RAIO-X"
+        emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX") else "RAIO-X"
         return self.projeto.aplicar(bloco(setor, emitido_por, corpo), autorizado_por_milan=autorizado, hoje=HOJE)
 
     def recarregar(self) -> Projeto:
@@ -350,7 +351,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         esperado = [
             "upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
             "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
-            "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", *bibliotecas,
+            "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", "upload_harvey/NEX_CEREBRO.md", *bibliotecas,
             "upload_harvey/S01_ROTA_DE_RENDA.md",
             "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
             "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"]
@@ -359,6 +360,10 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         self.assertIn("upload_batman/01_NUCLEO_BATMAN.md", nomes)
         self.assertIn("upload_batman/BATMAN_CEREBRO.md", nomes)
         self.assertEqual(sum(1 for n in nomes if n.startswith("upload_batman/BIB_B")), 10)
+        self.assertIn("upload_nex/00_ADENDO_PARA_O_SEU_NEX.md", nomes)
+        self.assertIn("upload_nex/01_NUCLEO_NEX.md", nomes)
+        self.assertIn("upload_nex/NEX_CEREBRO.md", nomes)
+        self.assertEqual(sum(1 for n in nomes if n.startswith("upload_nex/BIB_N")), 3)
         setor_md = (self.raiz / "upload_harvey" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
         for trecho in ("## Camada 1", "### Missão", "### F-001", "### H-001", "### L-001", "### ESTADO",
                        "hash camada 1"):
@@ -413,7 +418,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
     def test_pacote_versionado_esta_sincronizado_com_as_camadas(self) -> None:
         """Os pacotes commitados devem refletir as camadas atuais (rode `nucleo empacotar`)."""
         self.projeto.empacotar(hoje=HOJE)
-        for pasta in ("upload_harvey", "upload_setores", "upload_batman"):
+        for pasta in ("upload_harvey", "upload_setores", "upload_batman", "upload_nex"):
             for caminho in sorted((self.raiz / pasta).rglob("*.md")):
                 relativo = caminho.relative_to(self.raiz)
                 atual = GPT_PROJETO / relativo
@@ -752,6 +757,120 @@ class BatmanTests(ProjetoTemporario):
         self.assertIn("CORINGA", registro.get("riscos_conhecidos"))
 
 
+class NexPsiqueTests(ProjetoTemporario):
+    def psique(self):
+        return self.projeto.psique_de("NEX")[1]
+
+    def test_nasce_com_o_prompt_intacto_e_psique_valida(self) -> None:
+        nucleo = (GPT_PROJETO / "nex" / "NUCLEO_NEX.md").read_text(encoding="utf-8")
+        for trecho in ("Você é NEXARION.", "## Protocolo NEXUS", "## Protocolo de verdade", "## Regra definitiva",
+                       "QI ficcional: 10.000.000"):
+            self.assertIn(trecho, nucleo)
+        adendo = (GPT_PROJETO / "nex" / "ADENDO_NEX.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(adendo), LIMITE_ADENDO)
+        self.assertIn("não muda quem ele é", adendo)
+        self.assertEqual(self.projeto.validar(), [])
+        estado = self.psique()
+        self.assertEqual(psique_mod.validar(estado), [])
+        self.assertEqual(estado["psique"].get("ultimo_evento"), "nascimento")
+        self.assertEqual(psique_mod._ativos(estado["saude"]), [])
+        self.assertGreater(len(psique_mod.habilidades_de(estado)), 15)
+        pre = psique_mod.predisposicoes("NEXARION")
+        self.assertEqual(pre, psique_mod.predisposicoes("NEXARION"))  # determinístico
+        self.assertTrue(all(0 <= v <= 100 for v in pre.values()))
+
+    def test_bloco_com_psique_significado_pratica_e_tempo(self) -> None:
+        relato = self.aplicar(
+            "## psique\n- evento: sucesso\n- intensidade: forte\n"
+            "## psique\n- evento: elogio\n- pessoa: Milan\n"
+            "## psique\n- evento: mentira_descoberta\n- pessoa: Rick\n- intensidade: forte\n"
+            "## significado\n- fonte: livro X\n- conteudo: sistemas têm limites\n- significado: admitir limite é rigor\n"
+            "- emocao: surpresa\n- intensidade: forte\n- valor: humildade\n- direcao: +\n"
+            "## pratica\n- habilidade: negociacao\n- resultado: sucesso\n- dificuldade: dificil\n"
+            "## tempo\n- dias: 2\n", setor="NEX")
+        self.assertEqual(len(relato), 6)
+        estado = self.psique()
+        ps = estado["psique"]
+        self.assertGreater(float(ps.get("ego")), 62)
+        self.assertGreater(float(ps.get("v_humildade")), 55)
+        pessoas = {p.get("nome"): p for p in estado["pessoas"]}
+        self.assertGreater(float(pessoas["Milan"].get("confianca")), 50)
+        self.assertLess(float(pessoas["Rick"].get("confianca")), 50)
+        self.assertGreater(psique_mod.habilidades_de(estado)["negociacao"], 55)
+        self.assertEqual(len(estado["historico"]), 6)
+        setor = self.recarregar().setor("NEX")
+        self.assertTrue(any(r.id.startswith("SG-") for r in setor.licoes))
+        self.assertEqual(setor.metricas()["significados"], 1)
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_desgaste_ativa_quadro_sem_nome_e_avaliacao_da_nome(self) -> None:
+        for _ in range(4):
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "sobrecarga", "intensidade": "forte"}, hoje=HOJE)
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "sono_ruim", "intensidade": "forte"}, hoje=HOJE)
+        for _ in range(3):
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "isolamento", "intensidade": "forte"}, hoje=HOJE)
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "humilhacao", "intensidade": "forte", "pessoa": "Rick"}, hoje=HOJE)
+        estado = self.psique()
+        ativos = psique_mod._ativos(estado["saude"])
+        self.assertTrue(ativos, "algum quadro deveria estar ativo depois de tanto desgaste")
+        self.assertIn("sem nome", estado["saude"].get("sintomas_ativos"))
+        self.assertTrue(any(a.get("tipo") == "mente" and a.get("componente") == "NEX" for a in self.projeto.diario.ler("alertas")))
+        self.assertEqual(integridade(self.projeto, HOJE)[0], "ATENÇÃO")
+        self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "avaliacao"}, hoje=HOJE)
+        estado = self.psique()
+        self.assertNotIn("sem nome]", estado["saude"].get("sintomas_ativos").split(";")[0])
+        diagnosticados = [t for t in psique_mod.TRANSTORNOS if estado["saude"].get(f"{t}_diagnostico").startswith("sim")]
+        self.assertEqual(sorted(diagnosticados), sorted(ativos))
+        for _ in range(6):
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "descanso", "intensidade": "forte"}, hoje=HOJE)
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "terapia"}, hoje=HOJE)
+        self.projeto.registrar_evento_de_psique("NEX", "tempo", {"dias": "30"}, hoje=HOJE)
+        self.assertEqual(psique_mod._ativos(self.psique()["saude"]), [])
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_impulso_e_penalidade_aparecem(self) -> None:
+        estado = self.psique()
+        ps = estado["psique"]
+        ps.set("t_impulsividade", "95"); ps.set("e_raiva", "90"); ps.set("energia", "10")
+        psique_mod._derivar(ps, {"tdah": True})
+        self.assertGreater(float(ps.get("impulso")), 60)
+        self.assertGreater(float(ps.get("penalidade_de_desempenho")), 20)
+        disparos = sum(psique_mod.sortear_impulso(ps, f"evento{i}") for i in range(50))
+        self.assertGreater(disparos, 5)
+        ps.set("t_impulsividade", "5"); ps.set("e_raiva", "5"); ps.set("energia", "90"); ps.set("t_serenidade", "95")
+        psique_mod._derivar(ps, {})
+        self.assertLess(float(ps.get("impulso")), 15)
+
+    def test_secoes_erradas_sao_recusadas(self) -> None:
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## mente\n- evento: descanso\n", setor="NEX")
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## psique\n- evento: elogio\n", setor="BATMAN")
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## psique\n- evento: inventado\n", setor="NEX")
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## significado\n- fonte: x\n- conteudo: y\n", setor="NEX")
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## pratica\n- habilidade: inexistente\n- resultado: sucesso\n", setor="NEX")
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.travar("NEX", True, hoje=HOJE)
+
+    def test_sala_do_nex_e_registro_global(self) -> None:
+        self.projeto.empacotar(hoje=HOJE)
+        pasta = self.raiz / "upload_nex"
+        cerebro = (pasta / "NEX_CEREBRO.md").read_text(encoding="utf-8")
+        self.assertIn("## Camada 6 — Psique", cerebro)
+        self.assertIn("| Habilidade | Nível |", cerebro)
+        self.assertIn("O que ele sente", cerebro)
+        self.assertTrue((pasta / "00_ADENDO_PARA_O_SEU_NEX.md").exists())
+        registro = next(r for r in registro_global(self.projeto, HOJE) if r.id == "NEX")
+        self.assertIn("psique:", registro.get("estado_operacional"))
+        self.assertIn("camada 6 (psique)", registro.get("dados_mantidos"))
+        manifesto = (self.raiz / "upload_harvey" / "03_MANIFESTO.md").read_text(encoding="utf-8")
+        self.assertIn("NEXARION (NEX)", manifesto)
+        self.assertIn("Psique hoje:", manifesto)
+
+
 class CliTests(ProjetoTemporario):
     def rodar(self, *argv, entrada=""):
         saida, erro = io.StringIO(), io.StringIO()
@@ -818,6 +937,14 @@ class CliTests(ProjetoTemporario):
         self.assertIn("MH-001", saida)
         self.assertEqual(self.rodar("mente", "tempo", "BATMAN", "--dias", "2")[0], 0)
         self.assertEqual(self.rodar("mente", "evento", "BATMAN", "inventado")[0], 1)
+        self.assertIn("Emoção dominante", self.rodar("mente", "estado", "NEX")[1])
+        self.assertEqual(self.rodar("mente", "evento", "NEX", "elogio", "--pessoa", "Milan")[0], 0)
+        self.assertEqual(self.rodar("mente", "significado", "NEX", "--fonte", "f", "--conteudo", "c", "--significado", "s",
+                                    "--emocao", "alegria", "--valor", "coragem", "--direcao", "+")[0], 0)
+        self.assertEqual(self.rodar("mente", "pratica", "NEX", "--habilidade", "ensino", "--resultado", "parcial")[0], 0)
+        self.assertEqual(self.rodar("mente", "tempo", "NEX", "--dias", "3")[0], 0)
+        self.assertEqual(self.rodar("mente", "significado", "BATMAN", "--fonte", "f")[0], 2)
+        self.assertIn("Eventos de psique", self.rodar("mente", "catalogo")[1])
         self.assertEqual(self.rodar("custo", "registrar", "S01", "3", "creditos")[0], 0)
         self.assertIn("C-001", self.rodar("diario", "custos")[1])
 

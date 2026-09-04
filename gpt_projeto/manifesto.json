@@ -48,5 +48,15 @@
     "trava": "nenhuma, por decisão de Milan (a mente muda; o núcleo, só Milan)",
     "ultima_autorizacao": "Milan (Arquitetura Compósita v2, 2026-09-04)",
     "alterado_em": "2026-09-04"
+  },
+  "nex": {
+    "nome": "NEXARION",
+    "pasta": "nex",
+    "status": "Ativo",
+    "versao": 1,
+    "trava": "nenhuma, por decisão de Milan (a psique muda; o núcleo, só Milan)",
+    "ultima_autorizacao": "Milan (Prompt Mestre v2.0, 2026-09-04)",
+    "alterado_em": "2026-09-04",
+    "sala": "Projeto 'investimento' de Milan (adendo + arquivos; o prompt mestre já está lá)"
   }
 }

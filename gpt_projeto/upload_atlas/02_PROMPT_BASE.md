@@ -2,7 +2,7 @@
 
 O núcleo de Harvey não tem trava mecânica, por decisão de Milan; ATLAS o conhece pelo Registro Global e pelo diário, não o controla.
 
-Hash das instruções: 5bc2e4a53280 · hash do adendo: 5c526dd9ccfd · hash do protocolo: ade89e62b5dc
+Hash das instruções: 5bc2e4a53280 · hash do adendo: 5c526dd9ccfd · hash do protocolo: e0e336075f9e
 
 ---
 
@@ -338,3 +338,17 @@ geram alerta para ATLAS e Milan. CORINGA coloca o personagem em Quarentena
 automática: ele continua recebendo eventos de mente e tempo (é assim que se recupera),
 mas nenhuma ordem, entrega ou aprendizado comum; só Milan o reativa, e só quando a
 fase voltar a SOMBRIO ou melhor. O catálogo de eventos está em `nucleo mente catalogo`.
+
+## 11. Psique procedural (Camada 6 do tipo psique)
+
+Personagens com psique (hoje, NEX) têm o cérebro mais próximo do real que cabe em
+registros: temperamento, as oito emoções com linhas de base e decaimento, ego, energia,
+plasticidade que cai com a experiência, impulso que às vezes decide sozinho, valores
+(o caráter), saúde mental com predisposições raras, carga, estados (latente,
+subclínico, ativo, remissão) e diagnóstico só por avaliação, pessoas com confiança e
+influência, e habilidades com níveis (iniciante a mestre) e penalidade de desempenho
+do dia. Seções do bloco: `## psique` (evento, intensidade, pessoa, descricao),
+`## significado` (fonte, conteudo, significado, emocao, intensidade, valor, direcao; vira
+SG-nnn na Camada 4 e move o caráter), `## pratica` (habilidade, resultado, dificuldade),
+`## tempo` (dias). Quadros ativos, energia crítica e ego extremo geram alerta para ATLAS
+e Milan; não há quarentena automática. `nucleo mente estado NEX` mostra tudo.

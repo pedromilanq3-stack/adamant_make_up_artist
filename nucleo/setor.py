@@ -27,8 +27,8 @@ CAMADAS = {
     4: "camada4_licoes.md",
     5: "camada5_estado.md",
 }
-PREFIXOS = {"fato": "F", "hipotese": "H", "licao": "L", "regra": "RG"}
-CAMADA_DO_TIPO = {"fato": 2, "hipotese": 3, "licao": 4, "regra": 4}
+PREFIXOS = {"fato": "F", "hipotese": "H", "licao": "L", "regra": "RG", "significado": "SG"}
+CAMADA_DO_TIPO = {"fato": 2, "hipotese": 3, "licao": 4, "regra": 4, "significado": 4}
 TIPO_DO_PREFIXO = {v: k for k, v in PREFIXOS.items()}
 
 
@@ -45,6 +45,7 @@ CAMPOS_OBRIGATORIOS = {
     ),
     "licao": ("conteudo", "origem", "data", "status"),
     "regra": ("conteudo", "base", "quando_aplicar", "data", "status"),
+    "significado": ("fonte", "conteudo", "significado", "emocao", "intensidade", "valor", "direcao", "data", "status"),
     "estado": ("tarefa_ativa", "prazo", "proxima_acao", "bloqueios", "autorizacoes_pendentes",
                "atualizado_em"),
 }
@@ -58,10 +59,12 @@ STATUS_PERMITIDOS = {
     "hipotese": {"aberta", "confirmada", "refutada", "abandonada", "superada"},
     "licao": {"vigente", "superada"},
     "regra": {"vigente", "superada"},
+    "significado": {"vigente", "superada"},
 }
-STATUS_SUPERADO = {"fato": "superado", "hipotese": "superada", "licao": "superada", "regra": "superada"}
+STATUS_SUPERADO = {"fato": "superado", "hipotese": "superada", "licao": "superada", "regra": "superada",
+                   "significado": "superada"}
 DATA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-ID_SETOR = re.compile(r"^(S\d{2}|HARVEY|BATMAN)$")
+ID_SETOR = re.compile(r"^(S\d{2}|HARVEY|BATMAN|NEX)$")
 
 SECOES_DA_CAMADA_1 = (
     "Missão", "Responsabilidade", "Limites", "Método de análise", "Ferramentas permitidas",
@@ -203,7 +206,7 @@ class Setor:
             origem = registro.get("setor_origem")
             if origem and not ID_SETOR.match(origem):
                 problemas.append(f"{onde}: setor_origem='{origem}' deveria ser Snn")
-            if origem and origem != self.id and not registro.get("dossie") and self.id not in ("HARVEY", "BATMAN"):
+            if origem and origem != self.id and not registro.get("dossie") and self.id not in ("HARVEY", "BATMAN", "NEX"):
                 problemas.append(
                     f"{onde}: fato vindo de {origem} precisa citar o dossiê que o trouxe (campo 'dossie')"
                 )
@@ -297,7 +300,9 @@ class Setor:
                 continue
             licoes_por_origem[licao.get("origem")] = licoes_por_origem.get(licao.get("origem"), 0) + 1
         regras = [r for r in self.licoes if tipo_do_registro(r) == "regra"]
+        significados = [r for r in self.licoes if tipo_do_registro(r) == "significado"]
         return {
+            "significados": len(significados),
             "regras_vigentes": sum(1 for r in regras if r.get("status") == "vigente"),
             "regras_superadas": sum(1 for r in regras if r.get("status") == "superada"),
             "fatos_vigentes": fatos_vigentes,

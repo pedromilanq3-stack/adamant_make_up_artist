@@ -17,6 +17,11 @@ Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 3 fatos, 
 Status **Ativo**, cérebro próprio (BATMAN_CEREBRO.md), versão v001: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
 Fase mental: **ESTÁVEL** (sanidade 85, exaustão 30, isolamento 35, exposição ao caos 10).
 
+## NEXARION (NEX)
+
+Status **Ativo**, cérebro próprio (NEX_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 1 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Psique hoje: emoção expectativa (59), postura analisar, ego 62, energia 80.
+
 ## ATLAS
 
 Último status de integridade emitido por ATLAS: nenhum ainda. ATLAS opera em sala separada; Harvey não faz o trabalho de ATLAS.

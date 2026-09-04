@@ -40,6 +40,8 @@
 > próprio e dez bibliotecas de habilidades e comunicação
 > ([`gpt_projeto/upload_harvey/`](gpt_projeto/upload_harvey/)), Batman com cérebro procedural
 > e uma mente que pode ceder ao Coringa ([`gpt_projeto/upload_batman/`](gpt_projeto/upload_batman/)),
+> NEXARION com psique completa (emoções, ego, impulso, saúde mental, confiança por pessoa,
+> habilidades por nível e caráter formado por significado) ([`gpt_projeto/upload_nex/`](gpt_projeto/upload_nex/)),
 > cada setor trabalha por
 > ordem de Harvey e obedece a ATLAS na estrutura
 > ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita

@@ -12,6 +12,8 @@
     travar S01|ATLAS --autorizado-por-milan [--motivo "..."]
     versoes listar S01 | guardar S01 | reverter S01 v002 --autorizado-por-milan
     mente estado BATMAN | evento BATMAN descanso [--intensidade forte] | tempo BATMAN --dias 3 | catalogo
+    mente evento NEX elogio --pessoa Milan | significado NEX --fonte ... --valor humildade --direcao +
+    mente pratica NEX --habilidade redes_e_protocolos --resultado sucesso --dificuldade dificil
     setor listar | propor | aprovar | piloto | ativar | limitar | liberar | pausar | reativar | encerrar
     setor quarentena S02 --por ATLAS --motivo "..."   (preventiva; só Milan libera)
     dossie listar | autorizar D-001 | recusar D-001
@@ -31,6 +33,7 @@ import sys
 from pathlib import Path
 
 from . import mente as mente_mod
+from . import psique as psique_mod
 from .atlas import empacotar_atlas, integridade
 from .patch import ErroDePatch, extrair_blocos, parse_bloco, parse_bloco_atlas
 from .projeto import ErroDeAutorizacao, ErroDeIsolamento, Projeto
@@ -281,28 +284,52 @@ def cmd_alerta(args: argparse.Namespace) -> int:
 def cmd_mente(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     if args.acao == "catalogo":
+        print("# Eventos de mente (fases, Batman)")
         for nome, dados in mente_mod.EVENTOS.items():
             deltas = ", ".join(f"{k} {v:+d}" for k, v in dados["deltas"].items())
             print(f"{nome:<22} {dados['descricao']}  [{deltas}]")
+        print("\n# Eventos de psique (NEX)")
+        for nome, dados in psique_mod.EVENTOS.items():
+            print(f"{nome:<26} {dados['descricao']}")
+        print("\nSeções extras da psique: significado (fonte, conteudo, significado, emocao, intensidade, valor, direcao) "
+              "e pratica (habilidade, resultado, dificuldade).")
         return 0
     if not args.personagem:
-        print(f"uso: mente {args.acao} BATMAN ...", file=sys.stderr)
+        print(f"uso: mente {args.acao} BATMAN|NEX ...", file=sys.stderr)
         return 2
     try:
         if args.acao == "estado":
-            _, mente, historico = projeto.mente_de(args.personagem)
-            print(mente_mod.resumo(mente, historico))
+            if projeto.tem_mente(args.personagem):
+                _, mente, historico = projeto.mente_de(args.personagem)
+                print(mente_mod.resumo(mente, historico))
+            else:
+                print(psique_mod.resumo(projeto.psique_de(args.personagem)[1]))
             return 0
-        if args.acao == "evento":
+        if projeto.tem_psique(args.personagem):
+            campos = {k: v for k, v in {
+                "evento": args.evento, "intensidade": args.intensidade, "descricao": args.descricao,
+                "pessoa": args.pessoa, "dias": str(args.dias) if args.dias else None, "fonte": args.fonte,
+                "conteudo": args.conteudo, "significado": args.significado, "emocao": args.emocao,
+                "valor": args.valor, "direcao": args.direcao, "habilidade": args.habilidade,
+                "resultado": args.resultado, "dificuldade": args.dificuldade,
+            }.items() if v}
+            tipo = {"evento": "psique", "tempo": "tempo", "significado": "significado", "pratica": "pratica"}[args.acao]
+            if tipo == "tempo" and "dias" not in campos:
+                campos["dias"] = "1"
+            relato = projeto.registrar_evento_de_psique(args.personagem, tipo, campos, relatado_por=args.por or "Milan")
+        elif args.acao == "evento":
             if not args.evento:
                 print("uso: mente evento BATMAN <evento> [--intensidade leve|normal|forte] [--descricao ...]", file=sys.stderr)
                 return 2
             relato = projeto.registrar_evento_mental(args.personagem, args.evento, args.intensidade or "normal",
                                                      args.descricao or "", relatado_por=args.por or "Milan")
-        else:
+        elif args.acao == "tempo":
             relato = projeto.registrar_evento_mental(args.personagem, "tempo", descricao=str(args.dias or 1),
                                                      relatado_por=args.por or "Milan")
-    except (mente_mod.ErroDeMente, *ERROS) as erro:
+        else:
+            print(f"'{args.acao}' só vale para personagens com psique (NEX)", file=sys.stderr)
+            return 2
+    except (mente_mod.ErroDeMente, psique_mod.ErroDePsique, *ERROS) as erro:
         print(erro, file=sys.stderr)
         return 1
     for linha in relato:
@@ -364,10 +391,14 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("acao", choices=["fechar"]); p.add_argument("alerta"); p.add_argument("--resolucao")
     p.set_defaults(func=cmd_alerta)
     p = sub.add_parser("mente")
-    p.add_argument("acao", choices=["estado", "evento", "tempo", "catalogo"])
+    p.add_argument("acao", choices=["estado", "evento", "tempo", "significado", "pratica", "catalogo"])
     p.add_argument("personagem", nargs="?"); p.add_argument("evento", nargs="?")
     p.add_argument("--intensidade", choices=["leve", "normal", "forte"]); p.add_argument("--descricao")
-    p.add_argument("--dias", type=int); p.add_argument("--por")
+    p.add_argument("--dias", type=int); p.add_argument("--por"); p.add_argument("--pessoa")
+    p.add_argument("--fonte"); p.add_argument("--conteudo"); p.add_argument("--significado")
+    p.add_argument("--emocao"); p.add_argument("--valor"); p.add_argument("--direcao", choices=["+", "-"])
+    p.add_argument("--habilidade"); p.add_argument("--resultado", choices=["sucesso", "parcial", "fracasso"])
+    p.add_argument("--dificuldade", choices=["facil", "media", "dificil"])
     p.set_defaults(func=cmd_mente)
     p = sub.add_parser("custo")
     p.add_argument("acao", choices=["registrar"]); p.add_argument("componente"); p.add_argument("valor")

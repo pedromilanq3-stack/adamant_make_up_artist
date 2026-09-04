@@ -67,11 +67,15 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
         m = personagem.metricas()
         extras = {}
         estado = entrada.get("status", "Ativo")
-        if perfil["mente"]:
+        if perfil["camada6"] == "mente":
             mente = projeto.mente_de(id_p)[1]
             estado += f" · fase mental {mente.get('fase')} (sanidade {mente.get('sanidade')})"
             extras["riscos_conhecidos"] = ("mente procedural: pode chegar a LIMIAR ou CORINGA; em CORINGA o Núcleo "
                                            "o coloca em Quarentena e só Milan o reativa")
+        elif perfil["camada6"] == "psique":
+            estado += " · " + projeto.linha_de_camada6(id_p)
+            extras["riscos_conhecidos"] = ("psique procedural: ego, impulso, energia e quadros de saúde mental mudam o "
+                                           "desempenho; quadros ativos geram alerta")
         comp(id_p, nome=f"{perfil['nome']} (sala própria, cérebro procedural)", tipo="agente",
              missao=_uma_linha(_secao(personagem.camada1, "Missão")),
              responsavel=f"{perfil['nome']} (sala própria); só Milan edita o núcleo",
@@ -82,8 +86,8 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
              dependencias="PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas " + perfil["prefixo_bib"] + "*",
              dados_mantidos=f"{len(personagem.fatos)} fatos, {len(personagem.hipoteses)} hipóteses, "
                             f"{sum(m['licoes_vigentes'].values())} lições, {m['regras_vigentes']} regras próprias, 1 estado"
-                            + (", 1 mente (camada 6)" if perfil["mente"] else ""),
-             localizacao=f"{perfil['pasta']}/ (camadas 1–{6 if perfil['mente'] else 5}, bibliotecas/); versoes/{id_p}/",
+                            + (f", 1 camada 6 ({perfil['camada6']})" if perfil["camada6"] else ""),
+             localizacao=f"{perfil['pasta']}/ (camadas 1–{6 if perfil['camada6'] else 5}, bibliotecas/); versoes/{id_p}/",
              ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
              autorizacao_da_alteracao=entrada.get("ultima_autorizacao", "Milan (documento fundador)"), **extras)
     comp("PROMPT-BASE", nome="Instruções de Harvey + adendo de integração + Protocolo do Cérebro", tipo="prompt",
@@ -224,6 +228,9 @@ def integridade(projeto: Projeto, hoje: date | None = None) -> tuple[str, list[s
                 bloqueios.append(f"{id_p} na fase CORINGA (sanidade {mente.get('sanidade')}): cedeu à sanidade do Coringa")
             elif fase in ("LIMIAR", "OBSESSIVO"):
                 atencoes.append(f"{id_p} na fase {fase} (sanidade {mente.get('sanidade')}): análise com margem reduzida")
+        if projeto.tem_psique(id_p):
+            from . import psique as psique_mod
+            atencoes.extend(f"{id_p}: {a}" for a in psique_mod.alertas(projeto.psique_de(id_p)[1]))
     for chave, itens in projeto.pendencias(hoje).items():
         atencoes.extend(f"[{chave}] {item}" for item in itens)
     # duplicação de missão ou de agente entre setores operantes

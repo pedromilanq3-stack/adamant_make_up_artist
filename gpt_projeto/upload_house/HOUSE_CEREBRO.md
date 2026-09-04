@@ -146,7 +146,7 @@ Caráter (valores mais fortes): curiosidade 100, honestidade 83, coragem 78.
 | surpresa | 24.200000000000003 |
 | expectativa | 58.0 |
 
-| Traço | Valor |
+| Traço (temperamento, muda devagar) | Valor |
 |---|---|
 | curiosidade | 92 |
 | serenidade | 30 |

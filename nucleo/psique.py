@@ -135,6 +135,28 @@ TONS = {
 
 RECUPERACAO = frozenset({"descanso", "convivio", "terapia", "medicacao", "ajuda_recebida", "descoberta", "sucesso",
                          "fisioterapia"})
+# Plasticidade do temperamento: cada evento empurra traços devagar, na direção do que foi vivido.
+# O tamanho do passo é 0,35 × intensidade × plasticidade/100 × ruído; um traço leva dezenas de
+# experiências repetidas para se mover de verdade, e quanto mais vivido o personagem, menos ele muda.
+DERIVA_DE_TRACOS: dict[str, dict[str, float]] = {
+    "isolamento": {"sociabilidade": -1, "abertura": -0.5}, "convivio": {"sociabilidade": 1, "empatia": 0.5},
+    "descoberta": {"curiosidade": 1}, "fascinio": {"curiosidade": 1, "impulsividade": 0.3}, "tedio": {"curiosidade": -0.5},
+    "erro_negado": {"orgulho": 1, "abertura": -0.5}, "erro_reconhecido": {"orgulho": -0.5, "rigor": 0.5, "abertura": 0.5},
+    "elogio": {"orgulho": 0.5}, "reconhecimento": {"orgulho": 1}, "humilhacao": {"orgulho": -1, "serenidade": -0.5},
+    "critica_justa": {"rigor": 0.5, "abertura": 0.3}, "critica_injusta": {"abertura": -0.5, "impulsividade": 0.3},
+    "sucesso": {"resiliencia": 0.5, "rigor": 0.3}, "fracasso": {"resiliencia": 0.5, "serenidade": -0.3},
+    "sobrecarga": {"serenidade": -1, "impulsividade": 0.5}, "sono_ruim": {"serenidade": -0.5, "impulsividade": 0.5},
+    "descanso": {"serenidade": 1}, "terapia": {"serenidade": 1, "abertura": 0.5, "empatia": 0.3},
+    "medo_intenso": {"serenidade": -1}, "traicao": {"abertura": -1, "sociabilidade": -0.5, "empatia": -0.3},
+    "gentileza_recebida": {"empatia": 0.5, "abertura": 0.3}, "ajuda_recebida": {"empatia": 0.5},
+    "cumplicidade": {"sociabilidade": 0.5, "empatia": 0.5}, "conflito": {"impulsividade": 0.5},
+    "provocacao": {"impulsividade": 0.5, "serenidade": -0.3}, "brincadeira": {"sociabilidade": 0.5},
+    "ordem_antietica_recusada": {"rigor": 0.5, "resiliencia": 0.5}, "pressao_para_ceder": {"resiliencia": 0.5},
+    "perda": {"resiliencia": 0.5, "sociabilidade": -0.3}, "perda_de_alguem": {"resiliencia": 0.5, "sociabilidade": -0.5},
+    "dor_forte": {"serenidade": -0.5, "empatia": -0.2}, "abstinencia": {"serenidade": -1, "impulsividade": 0.5},
+    "fisioterapia": {"resiliencia": 0.5}, "injustica_presenciada": {"empatia": 0.5}, "encantamento": {"abertura": 0.5},
+    "decepcao_afetiva": {"abertura": -0.5}, "reconciliacao": {"abertura": 0.5, "empatia": 0.3},
+}
 
 
 class ErroDePsique(ValueError):
@@ -460,7 +482,14 @@ def _gravar(estado: dict, evento: str, intensidade: str, descricao: str, relatad
             deltas: dict[str, float], mudancas: list[str], hoje: date) -> Registro:
     psique = estado["psique"]
     psique.set("experiencias", str(int(_num(psique, "experiencias")) + 1))
-    psique.set("plasticidade", str(_clamp(max(15, 90 - int(_num(psique, "experiencias")) * 0.4))))
+    base_plast = max(15, 90 - int(_num(psique, "experiencias")) * 0.4)
+    bonus = float(psique.get("plasticidade_bonus", "0") or 0)
+    if evento in ("terapia", "descoberta", "significado", "fascinio"):
+        bonus = min(20.0, bonus + 1.5)  # novidade e terapia reabrem a mente
+    elif evento == "tempo":
+        bonus = max(0.0, bonus - 0.5)
+    psique.set("plasticidade_bonus", str(round(bonus, 2)))
+    psique.set("plasticidade", str(_clamp(base_plast + bonus)))
     ativos = {t: True for t in _ativos(estado["saude"])}
     _derivar(psique, ativos)
     por_impulso = evento not in ("tempo", "significado", "pratica") and sortear_impulso(psique, evento)
@@ -560,6 +589,11 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
         d = delta * fator * _num(psique, "plasticidade") / 100 * _ruido()
         psique.set(f"v_{valor}", str(_clamp(_num(psique, f"v_{valor}") + d)))
         deltas[f"v_{valor}"] = d
+    plasticidade = _num(psique, "plasticidade") / 100
+    for traco, direcao in DERIVA_DE_TRACOS.get(evento, {}).items():  # o temperamento também é plástico
+        d = 0.35 * direcao * fator * plasticidade * _ruido()
+        psique.set(f"t_{traco}", str(round(max(0.0, min(100.0, _num(psique, f"t_{traco}") + d)), 2)))
+        deltas[f"t_{traco}"] = d
     return _gravar(estado, evento, intensidade, descricao, relatado_por, pessoa, deltas, mudancas, hoje)
 
 
@@ -720,8 +754,8 @@ def resumo(estado: dict, ultimos: int = 8) -> str:
               "", f"Caráter (valores mais fortes): {psique.get('carater')}.", "",
               "| Emoção | Valor |", "|---|---|"]
     linhas += [f"| {e} | {psique.get('e_' + e)} |" for e in EMOCOES]
-    linhas += ["", "| Traço | Valor |", "|---|---|"]
-    linhas += [f"| {t} | {psique.get('t_' + t)} |" for t in TRACOS]
+    linhas += ["", "| Traço (temperamento, muda devagar) | Valor |", "|---|---|"]
+    linhas += [f"| {t} | {float(psique.get('t_' + t)):.0f} |" for t in TRACOS]
     linhas += ["", "| Valor | Força |", "|---|---|"]
     linhas += [f"| {v} | {psique.get('v_' + v)} |" for v in VALORES]
     linhas += ["", f"Impulso {psique.get('impulso')}: último evento {'**agiu por impulso**' if psique.get('agiu_por_impulso', 'nao').startswith('sim') else 'controlado'}. "

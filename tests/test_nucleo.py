@@ -908,6 +908,17 @@ class NexPsiqueTests(ProjetoTemporario):
             self.projeto.registrar_acaso("HARVEY", hoje=HOJE)
         self.assertEqual(self.projeto.validar(), [])
 
+    def test_temperamento_e_plastico_devagar(self) -> None:
+        antes = float(self.psique()["psique"].get("t_sociabilidade"))
+        for _ in range(30):
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "isolamento", "intensidade": "forte"}, hoje=HOJE)
+        depois = float(self.psique()["psique"].get("t_sociabilidade"))
+        self.assertLess(depois, antes)
+        self.assertGreater(depois, antes - 25)  # devagar: trinta isolamentos fortes não mudam quem ele é
+        plast = float(self.psique()["psique"].get("plasticidade"))
+        self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "terapia"}, hoje=HOJE)
+        self.assertGreaterEqual(float(self.psique()["psique"].get("plasticidade")), plast)
+
     def test_secoes_erradas_sao_recusadas(self) -> None:
         with self.assertRaises(ErroDePatch):
             self.aplicar("## mente\n- evento: descanso\n", setor="NEX")

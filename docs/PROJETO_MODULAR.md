@@ -276,8 +276,11 @@ NEX nasce sabendo toda a computação (o Prompt Mestre é o núcleo, intacto). O
 ganha é uma Camada 6 do tipo **psique**, `nex/camada6_psique.md`, calculada só pelo
 Núcleo:
 
-- **Temperamento** (nove traços) que nasce do prompt e muda devagar; **plasticidade**
-  que cai com a experiência.
+- **Temperamento** (nove traços) que nasce do prompt e é plástico: cada evento o
+  empurra devagar na direção do que foi vivido (isolamento repetido baixa sociabilidade;
+  descobertas sobem curiosidade; negar erro sobe orgulho), com passo proporcional à
+  **plasticidade**, que cai com a experiência e reabre um pouco com terapia, descoberta
+  e significado. Dezenas de experiências repetidas movem um traço; uma só, não.
 - **As oito emoções** (alegria, tristeza, raiva, medo, confiança, nojo, surpresa,
   expectativa) que sobem com eventos e decaem com o tempo rumo a linhas de base do
   temperamento e dos quadros ativos. A emoção dominante e a **postura** (analisar,

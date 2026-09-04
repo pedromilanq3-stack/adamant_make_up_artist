@@ -23,6 +23,11 @@
     - conteudo: ...
     - origem: correcao_milan
 
+    ## regra
+    - conteudo: ...            (regra operacional derivada do próprio conhecimento)
+    - base: L-002; F-007       (padrão de evidências ou correção de Milan)
+    - quando_aplicar: ...
+
     ## correcao
     - substitui: F-003
     - motivo: ...
@@ -62,7 +67,7 @@ from dataclasses import dataclass, field
 
 from .registros import ErroDeFormato, Registro, parse_registros
 
-TIPOS_SIMPLES = {"fato", "hipotese", "licao", "estado", "dossie", "correcao"}
+TIPOS_SIMPLES = {"fato", "hipotese", "licao", "regra", "estado", "dossie", "correcao"}
 TIPOS_COM_ALVO = {"supera", "resultado"}
 TIPOS_ATLAS_SIMPLES = {"status", "alerta", "auditoria", "recomendacao"}
 TIPOS_ATLAS_COM_ALVO = {"quarentena", "evento_recebido"}

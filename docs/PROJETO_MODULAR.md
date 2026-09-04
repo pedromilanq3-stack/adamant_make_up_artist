@@ -13,7 +13,7 @@ Duas partes trabalham juntas:
 
 | Parte | Onde vive | Papel |
 |---|---|---|
-| `gpt_projeto/upload_harvey/` | o Harvey que Milan já tem | adendo curto de integração para colar nas instruções dele, mais os arquivos que ele lê |
+| `gpt_projeto/upload_harvey/` | sala de Harvey (Projeto próprio) | Harvey Specter fiel ao personagem, com cérebro procedural próprio e dez bibliotecas de habilidades e comunicação |
 | `gpt_projeto/upload_setores/Snn/` | uma sala por setor (Projeto próprio) | o setor com seus agentes; obedece a Harvey na tarefa e a ATLAS na estrutura; é quem aprende |
 | `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
 | `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
@@ -30,12 +30,17 @@ campo **Instruções** (cabe no limite; `validar` avisa se passar de 8.000 carac
 e os demais vão em **Arquivos**. Se o Projeto oferecer "memória só do projeto",
 ative; a memória oficial continua sendo os arquivos.
 
-**O seu Harvey** (`gpt_projeto/upload_harvey/`): Milan já tem um Harvey com prompt
-próprio. Não o substitua. Cole `00_ADENDO_PARA_O_SEU_HARVEY.md` no fim das instruções
-que ele já tem (o adendo é curto e não redefine identidade; só ensina as salas, os
-arquivos, a ordem e a entrega). Envie `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`,
-`S01_ROTA_DE_RENDA.md` e, quando existirem, `03_AVISOS_DE_ATLAS.md` e `90_DOSSIES.md`
-nos Arquivos do Projeto dele.
+**Sala de Harvey** (`gpt_projeto/upload_harvey/`): `00_INSTRUCOES_HARVEY.md` nas
+Instruções (o núcleo de identidade: quem Harvey é, como fala, o que nunca faz, como
+comanda os setores). Nos Arquivos: `HARVEY_CEREBRO.md` (o cérebro procedural dele, cinco
+camadas), as dez bibliotecas `BIB_01` a `BIB_10` (perfil e psicologia, estilo de
+comunicação, negociação e estratégia, leitura de pessoas, relações e mentoria,
+referências culturais, frases por situação, modo de operação com Milan, combinações de
+habilidades, antipadrões), `01_ADENDO_DE_INTEGRACAO.md`, `02_PROTOCOLO_DO_CEREBRO.md`,
+`03_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e, quando existirem, `04_AVISOS_DE_ATLAS.md` e
+`90_DOSSIES.md`. Se Milan já tiver um Harvey com prompt próprio e preferir mantê-lo, o
+adendo sozinho basta para integrá-lo; nesse caso, o cérebro procedural continua
+funcionando do mesmo jeito.
 
 **Sala do Setor 01** (`gpt_projeto/upload_setores/S01/`): `00_INSTRUCOES_S01.md` nas
 Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e,
@@ -80,8 +85,9 @@ marca o que ATLAS já viu, e o arquivo de diferenças traz só o que mudou desde
 7. colar a entrega    na sala de Harvey; ele confronta, consolida e dá a Milan um próximo movimento
 ```
 
-Harvey não emite bloco de aprendizado: quem aprende é o setor. O que Harvey concluir e
-o setor precisar guardar vai dentro da ordem.
+Harvey também aprende: ele tem cérebro próprio e emite bloco de aprendizado com
+`setor: HARVEY`. O que o setor precisa guardar vai dentro da ordem; o que Harvey precisa
+guardar (fatos sobre Milan, hipóteses, lições e regras próprias) vai no cérebro dele.
 
 O mesmo `aplicar` aceita a resposta de ATLAS: ele emite um bloco ```atlas``` com
 status, alertas, auditorias, recomendações, `quarentena Snn` e `evento_recebido E-nnn`.
@@ -119,6 +125,7 @@ python -m nucleo diario [alteracoes|eventos|alertas|recomendacoes|custos]
 
 python -m nucleo travar S01 --autorizado-por-milan [--motivo "..."]   # depois de Milan editar a Camada 1
 python -m nucleo travar ATLAS --autorizado-por-milan                  # depois de Milan editar o núcleo de ATLAS
+python -m nucleo versoes guardar HARVEY                               # Harvey não trava: só guarda baseline
 python -m nucleo versoes listar [S01]
 python -m nucleo versoes reverter S01 v002 --autorizado-por-milan
 python -m nucleo setor listar
@@ -174,7 +181,7 @@ Milan reverte com um comando e a reversão também vira registro.
 
 ## 4a. Separação entre as três salas
 
-- **Harvey** (o que Milan já tem, com o adendo) nunca fala como setor nem como agente de setor. Ele ordena (handoff
+- **Harvey** nunca fala como setor nem como agente de setor. Ele ordena (handoff
   mínimo: objetivo, informação indispensável, origem, confiança, limite de uso,
   entrega esperada, prazo, autorização aplicável) e confronta a entrega.
 - **O setor** só trabalha a partir de uma ordem de Harvey ou de pergunta direta de
@@ -183,6 +190,28 @@ Milan reverte com um comando e a reversão também vira registro.
   Ordem fora do escopo volta a Harvey pela entrega, com o setor responsável indicado.
 - **ATLAS** governa a estrutura das duas outras salas: estados, versões, alterações,
   custos, integridade. Nenhuma das três altera o núcleo travado da outra.
+
+## 4a-bis. O cérebro procedural de Harvey
+
+Harvey é 100% o personagem, e por decisão de Milan o núcleo dele **não tem trava
+mecânica**: Harvey é Harvey por caráter, não por cadeado (`nucleo travar HARVEY` é
+recusado; `nucleo setor pausar HARVEY` também: ele não é um setor). O que evolui é o
+conhecimento e o método:
+
+- `harvey/camada1_nucleo.md`: identidade, missão, limites, método. Só Milan edita.
+- `camada2_fatos.md`, `camada3_hipoteses.md`: o que Harvey sabe e aposta sobre Milan,
+  mercado e pessoas. Fato vindo de entrega de setor cita `setor_origem: Snn` (Harvey é
+  o único componente que pode registrar fato alheio sem dossiê, porque recebe as
+  entregas).
+- `camada4_licoes.md`: lições (L-nnn) e **regras próprias** (RG-nnn), regras
+  operacionais que Harvey deriva do próprio conhecimento, com `base` (evidências ou
+  correção de Milan) e `quando_aplicar`. Quando a evidência muda, a regra é superada
+  por outra; a antiga fica marcada. Setores também podem criar regras próprias.
+- `camada5_estado.md`: o que Harvey conduz agora.
+
+Tudo passa pelo mesmo `nucleo aplicar`, entra no diário com versão e baseline, e
+aparece no Registro Global de ATLAS. `nucleo metricas` mostra regras vigentes e
+superadas: é o termômetro de que o método de Harvey está evoluindo.
 
 ## 4b. ATLAS: o que ele governa e como se liga ao sistema
 
@@ -228,7 +257,11 @@ Regras que o Núcleo faz cumprir em nome de ATLAS:
 
 ```
 gpt_projeto/
-  ADENDO_HARVEY.md                adendo de integração para o Harvey que Milan já tem
+  ADENDO_HARVEY.md                adendo de integração (também serve a um Harvey com prompt próprio)
+  harvey/
+    INSTRUCOES_HARVEY.md          núcleo de identidade: cola-se nas Instruções da sala de Harvey
+    camada1..5_*.md               cérebro procedural de Harvey (regras próprias RG-nnn na camada 4)
+    bibliotecas/BIB_01..10.md     habilidades e comunicação do personagem
   PROTOCOLO_DO_CEREBRO.md         formato dos registros, do bloco de aprendizado e do bloco atlas
   manifesto.json                  setores, status, versões, histórico, travas (setores e ATLAS)
   atlas/
@@ -244,7 +277,7 @@ gpt_projeto/
   diario/                         alteracoes (M-), eventos (E-), alertas (AL-), recomendacoes (R-), custos (C-)
   versoes/<componente>/vNNN/      baseline de cada versão, para reversão
   modelos/                        carta de setor, instruções de sala de setor, bloco de aprendizado
-  upload_harvey/                  gerado por `empacotar`; adendo e arquivos para o Harvey de Milan
+  upload_harvey/                  gerado por `empacotar`; sala de Harvey (identidade, cérebro, bibliotecas)
   upload_setores/Snn/             gerado por `empacotar`; uma sala por setor operante
   upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)

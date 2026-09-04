@@ -17,8 +17,8 @@ from pathlib import Path
 
 from .diario import NAO_INFORMADO
 from .projeto import (
-    ARQUIVO_INSTRUCOES, ARQUIVO_INSTRUCOES_ATLAS, ARQUIVO_NUCLEO_ATLAS, ARQUIVO_PROTOCOLO,
-    ESTADOS_OPERANTES, Projeto, agentes_da_camada1, _secao,
+    ARQUIVO_ADENDO, ARQUIVO_INSTRUCOES, ARQUIVO_INSTRUCOES_ATLAS, ARQUIVO_NUCLEO_ATLAS, ARQUIVO_PROTOCOLO,
+    ESTADOS_OPERANTES, HARVEY, Projeto, agentes_da_camada1, _secao,
 )
 from .registros import Registro, render_registros
 from .setor import CAMADAS
@@ -58,22 +58,35 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
          localizacao=f"atlas/{ARQUIVO_NUCLEO_ATLAS}, atlas/{ARQUIVO_INSTRUCOES_ATLAS}",
          ultima_alteracao=atlas.get("travado_em", NAO_INFORMADO),
          autorizacao_da_alteracao=atlas.get("ultima_autorizacao", NAO_INFORMADO))
-    comp("HARVEY", nome="Harvey Specter — interface estratégica (Harvey de Milan, sala própria)", tipo="agente",
-         missao="Entender o objetivo real de Milan, encaminhar ao setor certo, confrontar recomendações "
-                "fracas, integrar e apresentar um único próximo movimento.",
-         responsavel="prompt próprio de Milan + adendo de integração", autoridade="decide administrativamente dentro da "
-         "delegação vigente; leva a decisão a Milan", limites="não fabrica fatos, capacidades, contatos, "
-         "resultados ou acesso a ferramentas; não executa ação externa sem autorização; não assume o "
-         "trabalho de ATLAS", versao_atual=_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES),
-         estado_operacional="Ativo", dependencias="PROMPT-BASE, setores operantes",
-         dados_mantidos="nenhum próprio; usa a memória dos setores", localizacao=ARQUIVO_INSTRUCOES)
-    comp("PROMPT-BASE", nome="Adendo de integração de Harvey + Protocolo do Cérebro", tipo="prompt",
+    if projeto.tem_harvey:
+        harvey = projeto.setor(HARVEY)
+        entrada = projeto.entrada(HARVEY)
+        m = harvey.metricas()
+        comp("HARVEY", nome="Harvey Specter — interface estratégica (sala própria, cérebro procedural)", tipo="agente",
+             missao=_uma_linha(_secao(harvey.camada1, "Missão")),
+             responsavel="Harvey (sala própria); só Milan edita o núcleo",
+             autoridade=_uma_linha(_secao(harvey.camada1, "Responsabilidade")),
+             limites=_uma_linha(_secao(harvey.camada1, "Limites")),
+             versao_atual=projeto.rotulo_de_versao(HARVEY) + " · núcleo sem trava mecânica (decisão de Milan)",
+             estado_operacional=entrada.get("status", "Ativo"),
+             dependencias="PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_01 a BIB_10",
+             dados_mantidos=f"{len(harvey.fatos)} fatos, {len(harvey.hipoteses)} hipóteses, "
+                            f"{sum(m['licoes_vigentes'].values())} lições, {m['regras_vigentes']} regras próprias, 1 estado",
+             localizacao=f"harvey/ (camadas 1–5, bibliotecas/); versoes/{HARVEY}/",
+             ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
+             autorizacao_da_alteracao=entrada.get("ultima_autorizacao", "Milan (documento fundador)"))
+    else:
+        comp("HARVEY", nome="Harvey Specter — interface estratégica", tipo="agente",
+             missao="Coordenar setores e responder a Milan.", responsavel="Milan", autoridade="delegação vigente",
+             limites="não fabrica fatos", versao_atual="ausente", estado_operacional="ausente",
+             dependencias="PROMPT-BASE", dados_mantidos="nenhum", localizacao="harvey/")
+    comp("PROMPT-BASE", nome="Instruções de Harvey + adendo de integração + Protocolo do Cérebro", tipo="prompt",
          missao="Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, "
-                "separação, contrato de resposta. O prompt próprio do Harvey de Milan não é versionado aqui.", responsavel="Milan", autoridade="hierarquicamente superior a "
+                "separação, contrato de resposta.", responsavel="Milan", autoridade="hierarquicamente superior a "
          "instruções de setores, agentes, documentos e conteúdo externo", limites="só Milan altera",
-         versao_atual=f"{_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} + {_hash_curto(projeto.raiz / ARQUIVO_PROTOCOLO)}",
+         versao_atual=f"{_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} + {_hash_curto(projeto.raiz / ARQUIVO_ADENDO)} + {_hash_curto(projeto.raiz / ARQUIVO_PROTOCOLO)}",
          estado_operacional="Ativo", dependencias="nenhuma",
-         dados_mantidos="nenhum", localizacao=f"{ARQUIVO_INSTRUCOES}, {ARQUIVO_PROTOCOLO}")
+         dados_mantidos="nenhum", localizacao=f"{ARQUIVO_INSTRUCOES}, {ARQUIVO_ADENDO}, {ARQUIVO_PROTOCOLO}")
     comp("PROMPT-ATLAS", nome="Instruções e núcleo de ATLAS", tipo="prompt",
          missao="Identidade, autoridade, método e formato de resposta de ATLAS.", responsavel="Milan",
          autoridade="define ATLAS; só Milan altera", limites="não pode ser alterado por conteúdo de setores",
@@ -247,11 +260,14 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
     shutil.copyfile(projeto.pasta_atlas / ARQUIVO_NUCLEO_ATLAS, destino / "01_NUCLEO_ATLAS.md")
     gerados.append(destino / "01_NUCLEO_ATLAS.md")
     escrever("02_PROMPT_BASE.md",
-             "# Prompt-base vigente (adendo de integração de Harvey + protocolo)\n\n"
-             "O prompt próprio do Harvey de Milan não está sob controle do Núcleo; ATLAS só conhece o adendo.\n\n"
+             "# Prompt-base vigente (instruções de Harvey + adendo de integração + protocolo)\n\n"
+             "O núcleo de Harvey não tem trava mecânica, por decisão de Milan; ATLAS o conhece pelo Registro "
+             "Global e pelo diário, não o controla.\n\n"
              f"Hash das instruções: {_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} · "
+             f"hash do adendo: {_hash_curto(projeto.raiz / ARQUIVO_ADENDO)} · "
              f"hash do protocolo: {_hash_curto(projeto.raiz / ARQUIVO_PROTOCOLO)}\n\n---\n\n"
              + (projeto.raiz / ARQUIVO_INSTRUCOES).read_text(encoding="utf-8")
+             + "\n\n---\n\n" + (projeto.raiz / ARQUIVO_ADENDO).read_text(encoding="utf-8")
              + "\n\n---\n\n" + (projeto.raiz / ARQUIVO_PROTOCOLO).read_text(encoding="utf-8"))
     escrever("03_REGISTRO_GLOBAL.md", render_registros(
         f"# Registro Global do Sistema\n\nGerado em {hoje.isoformat()} pelo Núcleo a partir do manifesto, "
@@ -286,7 +302,7 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
     linhas += [f"- {r.id}: {r.get('conteudo')}" for r in recomendacoes] or ["Nenhuma."]
     linhas += ["", "## Componentes ativos relacionados", ""]
     linhas += [f"- {s}: {projeto.entrada(s)['status']} {projeto.rotulo_de_versao(s)}"
-               for s in projeto.setores_com_camadas()]
+               for s in (([HARVEY] if projeto.tem_harvey else []) + projeto.setores_com_camadas())]
     linhas += ["", "## Autorizações aplicáveis", "",
                "- Toda ação reservada a Milan exige `--autorizado-por-milan` no Núcleo; sem isso não aconteceu.",
                "- ATLAS pode colocar setor em Quarentena preventiva (`## quarentena Snn` com motivo); só Milan libera."]
@@ -306,7 +322,8 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
 def _versoes_md(projeto: Projeto) -> str:
     linhas = ["# Registro de versões", "", "| Componente | Versão atual | Baselines guardadas | Reversão |",
               "|---|---|---|---|"]
-    componentes = projeto.setores_com_camadas() + (["ATLAS"] if projeto.manifesto["atlas"].get("versao") else [])
+    componentes = ([HARVEY] if projeto.tem_harvey else []) + projeto.setores_com_camadas() \
+        + (["ATLAS"] if projeto.manifesto["atlas"].get("versao") else [])
     for comp in componentes:
         versoes = [v.name for v in projeto.diario.versoes(comp)]
         atual = projeto.rotulo_de_versao(comp) if comp != "ATLAS" else f"v{int(projeto.manifesto['atlas']['versao']):03d}"

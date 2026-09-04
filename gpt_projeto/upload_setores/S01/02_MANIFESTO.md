@@ -8,6 +8,10 @@ Gerado em 2026-09-04 pelo Núcleo. Se um arquivo de setor no Projeto tiver hash 
 |---|---|---|---|---|---|---|---|
 | S01 | Rota de Renda | Ativo | v001 | e100041c5166 | 6 | 1 | 1 |
 
+## Harvey
+
+Harvey tem cérebro próprio (HARVEY_CEREBRO.md), versão v001: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+
 ## ATLAS
 
 Último status de integridade emitido por ATLAS: nenhum ainda. ATLAS opera em sala separada; Harvey não faz o trabalho de ATLAS.

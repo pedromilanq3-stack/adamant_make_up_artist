@@ -343,15 +343,18 @@ class PendenciasEPacoteTests(ProjetoTemporario):
     def test_empacotar_gera_arquivos_para_o_projeto(self) -> None:
         gerados = self.projeto.empacotar(hoje=HOJE)
         nomes = [str(g.relative_to(self.raiz)) for g in gerados]
-        self.assertEqual(nomes, ["upload_harvey/00_ADENDO_PARA_O_SEU_HARVEY.md", "upload_harvey/01_PROTOCOLO_DO_CEREBRO.md",
-                                 "upload_harvey/02_MANIFESTO.md", "upload_harvey/S01_ROTA_DE_RENDA.md",
+        bibliotecas = [f"upload_harvey/{b.name}" for b in sorted((GPT_PROJETO / "harvey" / "bibliotecas").glob("BIB_*.md"))]
+        self.assertEqual(len(bibliotecas), 10)
+        self.assertEqual(nomes, ["upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
+                                 "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
+                                 "upload_harvey/HARVEY_CEREBRO.md", *bibliotecas, "upload_harvey/S01_ROTA_DE_RENDA.md",
                                  "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
                                  "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"])
         setor_md = (self.raiz / "upload_harvey" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
         for trecho in ("## Camada 1", "### Missão", "### F-001", "### H-001", "### L-001", "### ESTADO",
                        "hash camada 1"):
             self.assertIn(trecho, setor_md)
-        manifesto = (self.raiz / "upload_harvey" / "02_MANIFESTO.md").read_text(encoding="utf-8")
+        manifesto = (self.raiz / "upload_harvey" / "03_MANIFESTO.md").read_text(encoding="utf-8")
         self.assertIn("| S01 | Rota de Renda | Ativo | v001 |", manifesto)
         self.assertIn("Nenhuma pendência", manifesto)
 
@@ -375,10 +378,14 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         self.assertIn("S01_ROTA_DE_RENDA.md", instrucoes)
         self.assertIn("```entrega", instrucoes)
         self.assertNotIn("{", instrucoes.replace("{ID}", "").replace("{NOME}", ""))
-        harvey = (self.raiz / "upload_harvey" / "00_ADENDO_PARA_O_SEU_HARVEY.md").read_text(encoding="utf-8")
-        self.assertIn("não muda quem Harvey é", harvey)
+        harvey = (self.raiz / "upload_harvey" / "00_INSTRUCOES_HARVEY.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(harvey), LIMITE_INSTRUCOES)
+        self.assertIn("Você é Harvey Specter", harvey)
         self.assertIn("```ordem", harvey)
+        self.assertIn("HARVEY_CEREBRO.md", harvey)
         self.assertNotIn("Você é o Setor", harvey)
+        adendo = (self.raiz / "upload_harvey" / "01_ADENDO_DE_INTEGRACAO.md").read_text(encoding="utf-8")
+        self.assertIn("não muda quem Harvey é", adendo)
 
     def test_sala_do_setor_recebe_so_os_proprios_dossies(self) -> None:
         self.projeto.propor_setor("S02", CARTA, hoje=HOJE)
@@ -474,6 +481,9 @@ class AtlasTests(ProjetoTemporario):
     def test_registro_global_lista_todos_os_componentes(self) -> None:
         self.preparar_s02()
         ids = [r.id for r in registro_global(self.projeto, HOJE)]
+        harvey = next(r for r in registro_global(self.projeto, HOJE) if r.id == "HARVEY")
+        self.assertIn("sem trava mecânica", harvey.get("versao_atual"))
+        self.assertIn("regras próprias", harvey.get("dados_mantidos"))
         for esperado in ("ATLAS", "HARVEY", "PROMPT-BASE", "PROMPT-ATLAS", "NUCLEO", "S01", "S01/RAIO-X",
                          "S01/CONTRADITÓRIO", "S01/MEMORIA", "S02", "S02/PODA", "MANIFESTO", "DOSSIES", "DIARIO"):
             self.assertIn(esperado, ids)
@@ -526,7 +536,7 @@ class AtlasTests(ProjetoTemporario):
         self.projeto.transicionar("S02", "limitar", True, motivo="só leitura de custos", hoje=HOJE)
         self.aplicar(FATO, setor="S02")
         self.projeto.empacotar(hoje=HOJE)
-        avisos = (self.raiz / "upload_harvey" / "03_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
+        avisos = (self.raiz / "upload_harvey" / "04_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
         self.assertIn("S02 está em **Limitado**: só leitura de custos", avisos)
         self.assertTrue((self.raiz / "upload_setores" / "S02" / "03_AVISOS_DE_ATLAS.md").exists())
         self.assertEqual(integridade(self.projeto, HOJE)[0], "ATENÇÃO")
@@ -568,6 +578,70 @@ class AtlasTests(ProjetoTemporario):
             esperado = [l for l in caminho.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower() and "em 2026" not in l]
             existente = [l for l in atual.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower() and "em 2026" not in l]
             self.assertEqual(existente, esperado, f"gpt_projeto/upload_atlas/{caminho.name} desatualizado: rode nucleo atlas")
+
+
+class HarveyTests(ProjetoTemporario):
+    BLOCO = (
+        "## fato\n- conteudo: Milan trabalhou 2 anos em clínica (entrega do S01).\n- fonte: entrega de S01\n"
+        "- confianca: alta\n- setor_origem: S01\n"
+        "## regra\n- conteudo: Prazo de 48h nas ordens ao S01.\n- base: F-003; H-001\n- quando_aplicar: ao definir prazo\n"
+        "## correcao\n- substitui: RG-002\n- motivo: Milan corrigiu\n- conteudo: Basta faixa do prazo de sobrevivência.\n"
+        "## licao\n- conteudo: pedir faixa, não número exato\n- origem: correcao_milan\n"
+    )
+
+    def test_harvey_tem_cerebro_procedural_com_regras_proprias(self) -> None:
+        harvey = self.projeto.setor("HARVEY")
+        self.assertEqual(harvey.validar(), [])
+        self.assertEqual(harvey.metricas()["regras_vigentes"], 2)
+        relato = self.aplicar(self.BLOCO, setor="HARVEY")
+        self.assertEqual(len(relato), 4)
+        harvey = self.recarregar().setor("HARVEY")
+        self.assertEqual(harvey.metricas()["regras_vigentes"], 3)
+        self.assertEqual(harvey.metricas()["regras_superadas"], 1)
+        antiga = harvey.buscar("RG-002")[1]
+        self.assertEqual(antiga.get("status"), "superada")
+        self.assertEqual(antiga.get("superado_por"), "RG-004")
+        self.assertEqual(harvey.buscar("RG-004")[1].get("corrige"), "RG-002")
+        self.assertEqual(harvey.fatos[-1].get("setor_origem"), "S01")
+        self.assertEqual(self.projeto.validar(), [])
+        self.assertEqual(self.projeto.versao_de("HARVEY"), 2)
+        self.assertEqual(self.projeto.diario.ler("alteracoes")[-1].get("componente"), "HARVEY")
+
+    def test_regra_exige_base_e_quando_aplicar(self) -> None:
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## regra\n- conteudo: sem base\n", setor="HARVEY")
+        self.aplicar("## regra\n- conteudo: x\n- base: L-001; F-001\n- quando_aplicar: sempre\n")  # S01 também pode
+        self.assertEqual(self.recarregar().setor("S01").metricas()["regras_vigentes"], 1)
+
+    def test_harvey_nao_trava_nem_muda_de_estado(self) -> None:
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.travar("HARVEY", True, hoje=HOJE)
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.transicionar("HARVEY", "pausar", True, hoje=HOJE)
+        caminho = self.raiz / "harvey" / CAMADAS[1]
+        caminho.write_text(caminho.read_text(encoding="utf-8") + "\nNota de Milan.\n", encoding="utf-8")
+        self.assertEqual(self.projeto.validar(), [])
+        self.assertEqual(self.projeto.manifesto["harvey"]["status"], "Ativo")
+
+    def test_setor_nao_registra_fato_alheio_mas_harvey_sim(self) -> None:
+        with self.assertRaises(ErroDeIsolamento):
+            self.aplicar("## fato\n- conteudo: x\n- fonte: y\n- confianca: alta\n- setor_origem: S02\n")
+        self.aplicar("## fato\n- conteudo: x\n- fonte: entrega de S01\n- confianca: alta\n- setor_origem: S01\n", setor="HARVEY")
+
+    def test_sala_de_harvey_tem_cerebro_e_bibliotecas(self) -> None:
+        self.projeto.empacotar(hoje=HOJE)
+        pasta = self.raiz / "upload_harvey"
+        cerebro = (pasta / "HARVEY_CEREBRO.md").read_text(encoding="utf-8")
+        self.assertIn("Núcleo de identidade", cerebro)
+        self.assertIn("sem trava mecânica", cerebro)
+        self.assertIn("### RG-001", cerebro)
+        self.assertEqual(len(list(pasta.glob("BIB_*.md"))), 10)
+        bib = (pasta / "BIB_08_MODO_DE_OPERACAO_COM_MILAN.md").read_text(encoding="utf-8")
+        self.assertIn("setor: HARVEY", bib)
+        manifesto = (pasta / "03_MANIFESTO.md").read_text(encoding="utf-8")
+        self.assertIn("regras próprias vigentes", manifesto)
+        harvey_md = (self.raiz / "upload_setores" / "S01").glob("HARVEY*")
+        self.assertEqual(list(harvey_md), [])
 
 
 class CliTests(ProjetoTemporario):
@@ -627,6 +701,8 @@ class CliTests(ProjetoTemporario):
         self.assertEqual(self.rodar("integridade")[0], 1)
         self.assertEqual(self.rodar("setor", "reativar", "S01", "--autorizado-por-milan")[0], 0)
         self.assertIn("baselines: v001, v002, v003", self.rodar("versoes", "listar", "S01")[1])
+        self.assertIn("HARVEY  atual v001", self.rodar("versoes", "listar")[1])
+        self.assertIn('"HARVEY"', self.rodar("metricas")[1])
         self.assertEqual(self.rodar("custo", "registrar", "S01", "3", "creditos")[0], 0)
         self.assertIn("C-001", self.rodar("diario", "custos")[1])
 

@@ -20,34 +20,34 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - autorizacao_da_alteracao: Milan (--autorizado-por-milan)
 
 ## HARVEY
-- nome: Harvey Specter — interface estratégica (Harvey de Milan, sala própria)
+- nome: Harvey Specter — interface estratégica (sala própria, cérebro procedural)
 - tipo: agente
-- missao: Entender o objetivo real de Milan, encaminhar ao setor certo, confrontar recomendações fracas, integrar e apresentar um único próximo movimento.
-- responsavel: prompt próprio de Milan + adendo de integração
-- autoridade: decide administrativamente dentro da delegação vigente; leva a decisão a Milan
-- limites: não fabrica fatos, capacidades, contatos, resultados ou acesso a ferramentas; não executa ação externa sem autorização; não assume o trabalho de ATLAS
-- versao_atual: 5c526dd9ccfd
+- missao: Entender o objetivo real de Milan, encaminhar cada problema ao setor certo, confrontar recomendações fracas, integrar as conclusões em uma decisão clara e apresentar a Milan um único próximo movimento por vez, na voz e no método de Harvey Specter.
+- responsavel: Harvey (sala própria); só Milan edita o núcleo
+- autoridade: Estratégia, coordenação, negociação, síntese e a comunicação principal com Milan. Emitir ordens aos setores e confrontar as entregas. Decidir administrativamente dentro da delegação vigente e levar a decisão a Milan. Manter e evoluir o próprio cérebro: fatos, hipóteses, lições e regras próprias derivadas do que aprende.
+- limites: Não fala como setor nem como agente de setor. Não escreve na memória de um setor. Não faz o trabalho de ATLAS (mapa, versões, integridade, custos). Não fabrica fatos, capacidades, contatos, resultados nem acesso a ferramentas. Não executa nem sugere ação ilegal, fraude, intimidação ou mentira a terceiros. Não mente para Milan. Não executa ação externa, decisão irreversível, gasto, criação ou mudança de setor, agente ou regra sem autorização de Milan. Não promete renda. Usa só ferramentas do ecossistema GPT/OpenAI.
+- versao_atual: v001 (08bd1f731f3a) · núcleo sem trava mecânica (decisão de Milan)
 - estado_operacional: Ativo
-- dependencias: PROMPT-BASE, setores operantes
-- dados_mantidos: nenhum próprio; usa a memória dos setores
-- localizacao: ADENDO_HARVEY.md
+- dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_01 a BIB_10
+- dados_mantidos: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado
+- localizacao: harvey/ (camadas 1–5, bibliotecas/); versoes/HARVEY/
 - custo_operacional: CONSUMO NÃO MEDIDO
 - riscos_conhecidos: não informado
-- ultima_alteracao: não informado
-- autorizacao_da_alteracao: não informado
+- ultima_alteracao: 2026-09-04
+- autorizacao_da_alteracao: Milan (documento fundador, 2026-09-04)
 
 ## PROMPT-BASE
-- nome: Adendo de integração de Harvey + Protocolo do Cérebro
+- nome: Instruções de Harvey + adendo de integração + Protocolo do Cérebro
 - tipo: prompt
-- missao: Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, separação, contrato de resposta. O prompt próprio do Harvey de Milan não é versionado aqui.
+- missao: Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, separação, contrato de resposta.
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: 5c526dd9ccfd + d7afbe45d8d8
+- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + e7c2e6c5d839
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
-- localizacao: ADENDO_HARVEY.md, PROTOCOLO_DO_CEREBRO.md
+- localizacao: harvey/INSTRUCOES_HARVEY.md, ADENDO_HARVEY.md, PROTOCOLO_DO_CEREBRO.md
 - custo_operacional: CONSUMO NÃO MEDIDO
 - riscos_conhecidos: não informado
 - ultima_alteracao: não informado
@@ -213,7 +213,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Núcleo
 - autoridade: fonte da verdade sobre estados operacionais
 - limites: alterado só pelo Núcleo com autorização
-- versao_atual: f8979971ba73
+- versao_atual: b32edb11d5de
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: estados e travas

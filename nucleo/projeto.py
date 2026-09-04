@@ -30,7 +30,7 @@ from .patch import BlocoDeAprendizado, BlocoDoAtlas, ErroDePatch, Secao
 from .registros import Registro, parse_registros, proximo_id, render_registros
 from .setor import (
     CAMADAS, CAMPOS_OBRIGATORIOS, PREFIXOS, SECOES_DA_CAMADA_1, STATUS_SUPERADO, ErroDeValidacao,
-    Setor, hash_texto,
+    Setor, hash_texto, tipo_do_registro,
 )
 
 ESTADOS_DE_SETOR = ("Proposto", "Aprovado", "Piloto", "Ativo", "Limitado", "Quarentena",
@@ -57,7 +57,10 @@ SECOES_DA_CARTA = (
 )
 CAMPOS_DO_DOSSIE = ("para", "fato", "fonte", "confianca", "restricao", "pergunta")
 ARQUIVO_MANIFESTO = "manifesto.json"
-ARQUIVO_INSTRUCOES = "ADENDO_HARVEY.md"
+ARQUIVO_INSTRUCOES = "harvey/INSTRUCOES_HARVEY.md"
+ARQUIVO_ADENDO = "ADENDO_HARVEY.md"
+PASTA_HARVEY = "harvey"
+HARVEY = "HARVEY"
 ARQUIVO_PROTOCOLO = "PROTOCOLO_DO_CEREBRO.md"
 PASTA_ATLAS = "atlas"
 ARQUIVO_INSTRUCOES_ATLAS = "INSTRUCOES_ATLAS.md"
@@ -141,13 +144,25 @@ class Projeto:
         return self.raiz / PASTA_ATLAS
 
     def entrada(self, id_setor: str) -> dict:
+        if id_setor == HARVEY:
+            harvey = self.manifesto.setdefault("harvey", {})
+            harvey.setdefault("nome", "Harvey Specter")
+            harvey.setdefault("pasta", PASTA_HARVEY)
+            harvey.setdefault("status", "Ativo")
+            return harvey
         try:
             return self.manifesto["setores"][id_setor]
         except KeyError:
             raise ErroDeValidacao(f"setor {id_setor} não existe no manifesto") from None
 
     def pasta_do_setor(self, id_setor: str) -> Path:
+        if id_setor == HARVEY:
+            return self.raiz / PASTA_HARVEY
         return self.pasta_setores / self.entrada(id_setor)["pasta"]
+
+    @property
+    def tem_harvey(self) -> bool:
+        return (self.raiz / PASTA_HARVEY / CAMADAS[1]).exists()
 
     def setor(self, id_setor: str) -> Setor:
         return Setor.carregar(id_setor, self.pasta_do_setor(id_setor))
@@ -164,7 +179,7 @@ class Projeto:
     def hash_do_setor(self, id_setor: str) -> str:
         pasta = self.pasta_do_setor(id_setor)
         partes = []
-        for nome in sorted(p.name for p in pasta.iterdir() if p.is_file()):
+        for nome in sorted(p.name for p in pasta.iterdir() if p.is_file() and p.suffix == ".md"):
             partes.append(nome + "\n" + (pasta / nome).read_text(encoding="utf-8"))
         return hash_texto("\n".join(partes))
 
@@ -180,7 +195,7 @@ class Projeto:
     # ------------------------------------------------------------- validar
     def validar(self) -> list[str]:
         problemas: list[str] = []
-        for arquivo, limite in ((ARQUIVO_INSTRUCOES, LIMITE_ADENDO),
+        for arquivo, limite in ((ARQUIVO_INSTRUCOES, LIMITE_INSTRUCOES), (ARQUIVO_ADENDO, LIMITE_ADENDO),
                                 (f"{PASTA_ATLAS}/{ARQUIVO_INSTRUCOES_ATLAS}", LIMITE_INSTRUCOES)):
             caminho = self.raiz / arquivo
             if not caminho.exists():
@@ -199,6 +214,15 @@ class Projeto:
             problemas.append("ATLAS: núcleo não está travado (use 'travar ATLAS')")
         elif hash_atlas and trava_atlas != hash_atlas:
             problemas.append("ATLAS: núcleo foi alterado sem autorização (hash difere da trava)")
+        if self.tem_harvey:
+            try:
+                harvey = self.setor(HARVEY)
+            except (ErroDeValidacao, ValueError) as erro:
+                problemas.append(str(erro))
+            else:
+                problemas.extend(harvey.validar())
+                if not self.diario.versoes(HARVEY):
+                    problemas.append("HARVEY: sem versão guardada para reversão (use 'versoes guardar HARVEY')")
         for id_setor in self.setores():
             entrada = self.entrada(id_setor)
             if entrada.get("status") not in ESTADOS_DE_SETOR:
@@ -270,7 +294,8 @@ class Projeto:
             entrada["versao"] = 1
             self.salvar_manifesto()
         pasta = self.pasta_do_setor(id_setor)
-        return self.diario.guardar_versao(id_setor, numero, sorted(p for p in pasta.iterdir() if p.is_file()))
+        return self.diario.guardar_versao(id_setor, numero,
+                                          sorted(p for p in pasta.iterdir() if p.is_file() and p.suffix == ".md"))
 
     def _antes_de_mudar(self, id_setor: str) -> str:
         """Garante baseline da versão atual (se faltar) e devolve o rótulo da versão anterior.
@@ -310,7 +335,8 @@ class Projeto:
         restaurados = self.diario.restaurar_versao(id_setor, numero, self.pasta_do_setor(id_setor))
         setor = self.setor(id_setor)
         entrada = self.entrada(id_setor)
-        entrada["trava_camada1"] = setor.hash_camada1()
+        if id_setor != HARVEY:
+            entrada["trava_camada1"] = setor.hash_camada1()
         return self._depois_de_mudar(
             id_setor, operacao="reversao", diferenca=f"restaurados {len(restaurados)} arquivo(s) de v{numero:03d}",
             motivo=motivo or f"reversão para v{numero:03d}", responsavel="Milan",
@@ -325,6 +351,9 @@ class Projeto:
         hoje = hoje or date.today()
         if id_setor.upper() == "ATLAS":
             return self._travar_atlas(motivo, hoje)
+        if id_setor == HARVEY:
+            raise ErroDeValidacao("HARVEY não tem trava mecânica, por decisão de Milan: ele é ele. "
+                                  "Só Milan edita o núcleo; a mudança fica no diário via 'versoes guardar'.")
         setor = self.setor(id_setor)
         problemas = [p for p in setor.validar() if "/camada1" in p]
         if problemas:
@@ -433,7 +462,7 @@ class Projeto:
                        autorizado: bool, dossies: list[Registro]) -> str:
         campos = dict(secao.campos)
         data_hoje = hoje.isoformat()
-        if secao.tipo in ("fato", "hipotese", "licao"):
+        if secao.tipo in ("fato", "hipotese", "licao", "regra"):
             self._preencher_padroes(secao.tipo, campos, bloco, data_hoje)
             self._exigir_isolamento(setor, secao.tipo, campos, autorizado)
             novo = setor.acrescentar(secao.tipo, campos)
@@ -449,13 +478,13 @@ class Projeto:
                     f"{antigo_id} não pertence a {setor.id}; um setor só corrige a própria memória"
                 )
             numero, antigo = encontrado
-            tipo = {2: "fato", 3: "hipotese", 4: "licao"}[numero]
+            tipo = tipo_do_registro(antigo) or {2: "fato", 3: "hipotese", 4: "licao"}[numero]
             for chave, valor in antigo.campos.items():
                 if chave not in campos and chave not in {"status", "superado_por", "superado_em",
                                                           "motivo_superacao", "registrado_em"}:
                     campos.setdefault(chave, valor)
             self._preencher_padroes(tipo, campos, bloco, data_hoje)
-            campos["status"] = {"fato": "vigente", "hipotese": "aberta", "licao": "vigente"}[tipo]
+            campos["status"] = {"fato": "vigente", "hipotese": "aberta", "licao": "vigente", "regra": "vigente"}[tipo]
             campos["corrige"] = antigo_id
             self._exigir_isolamento(setor, tipo, campos, autorizado)
             novo = setor.acrescentar(tipo, campos)
@@ -503,7 +532,7 @@ class Projeto:
             campos.setdefault("status", "vigente")
         elif tipo == "hipotese":
             campos.setdefault("status", "aberta")
-        elif tipo == "licao":
+        elif tipo in ("licao", "regra"):
             campos.setdefault("data", bloco.data)
             campos.setdefault("status", "vigente")
         faltando = [c for c in CAMPOS_OBRIGATORIOS[tipo] if not campos.get(c)]
@@ -515,7 +544,7 @@ class Projeto:
         if tipo != "fato":
             return
         origem = campos.get("setor_origem", setor.id)
-        if origem == setor.id:
+        if origem == setor.id or setor.id == HARVEY:
             return
         referencia = campos.get("dossie")
         if not referencia:
@@ -765,6 +794,8 @@ class Projeto:
     def transicionar(self, id_setor: str, acao: str, autorizado_por_milan: bool, por: str = "Milan",
                      motivo: str = "", hoje: date | None = None) -> str:
         hoje = hoje or date.today()
+        if id_setor == HARVEY:
+            raise ErroDeValidacao("HARVEY não é um setor: não muda de estado. Ele é ele.")
         if acao not in TRANSICOES:
             raise ValueError(f"ação desconhecida '{acao}'; use {sorted(TRANSICOES)}")
         if acao == "quarentena":
@@ -887,6 +918,10 @@ class Projeto:
     def pendencias(self, hoje: date | None = None) -> dict[str, list[str]]:
         hoje = hoje or date.today()
         resultado: dict[str, list[str]] = {}
+        if self.tem_harvey:
+            itens = self.setor(HARVEY).pendencias(hoje)
+            if itens:
+                resultado[HARVEY] = itens
         for id_setor in self.setores_com_camadas():
             if self.entrada(id_setor)["status"] not in ESTADOS_OPERANTES:
                 continue
@@ -914,7 +949,8 @@ class Projeto:
         return resultado
 
     def metricas(self) -> dict[str, dict[str, object]]:
-        return {s: self.setor(s).metricas() for s in self.setores_com_camadas()}
+        ids = ([HARVEY] if self.tem_harvey else []) + self.setores_com_camadas()
+        return {s: self.setor(s).metricas() for s in ids}
 
     # ---------------------------------------------------------- empacotar
     def empacotar(self, hoje: date | None = None) -> list[Path]:
@@ -927,16 +963,24 @@ class Projeto:
             shutil.rmtree(destino)
         destino.mkdir(parents=True)
         gerados: list[Path] = []
-        for origem, nome in ((ARQUIVO_INSTRUCOES, "00_ADENDO_PARA_O_SEU_HARVEY.md"),
-                             (ARQUIVO_PROTOCOLO, "01_PROTOCOLO_DO_CEREBRO.md")):
+        for origem, nome in ((ARQUIVO_INSTRUCOES, "00_INSTRUCOES_HARVEY.md"),
+                             (ARQUIVO_ADENDO, "01_ADENDO_DE_INTEGRACAO.md"),
+                             (ARQUIVO_PROTOCOLO, "02_PROTOCOLO_DO_CEREBRO.md")):
             gerados.append(destino / nome)
             shutil.copyfile(self.raiz / origem, destino / nome)
-        gerados.append(destino / "02_MANIFESTO.md")
-        (destino / "02_MANIFESTO.md").write_text(self._manifesto_md(hoje), encoding="utf-8")
+        gerados.append(destino / "03_MANIFESTO.md")
+        (destino / "03_MANIFESTO.md").write_text(self._manifesto_md(hoje), encoding="utf-8")
         avisos = self._avisos_de_atlas_md()
         if avisos:
-            gerados.append(destino / "03_AVISOS_DE_ATLAS.md")
-            (destino / "03_AVISOS_DE_ATLAS.md").write_text(avisos, encoding="utf-8")
+            gerados.append(destino / "04_AVISOS_DE_ATLAS.md")
+            (destino / "04_AVISOS_DE_ATLAS.md").write_text(avisos, encoding="utf-8")
+        if self.tem_harvey:
+            gerados.append(destino / "HARVEY_CEREBRO.md")
+            (destino / "HARVEY_CEREBRO.md").write_text(
+                self._setor_md(HARVEY, self.entrada(HARVEY), self.raiz / PASTA_HARVEY, hoje), encoding="utf-8")
+            for biblioteca in sorted((self.raiz / PASTA_HARVEY / "bibliotecas").glob("BIB_*.md")):
+                shutil.copyfile(biblioteca, destino / biblioteca.name)
+                gerados.append(destino / biblioteca.name)
         for id_setor in self.setores():
             entrada = self.entrada(id_setor)
             pasta = self.pasta_setores / entrada["pasta"]
@@ -1049,6 +1093,13 @@ class Projeto:
                 f"{setor.hash_camada1()[:12]} | {m['fatos_vigentes']} | "
                 f"{sum(m['hipoteses'].values())} | {sum(m['licoes_vigentes'].values())} |"
             )
+        if self.tem_harvey:
+            h = self.setor(HARVEY).metricas()
+            linhas += ["", "## Harvey", "",
+                       f"Harvey tem cérebro próprio (HARVEY_CEREBRO.md), versão v{self.versao_de(HARVEY):03d}: "
+                       f"{h['fatos_vigentes']} fatos, {sum(h['hipoteses'].values())} hipóteses, "
+                       f"{sum(h['licoes_vigentes'].values())} lições, {h['regras_vigentes']} regras próprias vigentes. "
+                       "Núcleo sem trava mecânica, por decisão de Milan."]
         ultimo = self.manifesto["atlas"].get("ultimo_status")
         linhas += ["", "## ATLAS", "",
                    f"Último status de integridade emitido por ATLAS: "
@@ -1079,11 +1130,17 @@ class Projeto:
         titulos = {2: "Camada 2 — Fatos verificados", 3: "Camada 3 — Hipóteses",
                    4: "Camada 4 — Lições e resultados", 5: "Camada 5 — Estado atual"}
         restricao = f" Motivo: {entrada['motivo_do_status']}." if entrada.get("motivo_do_status") else ""
+        if id_setor == HARVEY:
+            trava = "A Camada 1 é a identidade de Harvey; sem trava mecânica, por decisão de Milan."
+            titulo1 = "## Camada 1 — Núcleo de identidade"
+        else:
+            trava = f"A Camada 1 é travada (hash {setor.hash_camada1()[:12]})."
+            titulo1 = "## Camada 1 — Núcleo travado"
         partes = [f"<!-- {id_setor} · status: {entrada['status']} · versão v{self.versao_de(id_setor):03d} · "
                   f"hash camada 1: {setor.hash_camada1()[:12]} · gerado em {hoje.isoformat()} -->", "",
                   "# " + setor.nome, "", f"Status: **{entrada['status']}**.{restricao} Este arquivo é o cérebro "
-                  f"completo do setor. A Camada 1 é travada (hash {setor.hash_camada1()[:12]}).", "",
-                  "---", "", "## Camada 1 — Núcleo travado", "",
+                  f"completo. {trava}", "",
+                  "---", "", titulo1, "",
                   _rebaixar_titulos(_sem_titulo(setor.camada1))]
         for numero in (2, 3, 4, 5):
             texto = render_registros(_sem_titulo(setor.preambulos[numero]), setor.registros[numero])

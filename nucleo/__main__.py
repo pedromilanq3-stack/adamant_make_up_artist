@@ -179,7 +179,8 @@ def cmd_versoes(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     try:
         if args.acao == "listar":
-            for comp in ([args.setor] if args.setor else projeto.setores_com_camadas()):
+            todos = (["HARVEY"] if projeto.tem_harvey else []) + projeto.setores_com_camadas()
+            for comp in ([args.setor] if args.setor else todos):
                 versoes = [v.name for v in projeto.diario.versoes(comp)]
                 print(f"{comp}  atual {projeto.rotulo_de_versao(comp)}  baselines: {', '.join(versoes) or 'nenhuma'}")
             return 0

@@ -2,7 +2,7 @@
 
 # S01 — Rota de Renda
 
-Status: **Ativo**. Este arquivo é o cérebro completo do setor. A Camada 1 é travada (hash e100041c5166).
+Status: **Ativo**. Este arquivo é o cérebro completo. A Camada 1 é travada (hash e100041c5166).
 
 ---
 

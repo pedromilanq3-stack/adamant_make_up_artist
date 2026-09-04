@@ -15,8 +15,9 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
                     └── nucleo atlas ──► sala de ATLAS ──bloco ```atlas```──► nucleo aplicar
 ```
 
-- **Harvey** é o Harvey que Milan já tem, com um adendo de integração. Coordena e
-  responde a Milan. Não fala como setor. Emite ordens.
+- **Harvey** tem sala própria e cérebro procedural próprio (`HARVEY_CEREBRO.md`,
+  cinco camadas, sem trava mecânica no núcleo, por decisão de Milan). Coordena e
+  responde a Milan. Não fala como setor. Emite ordens. Aprende com `setor: HARVEY`.
 - **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
   estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
 - **ATLAS** governa mapa, versões, alterações, custos e integridade.
@@ -53,6 +54,14 @@ opcional `confianca` (alta | media | baixa, usada para medir calibração).
 ### Lição (Camada 4, ids L-nnn)
 `conteudo`, `origem` (resultado | experimento | correcao_milan | evidencia), `data`,
 `status` (vigente | superada), opcional `contexto`.
+
+### Regra própria (Camada 4, ids RG-nnn)
+Regra operacional que o componente deriva do próprio conhecimento. `conteudo`, `base`
+(ids das evidências ou a correção de Milan que a sustentam; exige padrão de duas ou
+mais evidências, ou uma correção de Milan), `quando_aplicar`, `data`, `status`
+(vigente | superada). Regras são lidas antes de qualquer decisão; quando a evidência
+muda, a regra é superada por outra, nunca apagada. Harvey usa regras para evoluir o
+método sem mudar o personagem.
 
 ### Estado (Camada 5, registro único ESTADO)
 `tarefa_ativa`, `prazo`, `proxima_acao`, `bloqueios`, `autorizacoes_pendentes`,

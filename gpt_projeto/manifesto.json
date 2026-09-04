@@ -30,5 +30,14 @@
     "ultima_autorizacao": "Milan (--autorizado-por-milan)",
     "ultimo_registro_visto": "M-001",
     "ultimo_pacote_em": "2026-09-04"
+  },
+  "harvey": {
+    "nome": "Harvey Specter",
+    "pasta": "harvey",
+    "status": "Ativo",
+    "versao": 1,
+    "trava": "nenhuma, por decisão de Milan (Harvey é Harvey por caráter)",
+    "ultima_autorizacao": "Milan (documento fundador, 2026-09-04)",
+    "alterado_em": "2026-09-04"
   }
 }

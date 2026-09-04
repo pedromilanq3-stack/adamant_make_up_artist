@@ -27,8 +27,15 @@ CAMADAS = {
     4: "camada4_licoes.md",
     5: "camada5_estado.md",
 }
-PREFIXOS = {"fato": "F", "hipotese": "H", "licao": "L"}
-CAMADA_DO_TIPO = {"fato": 2, "hipotese": 3, "licao": 4}
+PREFIXOS = {"fato": "F", "hipotese": "H", "licao": "L", "regra": "RG"}
+CAMADA_DO_TIPO = {"fato": 2, "hipotese": 3, "licao": 4, "regra": 4}
+TIPO_DO_PREFIXO = {v: k for k, v in PREFIXOS.items()}
+
+
+def tipo_do_registro(registro: "Registro") -> str | None:
+    """Descobre o tipo (fato, hipotese, licao, regra) pelo prefixo do id."""
+    prefixo = registro.id.split("-")[0]
+    return TIPO_DO_PREFIXO.get(prefixo)
 
 CAMPOS_OBRIGATORIOS = {
     "fato": ("conteudo", "fonte", "data", "confianca", "setor_origem", "volatil", "status"),
@@ -37,6 +44,7 @@ CAMPOS_OBRIGATORIOS = {
         "abandono", "status",
     ),
     "licao": ("conteudo", "origem", "data", "status"),
+    "regra": ("conteudo", "base", "quando_aplicar", "data", "status"),
     "estado": ("tarefa_ativa", "prazo", "proxima_acao", "bloqueios", "autorizacoes_pendentes",
                "atualizado_em"),
 }
@@ -49,10 +57,11 @@ STATUS_PERMITIDOS = {
     "fato": {"vigente", "superado"},
     "hipotese": {"aberta", "confirmada", "refutada", "abandonada", "superada"},
     "licao": {"vigente", "superada"},
+    "regra": {"vigente", "superada"},
 }
-STATUS_SUPERADO = {"fato": "superado", "hipotese": "superada", "licao": "superada"}
+STATUS_SUPERADO = {"fato": "superado", "hipotese": "superada", "licao": "superada", "regra": "superada"}
 DATA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-ID_SETOR = re.compile(r"^S\d{2}$")
+ID_SETOR = re.compile(r"^(S\d{2}|HARVEY)$")
 
 SECOES_DA_CAMADA_1 = (
     "Missão", "Responsabilidade", "Limites", "Método de análise", "Ferramentas permitidas",
@@ -149,17 +158,20 @@ class Setor:
         for secao in SECOES_DA_CAMADA_1:
             if not re.search(rf"^##\s+{re.escape(secao)}\b", self.camada1, re.MULTILINE):
                 problemas.append(f"{self.id}/camada1: falta a seção '## {secao}'")
-        for tipo, numero in CAMADA_DO_TIPO.items():
-            prefixo = PREFIXOS[tipo]
+        for numero in (2, 3, 4):
+            permitidos = [t for t, n in CAMADA_DO_TIPO.items() if n == numero]
             vistos: set[str] = set()
             for registro in self.registros[numero]:
                 if registro.id in vistos:
                     problemas.append(f"{self.id}/{CAMADAS[numero]}: id repetido {registro.id}")
                 vistos.add(registro.id)
-                if not re.match(rf"^{prefixo}-\d{{3,}}$", registro.id):
+                tipo = tipo_do_registro(registro)
+                if tipo not in permitidos or not re.match(r"^[A-Z]+-\d{3,}$", registro.id):
                     problemas.append(
-                        f"{self.id}/{CAMADAS[numero]}: id {registro.id} deveria ser {prefixo}-nnn"
+                        f"{self.id}/{CAMADAS[numero]}: id {registro.id} deveria ser "
+                        + " ou ".join(f"{PREFIXOS[t]}-nnn" for t in permitidos)
                     )
+                    continue
                 problemas.extend(self._validar_registro(tipo, registro, CAMADAS[numero]))
         try:
             estado = self.estado
@@ -191,7 +203,7 @@ class Setor:
             origem = registro.get("setor_origem")
             if origem and not ID_SETOR.match(origem):
                 problemas.append(f"{onde}: setor_origem='{origem}' deveria ser Snn")
-            if origem and origem != self.id and not registro.get("dossie"):
+            if origem and origem != self.id and not registro.get("dossie") and self.id != "HARVEY":
                 problemas.append(
                     f"{onde}: fato vindo de {origem} precisa citar o dossiê que o trouxe (campo 'dossie')"
                 )
@@ -215,7 +227,7 @@ class Setor:
         if encontrado is None:
             raise ErroDeValidacao(f"{self.id}: registro {id_antigo} não existe")
         numero, registro = encontrado
-        tipo = {2: "fato", 3: "hipotese", 4: "licao"}[numero]
+        tipo = tipo_do_registro(registro) or {2: "fato", 3: "hipotese", 4: "licao"}[numero]
         if registro.get("status") == STATUS_SUPERADO[tipo]:
             raise ErroDeValidacao(f"{self.id}: {id_antigo} já estava superado")
         registro.set("status", STATUS_SUPERADO[tipo])
@@ -281,14 +293,17 @@ class Setor:
             faixa_dados["confirmadas" if status == "confirmada" else "refutadas"] += 1
         licoes_por_origem: dict[str, int] = {}
         for licao in self.licoes:
-            if licao.get("status") != "vigente":
+            if licao.get("status") != "vigente" or tipo_do_registro(licao) != "licao":
                 continue
             licoes_por_origem[licao.get("origem")] = licoes_por_origem.get(licao.get("origem"), 0) + 1
+        regras = [r for r in self.licoes if tipo_do_registro(r) == "regra"]
         return {
+            "regras_vigentes": sum(1 for r in regras if r.get("status") == "vigente"),
+            "regras_superadas": sum(1 for r in regras if r.get("status") == "superada"),
             "fatos_vigentes": fatos_vigentes,
             "fatos_superados": fatos_superados,
             "hipoteses": por_status,
             "calibracao": calibracao,
             "licoes_vigentes": licoes_por_origem,
-            "licoes_superadas": sum(1 for l in self.licoes if l.get("status") == "superada"),
+            "licoes_superadas": sum(1 for l in self.licoes if l.get("status") == "superada" and tipo_do_registro(l) == "licao"),
         }

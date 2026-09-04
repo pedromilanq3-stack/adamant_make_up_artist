@@ -20,7 +20,7 @@ Nenhuma.
 
 - HARVEY: Ativo v001 (08bd1f731f3a)
 - BATMAN: Ativo v001 (e2cef4d6e433)
-- NEX: Ativo v001 (5678c9c03fb3)
+- NEX: Ativo v001 (62dc60f8101b)
 - S01: Ativo v001 (85d4b4a71530)
 
 ## Autorizações aplicáveis

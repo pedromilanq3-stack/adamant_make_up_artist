@@ -639,7 +639,10 @@ class Projeto:
                         hoje: date | None = None) -> list[str]:
         """O acaso age: eventos de vida sorteados, ponderados pelo estado atual do personagem."""
         hoje = hoje or date.today()
-        rng = random.Random(semente)
+        if semente is not None:
+            psique_mod.semear(semente)
+            mente_mod.semear(semente)
+        rng = random.Random(semente) if semente is not None else None
         relato: list[str] = []
         if self.tem_psique(id_):
             estado = self.psique_de(id_)[1]

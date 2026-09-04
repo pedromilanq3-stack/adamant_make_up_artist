@@ -92,6 +92,8 @@ data: 2026-09-05
 
 class ProjetoTemporario(unittest.TestCase):
     def setUp(self) -> None:
+        mente_mod.semear(1234)
+        psique_mod.semear(1234)
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
         shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex"))
@@ -704,11 +706,13 @@ class BatmanTests(ProjetoTemporario):
             self.projeto.registrar_evento_mental("S01", "descanso", hoje=HOJE)
 
     def test_descida_ate_o_coringa_poe_em_quarentena_e_so_milan_reativa(self) -> None:
-        for evento in ("perda", "exposicao_ao_caos", "exposicao_ao_caos", "piada_do_coringa", "tentacao_cedida"):
-            relato = self.projeto.registrar_evento_mental("BATMAN", evento, "forte", hoje=HOJE)
+        relatos = []
+        for evento in ("perda", "exposicao_ao_caos", "exposicao_ao_caos", "piada_do_coringa", "tentacao_cedida",
+                       "tentacao_cedida"):
+            relatos += self.projeto.registrar_evento_mental("BATMAN", evento, "forte", hoje=HOJE)
         self.assertEqual(self.mente().get("fase"), "CORINGA")
         self.assertEqual(self.projeto.entrada("BATMAN")["status"], "Quarentena")
-        self.assertTrue(any("Quarentena automática" in r for r in relato))
+        self.assertTrue(any("Quarentena automática" in r for r in relatos))
         tipos = [a.get("tipo") for a in self.projeto.diario.ler("alertas")]
         self.assertIn("mente", tipos)
         self.assertIn("quarentena", tipos)
@@ -720,7 +724,7 @@ class BatmanTests(ProjetoTemporario):
         self.aplicar("## mente\n- evento: descanso\n", setor="BATMAN")  # mente continua aceita
         with self.assertRaises(ErroDeValidacao):
             self.projeto.transicionar("BATMAN", "reativar", True, hoje=HOJE)
-        for _ in range(6):
+        for _ in range(12):
             for evento in ("descanso", "alfred", "terapia", "familia", "gordon", "fundacao_wayne"):
                 self.projeto.registrar_evento_mental("BATMAN", evento, "normal", hoje=HOJE)
             if self.mente().get("fase") in ("SOMBRIO", "ESTÁVEL"):
@@ -734,26 +738,29 @@ class BatmanTests(ProjetoTemporario):
     def test_tempo_cansa_e_dias_calmos_recuperam(self) -> None:
         self.projeto.registrar_evento_mental("BATMAN", "tempo", descricao="10", hoje=HOJE)
         mente = self.mente()
-        self.assertEqual(int(mente.get("exaustao")), 50)
-        self.assertEqual(int(mente.get("sanidade")), 94)
-        self.projeto.registrar_evento_mental("BATMAN", "noite_em_claro", "forte", hoje=HOJE)
+        self.assertTrue(40 <= int(mente.get("exaustao")) <= 60, mente.get("exaustao"))
+        self.assertGreater(int(mente.get("sanidade")), 85)
+        antes = int(mente.get("sanidade"))
+        for _ in range(3):
+            self.projeto.registrar_evento_mental("BATMAN", "noite_em_claro", "forte", hoje=HOJE)
         self.projeto.registrar_evento_mental("BATMAN", "tempo", descricao="5", hoje=HOJE)
-        self.assertLess(int(self.mente().get("sanidade")), 94)
+        self.assertLess(int(self.mente().get("sanidade")), antes)
 
     def test_batman_nao_trava_e_avisos_mostram_fase(self) -> None:
         with self.assertRaises(ErroDeValidacao):
             self.projeto.travar("BATMAN", True, hoje=HOJE)
         self.projeto.registrar_evento_mental("BATMAN", "perda", "forte", hoje=HOJE)
         self.projeto.registrar_evento_mental("BATMAN", "rejeitou_alfred", "forte", hoje=HOJE)
-        self.assertEqual(self.mente().get("fase"), "SOMBRIO")
+        fase = self.mente().get("fase")
+        self.assertIn(fase, ("SOMBRIO", "OBSESSIVO"))  # com ruído, a queda varia
         self.projeto.empacotar(hoje=HOJE)
         avisos = (self.raiz / "upload_harvey" / "04_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
-        self.assertIn("BATMAN está na fase mental **SOMBRIO**", avisos)
+        self.assertIn(f"BATMAN está na fase mental **{fase}**", avisos)
         cerebro = (self.raiz / "upload_batman" / "BATMAN_CEREBRO.md").read_text(encoding="utf-8")
         self.assertIn("## Camada 6 — Mente", cerebro)
-        self.assertIn("Fase mental atual: **SOMBRIO**", cerebro)
+        self.assertIn(f"Fase mental atual: **{fase}**", cerebro)
         registro = next(r for r in registro_global(self.projeto, HOJE) if r.id == "BATMAN")
-        self.assertIn("fase mental SOMBRIO", registro.get("estado_operacional"))
+        self.assertIn(f"fase mental {fase}", registro.get("estado_operacional"))
         self.assertIn("CORINGA", registro.get("riscos_conhecidos"))
 
 
@@ -775,9 +782,12 @@ class NexPsiqueTests(ProjetoTemporario):
         self.assertEqual(estado["psique"].get("ultimo_evento"), "nascimento")
         self.assertEqual(psique_mod._ativos(estado["saude"]), [])
         self.assertGreater(len(psique_mod.habilidades_de(estado)), 15)
-        pre = psique_mod.predisposicoes("NEXARION")
-        self.assertEqual(pre, psique_mod.predisposicoes("NEXARION"))  # determinístico
+        pre = psique_mod.predisposicoes("NEXARION", pelo_nome=True)
+        self.assertEqual(pre, psique_mod.predisposicoes("NEXARION", pelo_nome=True))  # pelo nome: fixo
         self.assertTrue(all(0 <= v <= 100 for v in pre.values()))
+        psique_mod.semear(None)
+        aleatorios = {tuple(sorted(psique_mod.predisposicoes("NEXARION").items())) for _ in range(6)}
+        self.assertGreater(len(aleatorios), 1)  # sem semente: aleatório de verdade
 
     def test_bloco_com_psique_significado_pratica_e_tempo(self) -> None:
         relato = self.aplicar(
@@ -818,7 +828,8 @@ class NexPsiqueTests(ProjetoTemporario):
         self.assertEqual(integridade(self.projeto, HOJE)[0], "ATENÇÃO")
         self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "avaliacao"}, hoje=HOJE)
         estado = self.psique()
-        self.assertNotIn("sem nome]", estado["saude"].get("sintomas_ativos").split(";")[0])
+        sintomas = estado["saude"].get("sintomas_ativos")
+        self.assertTrue(all(f"[{t}]" in sintomas for t in ativos), sintomas)  # ativos agora têm nome
         diagnosticados = [t for t in psique_mod.TRANSTORNOS if estado["saude"].get(f"{t}_diagnostico").startswith("sim")]
         self.assertEqual(sorted(diagnosticados), sorted(ativos))
         for _ in range(6):
@@ -835,8 +846,8 @@ class NexPsiqueTests(ProjetoTemporario):
         psique_mod._derivar(ps, {"tdah": True})
         self.assertGreater(float(ps.get("impulso")), 60)
         self.assertGreater(float(ps.get("penalidade_de_desempenho")), 20)
-        disparos = sum(psique_mod.sortear_impulso(ps, f"evento{i}") for i in range(50))
-        self.assertGreater(disparos, 5)
+        disparos = sum(psique_mod.sortear_impulso(ps, f"evento{i}") for i in range(200))
+        self.assertGreater(disparos, 30)
         ps.set("t_impulsividade", "5"); ps.set("e_raiva", "5"); ps.set("energia", "90"); ps.set("t_serenidade", "95")
         psique_mod._derivar(ps, {})
         self.assertLess(float(ps.get("impulso")), 15)
@@ -861,6 +872,20 @@ class NexPsiqueTests(ProjetoTemporario):
         self.assertIn("tom", cerebro_linha)
         self.projeto.registrar_evento_de_psique("NEX", "tempo", {"dias": "30"}, hoje=HOJE)
         self.assertLess(float(self.psique()["psique"].get("odio")), float(ps.get("odio")))
+
+    def test_tudo_e_aleatorio_mas_reprodutivel_com_semente(self) -> None:
+        def rodar(semente):
+            psique_mod.semear(semente)
+            ps, sa, hab = psique_mod.nascer("X", {"curiosidade": 50}, {"honestidade": 50}, habilidades={"a": 50}, hoje=HOJE)
+            estado = {"psique": ps, "saude": sa, "habilidades": hab, "pessoas": [], "historico": []}
+            for ev in ("elogio", "fracasso", "sobrecarga", "sono_ruim"):
+                psique_mod.aplicar_evento(estado, ev, hoje=HOJE)
+            psique_mod.passar_tempo(estado, 7, hoje=HOJE)
+            return tuple(ps.campos.values())
+        self.assertEqual(rodar(5), rodar(5))
+        self.assertNotEqual(rodar(5), rodar(6))
+        psique_mod.semear(None)
+        self.assertNotEqual(rodar(None), rodar(None))
 
     def test_habilidade_nunca_enferruja_e_acaso_age(self) -> None:
         antes = psique_mod.habilidades_de(self.psique())

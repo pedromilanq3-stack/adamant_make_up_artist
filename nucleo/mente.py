@@ -80,6 +80,18 @@ RECUPERACAO = frozenset({"descanso", "alfred", "terapia", "familia", "gordon", "
                          "fundacao_wayne", "debriefing", "vitoria_limpa", "treino"})
 
 
+_RNG = random.Random()
+
+
+def semear(semente: int | None) -> None:
+    global _RNG
+    _RNG = random.Random(semente)
+
+
+def _ruido(amplitude: float = 0.4) -> float:
+    return 1.0 + _RNG.uniform(-amplitude, amplitude)
+
+
 class ErroDeMente(ValueError):
     pass
 
@@ -176,7 +188,10 @@ def aplicar_evento(mente: Registro, historico: list[Registro], evento: str, inte
         raise ErroDeMente("intensidade deve ser leve, normal ou forte")
     fator = INTENSIDADES[intensidade]
     valores = _valores(mente)
-    deltas = {k: v * fator for k, v in EVENTOS[evento]["deltas"].items()}
+    deltas = {k: v * fator * _ruido() for k, v in EVENTOS[evento]["deltas"].items()}
+    if _RNG.random() < 0.2:  # ricochete: algo a mais que ninguém previu
+        extra = _RNG.choice(VARIAVEIS)
+        deltas[extra] = deltas.get(extra, 0) + _RNG.uniform(-6, 6)
     for chave, delta in deltas.items():
         valores[chave] += delta
     if evento not in RECUPERACAO:  # recuperar nunca é punido pelas pressões; desgastar, sim
@@ -195,13 +210,15 @@ def passar_tempo(mente: Registro, historico: list[Registro], dias: int, relatado
     valores = _valores(mente)
     inicio = dict(valores)
     for _ in range(dias):
-        valores["exaustao"] = min(100, valores["exaustao"] + 2)
-        valores["isolamento"] = min(100, valores["isolamento"] + 1)
-        valores["exposicao_ao_caos"] = max(0, valores["exposicao_ao_caos"] - 3)
+        valores["exaustao"] = min(100, valores["exaustao"] + 2 * _ruido(0.6))
+        valores["isolamento"] = min(100, valores["isolamento"] + 1 * _ruido(0.6))
+        valores["exposicao_ao_caos"] = max(0, valores["exposicao_ao_caos"] - 3 * _ruido(0.5))
         if valores["exaustao"] < 50 and valores["isolamento"] < 50 and valores["exposicao_ao_caos"] < 40:
-            valores["sanidade"] = min(100, valores["sanidade"] + 1)
+            valores["sanidade"] = min(100, valores["sanidade"] + 1 * _ruido(0.5))
         elif valores["exaustao"] >= 70 or valores["isolamento"] >= 70 or valores["exposicao_ao_caos"] >= 80:
-            valores["sanidade"] = max(0, valores["sanidade"] - 1)
+            valores["sanidade"] = max(0, valores["sanidade"] - 1 * _ruido(0.5))
+        if _RNG.random() < 0.1:  # uma noite ruim ou uma boa notícia sem registro
+            valores["sanidade"] = max(0, min(100, valores["sanidade"] + _RNG.uniform(-3, 3)))
     deltas = {k: valores[k] - inicio[k] for k in VARIAVEIS if valores[k] != inicio[k]}
     return _gravar(mente, historico, valores, deltas, "tempo", "normal", f"{dias} dia(s) se passaram",
                    relatado_por, hoje)
@@ -220,8 +237,9 @@ def resumo(mente: Registro, historico: list[Registro], ultimos: int = 8) -> str:
     return "\n".join(linhas) + "\n"
 
 
-def sortear_acaso(mente: Registro, rng: random.Random, quantos: int = 1) -> list[tuple[str, str]]:
+def sortear_acaso(mente: Registro, rng: random.Random | None = None, quantos: int = 1) -> list[tuple[str, str]]:
     """Eventos sorteados para Batman, ponderados pela fase: quanto pior, mais provável o desgaste."""
+    rng = rng or _RNG
     sanidade = float(mente.get("sanidade", "70") or 70)
     recuperacao = {"descanso", "alfred", "gordon", "familia", "bruce_wayne", "fundacao_wayne", "debriefing",
                    "vitoria_limpa", "treino"}

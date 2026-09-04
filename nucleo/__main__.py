@@ -284,6 +284,9 @@ def cmd_alerta(args: argparse.Namespace) -> int:
 
 def cmd_mente(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
+    if getattr(args, "semente", None) is not None:  # sem semente, tudo é aleatório de verdade
+        psique_mod.semear(args.semente)
+        mente_mod.semear(args.semente)
     if args.acao == "catalogo":
         print("# Eventos de mente (fases, Batman)")
         for nome, dados in mente_mod.EVENTOS.items():

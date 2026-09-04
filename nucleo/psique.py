@@ -134,19 +134,38 @@ class ErroDePsique(ValueError):
     pass
 
 
+# ----------------------------------------------------------------- aleatório
+_RNG = random.Random()
+
+
+def semear(semente: int | None) -> None:
+    """Semente para reproduzir; sem semente, tudo é aleatório de verdade."""
+    global _RNG
+    _RNG = random.Random(semente)
+
+
+def _ruido(amplitude: float = 0.4) -> float:
+    """Fator multiplicativo aleatório em torno de 1 (por padrão, entre 0,6 e 1,4)."""
+    return 1.0 + _RNG.uniform(-amplitude, amplitude)
+
+
+def _jitter(valor: float, amplitude: float) -> float:
+    return valor + _RNG.uniform(-amplitude, amplitude)
+
+
 # ----------------------------------------------------------------- nascimento
-def predisposicoes(nome: str) -> dict[str, int]:
-    """Raras, sorteadas deterministicamente do nome: a maioria baixa, poucas altas."""
-    digest = hashlib.sha256(nome.encode("utf-8")).digest()
+def predisposicoes(nome: str, pelo_nome: bool = False) -> dict[str, int]:
+    """Raras: a maioria baixa, poucas altas. Aleatórias; `pelo_nome` fixa pelo nome."""
+    rng = random.Random(hashlib.sha256(nome.encode("utf-8")).digest()) if pelo_nome else _RNG
     saida = {}
-    for indice, transtorno in enumerate(TRANSTORNOS):
-        v = digest[indice] % 100
+    for transtorno in TRANSTORNOS:
+        v = rng.random() * 100
         if v < 80:
-            saida[transtorno] = 5 + v % 15          # 5..19
+            saida[transtorno] = int(5 + rng.random() * 15)          # 5..19
         elif v < 95:
-            saida[transtorno] = 25 + v % 20         # 25..44
+            saida[transtorno] = int(25 + rng.random() * 20)         # 25..44
         else:
-            saida[transtorno] = 55 + v % 30         # 55..84 (raro)
+            saida[transtorno] = int(55 + rng.random() * 30)         # 55..84 (raro)
     return saida
 
 
@@ -162,16 +181,16 @@ def nascer(nome: str, temperamento: dict[str, int], valores: dict[str, int], ego
            habilidades: dict[str, int] | None = None, hoje: date | None = None) -> tuple[Registro, Registro, Registro]:
     hoje = hoje or date.today()
     psique = Registro("PSIQUE")
-    psique.set("plasticidade", "90")
-    psique.set("ego", str(ego))
-    psique.set("energia", "80")
+    psique.set("plasticidade", str(_clamp(_jitter(90, 6))))
+    psique.set("ego", str(_clamp(_jitter(ego, 6))))
+    psique.set("energia", str(_clamp(_jitter(80, 10))))
     psique.set("experiencias", "0")
     for traco in TRACOS:
-        psique.set(f"t_{traco}", str(temperamento.get(traco, 50)))
+        psique.set(f"t_{traco}", str(_clamp(_jitter(temperamento.get(traco, 50), 7))))
     for emocao in EMOCOES:
         psique.set(f"e_{emocao}", str(_base_emocional(psique, emocao, {})))
     for valor in VALORES:
-        psique.set(f"v_{valor}", str(valores.get(valor, 50)))
+        psique.set(f"v_{valor}", str(_clamp(_jitter(valores.get(valor, 50), 6))))
     for complexa in COMPLEXAS:
         psique.set(complexa, "0")
     _derivar(psique, {})
@@ -186,7 +205,7 @@ def nascer(nome: str, temperamento: dict[str, int], valores: dict[str, int], ego
     saude.set("sintomas_ativos", "nenhum")
     hab = Registro("HABILIDADES")
     for nome_h, nivel in (habilidades or {}).items():
-        hab.set(nome_h, str(_clamp(nivel)))
+        hab.set(nome_h, str(_clamp(_jitter(nivel, 3))))
         hab.set(f"{nome_h}_ultima_pratica", hoje.isoformat())
     return psique, saude, hab
 
@@ -359,11 +378,9 @@ def _derivar(psique: Registro, saude_ativos: dict) -> None:
     psique.set("penalidade_de_desempenho", str(_clamp(penalidade)))
 
 
-def sortear_impulso(psique: Registro, nome_evento: str) -> bool:
-    """Às vezes ele age por impulso: sorteio determinístico contra o impulso atual."""
-    semente = f"{psique.get('experiencias')}:{nome_evento}:{psique.get('impulso')}"
-    tiro = hashlib.sha256(semente.encode("utf-8")).digest()[0] % 100
-    return tiro < _num(psique, "impulso") * 0.6
+def sortear_impulso(psique: Registro, nome_evento: str = "") -> bool:
+    """Às vezes ele age por impulso: sorteio real contra o impulso atual."""
+    return _RNG.random() * 100 < _num(psique, "impulso") * 0.6
 
 
 def _atualizar_saude(saude: Registro, cargas_delta: dict[str, float], hoje: date) -> list[str]:
@@ -373,7 +390,7 @@ def _atualizar_saude(saude: Registro, cargas_delta: dict[str, float], hoje: date
         carga = _clamp(_num(saude, f"{transtorno}_carga") + cargas_delta.get(transtorno, 0))
         saude.set(f"{transtorno}_carga", str(carga))
         pre = _num(saude, f"{transtorno}_predisposicao")
-        limiar = max(20, 100 - pre)
+        limiar = max(20, (100 - pre) * _ruido(0.12))  # o corpo não avisa sempre no mesmo ponto
         estado = saude.get(f"{transtorno}_estado")
         novo = estado
         if estado in ("latente", "remissao") and carga >= limiar:
@@ -453,16 +470,22 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
     deltas: dict[str, float] = {}
     impulsividade = _num(psique, "t_impulsividade") / 100
     for emocao, delta in dados.get("e", {}).items():
-        d = delta * fator * (0.7 + 0.6 * impulsividade)
+        d = delta * fator * (0.7 + 0.6 * impulsividade) * _ruido()
         psique.set(f"e_{emocao}", str(_clamp(_num(psique, f"e_{emocao}") + d)))
         deltas[emocao] = d
+    if _RNG.random() < 0.25:  # ricochete: uma emoção que ninguém previu
+        extra = _RNG.choice(EMOCOES)
+        d = _RNG.uniform(-8, 12) * fator
+        psique.set(f"e_{extra}", str(_clamp(_num(psique, f"e_{extra}") + d)))
+        deltas[f"{extra} (ricochete)"] = d
     if "ego" in dados:
         orgulho = _num(psique, "t_orgulho") / 100
         d = dados["ego"] * fator * (0.6 + 0.8 * orgulho) if dados["ego"] > 0 else dados["ego"] * fator * (1.4 - 0.8 * orgulho)
+        d *= _ruido()
         psique.set("ego", str(_clamp(_num(psique, "ego") + d)))
         deltas["ego"] = d
     if "energia" in dados:
-        d = dados["energia"] * fator
+        d = dados["energia"] * fator * _ruido(0.3)
         psique.set("energia", str(_clamp(_num(psique, "energia") + d)))
         deltas["energia"] = d
     cargas = {}
@@ -472,9 +495,9 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
             continue
         pre = _num(saude, f"{transtorno}_predisposicao") / 100
         if delta > 0:
-            d = delta * fator * (0.5 + pre) * (1.3 - 0.6 * resiliencia)
+            d = delta * fator * (0.5 + pre) * (1.3 - 0.6 * resiliencia) * _ruido()
         else:
-            d = delta * fator
+            d = delta * fator * _ruido(0.3)
         cargas[transtorno] = d
         deltas[f"carga_{transtorno}"] = d
     if evento == "avaliacao":
@@ -484,15 +507,15 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
     empatia = _num(psique, "t_empatia") / 100
     for complexa in COMPLEXAS:
         if complexa in dados:
-            d = dados[complexa] * fator * (0.6 + 0.8 * empatia if dados[complexa] > 0 else 1.0)
+            d = dados[complexa] * fator * (0.6 + 0.8 * empatia if dados[complexa] > 0 else 1.0) * _ruido()
             psique.set(complexa, str(_clamp(_num(psique, complexa) + d)))
             deltas[complexa] = d
     if pessoa:
         registro_pessoa = _pessoa(estado, pessoa)
-        d = dados.get("pessoa", 0) * fator
+        d = dados.get("pessoa", 0) * fator * _ruido()
         registro_pessoa.set("confianca", str(_clamp(_num(registro_pessoa, "confianca") + d)))
         if "afeto" in dados:
-            da = dados["afeto"] * fator
+            da = dados["afeto"] * fator * _ruido()
             afeto = max(-100.0, min(100.0, _num(registro_pessoa, "afeto") + da))
             registro_pessoa.set("afeto", str(int(round(afeto))))
             deltas[f"afeto_por_{pessoa}"] = da
@@ -503,7 +526,7 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
         deltas[f"confianca_em_{pessoa}"] = d
     if "valor" in dados:
         valor, delta = dados["valor"]
-        d = delta * fator * _num(psique, "plasticidade") / 100
+        d = delta * fator * _num(psique, "plasticidade") / 100 * _ruido()
         psique.set(f"v_{valor}", str(_clamp(_num(psique, f"v_{valor}") + d)))
         deltas[f"v_{valor}"] = d
     return _gravar(estado, evento, intensidade, descricao, relatado_por, pessoa, deltas, mudancas, hoje)
@@ -526,9 +549,9 @@ def aplicar_significado(estado: dict, fonte: str, conteudo: str, significado: st
     fator = INTENSIDADES[intensidade]
     plasticidade = _num(psique, "plasticidade") / 100
     abertura = _num(psique, "t_abertura") / 100
-    d_valor = (6 if direcao == "+" else -6) * fator * plasticidade * (0.6 + 0.8 * abertura)
+    d_valor = (6 if direcao == "+" else -6) * fator * plasticidade * (0.6 + 0.8 * abertura) * _ruido()
     psique.set(f"v_{valor}", str(_clamp(_num(psique, f"v_{valor}") + d_valor)))
-    d_emocao = 10 * fator
+    d_emocao = 10 * fator * _ruido()
     psique.set(f"e_{emocao}", str(_clamp(_num(psique, f"e_{emocao}") + d_emocao)))
     deltas = {f"v_{valor}": d_valor, emocao: d_emocao}
     descricao = f"{fonte}: {conteudo} → significado: {significado}"
@@ -548,7 +571,7 @@ def aplicar_pratica(estado: dict, habilidade: str, resultado: str, dificuldade: 
         raise ErroDePsique("dificuldade deve ser facil, media ou dificil")
     psique = estado["psique"]
     nivel = _num(hab, habilidade)
-    ganho = 4.0 * DIFICULDADES[dificuldade] * RESULTADOS[resultado] * ((100 - nivel) / 100) ** 1.5 * (0.5 + _num(psique, "t_curiosidade") / 200)
+    ganho = 4.0 * DIFICULDADES[dificuldade] * RESULTADOS[resultado] * ((100 - nivel) / 100) ** 1.5 * (0.5 + _num(psique, "t_curiosidade") / 200) * _ruido(0.5)
     if dificuldade == "facil" and nivel >= 80:
         ganho = 0.0
     hab.set(habilidade, str(round(min(100.0, nivel + ganho), 2)))
@@ -576,20 +599,26 @@ def passar_tempo(estado: dict, dias: int, relatado_por: str = "Milan", hoje: dat
     ativos = {t: True for t in _ativos(saude)}
     inicio = {e: _num(psique, f"e_{e}") for e in EMOCOES}
     cargas: dict[str, float] = {}
+    oscilacoes = 0
     for _ in range(dias):
         for emocao in EMOCOES:
             atual = _num(psique, f"e_{emocao}")
             base = _base_emocional(psique, emocao, ativos)
-            psique.set(f"e_{emocao}", str(max(0.0, min(100.0, atual + (base - atual) * 0.25))))
+            psique.set(f"e_{emocao}", str(max(0.0, min(100.0, atual + (base - atual) * _RNG.uniform(0.15, 0.35)))))
+        if _RNG.random() < 0.2:  # oscilação de humor sem causa
+            emocao = _RNG.choice(EMOCOES)
+            psique.set(f"e_{emocao}", str(max(0.0, min(100.0, _num(psique, f"e_{emocao}") + _RNG.uniform(-12, 15)))))
+            oscilacoes += 1
         energia = _num(psique, "energia")
         alvo = 45 if ativos.get("depressao") or ativos.get("burnout") else 80
-        psique.set("energia", str(max(0.0, min(100.0, energia + (alvo - energia) * 0.2))))
+        alvo = _jitter(alvo, 8)  # dia bom, dia ruim
+        psique.set("energia", str(max(0.0, min(100.0, energia + (alvo - energia) * _RNG.uniform(0.1, 0.3)))))
         for transtorno in TRANSTORNOS:
-            cargas[transtorno] = cargas.get(transtorno, 0) - (1.5 if transtorno != "tdah" else 0.5)
+            cargas[transtorno] = cargas.get(transtorno, 0) - (1.5 if transtorno != "tdah" else 0.5) * _ruido(0.5)
         ego = _num(psique, "ego")
-        psique.set("ego", str(max(0.0, min(100.0, ego + (50 - ego) * 0.05))))
-        for complexa in COMPLEXAS:  # amor, ódio e paixão são lentos: 2% ao dia rumo a zero
-            psique.set(complexa, str(max(0.0, _num(psique, complexa) * 0.98)))
+        psique.set("ego", str(max(0.0, min(100.0, ego + (50 - ego) * 0.05 + _RNG.uniform(-1.5, 1.5)))))
+        for complexa in COMPLEXAS:  # amor, ódio e paixão são lentos e caprichosos
+            psique.set(complexa, str(max(0.0, _num(psique, complexa) * _RNG.uniform(0.96, 0.995))))
     for complexa in COMPLEXAS:
         psique.set(complexa, str(_clamp(_num(psique, complexa))))
     for emocao in EMOCOES:
@@ -598,12 +627,15 @@ def passar_tempo(estado: dict, dias: int, relatado_por: str = "Milan", hoje: dat
     psique.set("ego", str(_clamp(_num(psique, "ego"))))
     mudancas = _atualizar_saude(saude, cargas, hoje)
     deltas = {e: _num(psique, f"e_{e}") - inicio[e] for e in EMOCOES}
-    return _gravar(estado, "tempo", "normal", f"{dias} dia(s) se passaram", relatado_por, "", deltas, mudancas, hoje)
+    return _gravar(estado, "tempo", "normal", f"{dias} dia(s) se passaram"
+                   + (f"; {oscilacoes} oscilação(ões) de humor sem causa" if oscilacoes else ""),
+                   relatado_por, "", deltas, mudancas, hoje)
 
 
 # ---------------------------------------------------------------------- acaso
-def sortear_acaso(estado: dict, rng: random.Random, quantos: int = 1) -> list[tuple[str, str, str]]:
+def sortear_acaso(estado: dict, rng: random.Random | None = None, quantos: int = 1) -> list[tuple[str, str, str]]:
     """Eventos de vida sorteados, ponderados pelo estado: devolve (evento, intensidade, pessoa)."""
+    rng = rng or _RNG
     psique, saude = estado["psique"], estado["saude"]
     energia = _num(psique, "energia")
     pessoas = [p.get("nome") for p in estado["pessoas"]]

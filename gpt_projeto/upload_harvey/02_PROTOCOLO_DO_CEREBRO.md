@@ -250,5 +250,8 @@ influência, e habilidades com níveis (iniciante a mestre) e penalidade de dese
 do dia. Seções do bloco: `## psique` (evento, intensidade, pessoa, descricao),
 `## significado` (fonte, conteudo, significado, emocao, intensidade, valor, direcao; vira
 SG-nnn na Camada 4 e move o caráter), `## pratica` (habilidade, resultado, dificuldade),
-`## tempo` (dias). Quadros ativos, energia crítica e ego extremo geram alerta para ATLAS
-e Milan; não há quarentena automática. `nucleo mente estado NEX` mostra tudo.
+`## tempo` (dias). Emoções complexas (amor, ódio, paixão) misturam-se às básicas e
+produzem o tom (sarcástico, hostil, frio, terno, fervoroso, amargo, brincalhão, sereno).
+Habilidade nunca se perde por desuso. Quadros ativos, energia crítica, ego extremo e ódio
+alto geram alerta para ATLAS e Milan; não há quarentena automática. `nucleo mente estado
+NEX` mostra tudo; `nucleo mente acaso NEX` deixa o acaso agir.

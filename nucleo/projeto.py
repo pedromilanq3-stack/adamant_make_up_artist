@@ -18,6 +18,7 @@ Regras que este módulo faz cumprir por construção:
 from __future__ import annotations
 
 import json
+import random
 import re
 import shutil
 import unicodedata
@@ -633,6 +634,27 @@ class Projeto:
         )
         relato.extend(self._consequencias_de_psique(id_, antes, estado, hoje))
         return relato
+
+    def registrar_acaso(self, id_: str, quantos: int = 1, semente: int | None = None,
+                        hoje: date | None = None) -> list[str]:
+        """O acaso age: eventos de vida sorteados, ponderados pelo estado atual do personagem."""
+        hoje = hoje or date.today()
+        rng = random.Random(semente)
+        relato: list[str] = []
+        if self.tem_psique(id_):
+            estado = self.psique_de(id_)[1]
+            for evento, intensidade, pessoa in psique_mod.sortear_acaso(estado, rng, quantos):
+                campos = {"evento": evento, "intensidade": intensidade, "descricao": "acaso"}
+                if pessoa:
+                    campos["pessoa"] = pessoa
+                relato.extend(self.registrar_evento_de_psique(id_, "psique", campos, relatado_por="Acaso", hoje=hoje))
+            return relato
+        if self.tem_mente(id_):
+            mente = self.mente_de(id_)[1]
+            for evento, intensidade in mente_mod.sortear_acaso(mente, rng, quantos):
+                relato.extend(self.registrar_evento_mental(id_, evento, intensidade, "acaso", relatado_por="Acaso", hoje=hoje))
+            return relato
+        raise ErroDeValidacao(f"{id_} não tem Camada 6: o acaso não age sobre ele")
 
     def _aplicar_mente(self, mente_estado, bloco: BlocoDeAprendizado, secao: Secao, hoje: date) -> str:
         _, mente, historico = mente_estado

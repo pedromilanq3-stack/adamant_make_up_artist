@@ -20,7 +20,7 @@ Fase mental: **ESTÁVEL** (sanidade 85, exaustão 30, isolamento 35, exposição
 ## NEXARION (NEX)
 
 Status **Ativo**, cérebro próprio (NEX_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 1 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
-Psique hoje: emoção expectativa (59), postura analisar, ego 62, energia 80.
+Psique hoje: emoção expectativa (59), tom sereno, postura analisar, ego 62, energia 80.
 
 ## ATLAS
 

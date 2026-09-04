@@ -18,6 +18,7 @@ Nada aqui é editado à mão: o Núcleo grava MENTE (valores atuais) e o histór
 
 from __future__ import annotations
 
+import random
 from datetime import date
 from pathlib import Path
 
@@ -217,3 +218,16 @@ def resumo(mente: Registro, historico: list[Registro], ultimos: int = 8) -> str:
             linhas.append(f"- {registro.id} {registro.get('data')}: {registro.get('evento')} ({registro.get('intensidade')}) "
                           f"→ sanidade {registro.get('sanidade_apos')}, fase {registro.get('fase_apos')}. {registro.get('descricao')}")
     return "\n".join(linhas) + "\n"
+
+
+def sortear_acaso(mente: Registro, rng: random.Random, quantos: int = 1) -> list[tuple[str, str]]:
+    """Eventos sorteados para Batman, ponderados pela fase: quanto pior, mais provável o desgaste."""
+    sanidade = float(mente.get("sanidade", "70") or 70)
+    recuperacao = {"descanso", "alfred", "gordon", "familia", "bruce_wayne", "fundacao_wayne", "debriefing",
+                   "vitoria_limpa", "treino"}
+    excluidos = {"terapia", "tentacao_cedida"}  # terapia é decisão de Milan; ceder é escolha, não acaso
+    nomes = [n for n in EVENTOS if n not in excluidos]
+    pesos = [(1.3 if (n in recuperacao) == (sanidade >= 50) else 0.8) * (0.3 if n in ("perda", "dano_a_inocente") else 1.0)
+             for n in nomes]
+    return [(rng.choices(nomes, weights=pesos)[0], rng.choices(list(INTENSIDADES), weights=[3, 5, 2])[0])
+            for _ in range(quantos)]

@@ -841,6 +841,42 @@ class NexPsiqueTests(ProjetoTemporario):
         psique_mod._derivar(ps, {})
         self.assertLess(float(ps.get("impulso")), 15)
 
+    def test_emocoes_complexas_mistura_e_tom(self) -> None:
+        self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "encantamento", "pessoa": "Lia", "intensidade": "forte"}, hoje=HOJE)
+        self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "fascinio", "intensidade": "forte"}, hoje=HOJE)
+        ps = self.psique()["psique"]
+        self.assertGreater(float(ps.get("amor")), 0)
+        self.assertGreater(float(ps.get("paixao")), 20)
+        self.assertIn("fervoroso", ps.get("tom"))
+        for _ in range(3):
+            self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "ofensa_pessoal", "pessoa": "Rick", "intensidade": "forte"}, hoje=HOJE)
+        estado = self.psique()
+        ps = estado["psique"]
+        self.assertGreater(float(ps.get("odio")), 30)
+        self.assertTrue(any(t in ps.get("tom") for t in ("sarcástico", "hostil", "amargo")), ps.get("tom"))
+        rick = next(p for p in estado["pessoas"] if p.get("nome") == "Rick")
+        self.assertLess(float(rick.get("afeto")), -20)
+        self.assertIn(";", ps.get("mistura"))
+        cerebro_linha = psique_mod.linha_de_estado(estado)
+        self.assertIn("tom", cerebro_linha)
+        self.projeto.registrar_evento_de_psique("NEX", "tempo", {"dias": "30"}, hoje=HOJE)
+        self.assertLess(float(self.psique()["psique"].get("odio")), float(ps.get("odio")))
+
+    def test_habilidade_nunca_enferruja_e_acaso_age(self) -> None:
+        antes = psique_mod.habilidades_de(self.psique())
+        self.projeto.registrar_evento_de_psique("NEX", "tempo", {"dias": "400"}, hoje=HOJE)
+        depois = psique_mod.habilidades_de(self.psique())
+        self.assertEqual(antes, depois)
+        relato = self.projeto.registrar_acaso("NEX", quantos=3, semente=7, hoje=HOJE)
+        self.assertGreaterEqual(len(relato), 3)
+        historico = self.psique()["historico"]
+        self.assertEqual(historico[-1].get("relatado_por"), "Acaso")
+        relato2 = self.projeto.registrar_acaso("BATMAN", quantos=2, semente=7, hoje=HOJE)
+        self.assertGreaterEqual(len(relato2), 2)
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.registrar_acaso("HARVEY", hoje=HOJE)
+        self.assertEqual(self.projeto.validar(), [])
+
     def test_secoes_erradas_sao_recusadas(self) -> None:
         with self.assertRaises(ErroDePatch):
             self.aplicar("## mente\n- evento: descanso\n", setor="NEX")
@@ -945,6 +981,8 @@ class CliTests(ProjetoTemporario):
         self.assertEqual(self.rodar("mente", "tempo", "NEX", "--dias", "3")[0], 0)
         self.assertEqual(self.rodar("mente", "significado", "BATMAN", "--fonte", "f")[0], 2)
         self.assertIn("Eventos de psique", self.rodar("mente", "catalogo")[1])
+        self.assertEqual(self.rodar("mente", "acaso", "NEX", "--quantos", "2", "--semente", "3")[0], 0)
+        self.assertEqual(self.rodar("mente", "acaso", "BATMAN", "--semente", "3")[0], 0)
         self.assertEqual(self.rodar("custo", "registrar", "S01", "3", "creditos")[0], 0)
         self.assertIn("C-001", self.rodar("diario", "custos")[1])
 

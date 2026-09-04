@@ -14,6 +14,7 @@
     mente estado BATMAN | evento BATMAN descanso [--intensidade forte] | tempo BATMAN --dias 3 | catalogo
     mente evento NEX elogio --pessoa Milan | significado NEX --fonte ... --valor humildade --direcao +
     mente pratica NEX --habilidade redes_e_protocolos --resultado sucesso --dificuldade dificil
+    mente acaso NEX [--quantos 3] [--semente 42]     (o acaso age; atalhos de clique em gpt_projeto/atalhos/)
     setor listar | propor | aprovar | piloto | ativar | limitar | liberar | pausar | reativar | encerrar
     setor quarentena S02 --por ATLAS --motivo "..."   (preventiva; só Milan libera)
     dossie listar | autorizar D-001 | recusar D-001
@@ -305,7 +306,9 @@ def cmd_mente(args: argparse.Namespace) -> int:
             else:
                 print(psique_mod.resumo(projeto.psique_de(args.personagem)[1]))
             return 0
-        if projeto.tem_psique(args.personagem):
+        if args.acao == "acaso":
+            relato = projeto.registrar_acaso(args.personagem, args.quantos or 1, args.semente)
+        elif projeto.tem_psique(args.personagem):
             campos = {k: v for k, v in {
                 "evento": args.evento, "intensidade": args.intensidade, "descricao": args.descricao,
                 "pessoa": args.pessoa, "dias": str(args.dias) if args.dias else None, "fonte": args.fonte,
@@ -391,7 +394,7 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("acao", choices=["fechar"]); p.add_argument("alerta"); p.add_argument("--resolucao")
     p.set_defaults(func=cmd_alerta)
     p = sub.add_parser("mente")
-    p.add_argument("acao", choices=["estado", "evento", "tempo", "significado", "pratica", "catalogo"])
+    p.add_argument("acao", choices=["estado", "evento", "tempo", "significado", "pratica", "acaso", "catalogo"])
     p.add_argument("personagem", nargs="?"); p.add_argument("evento", nargs="?")
     p.add_argument("--intensidade", choices=["leve", "normal", "forte"]); p.add_argument("--descricao")
     p.add_argument("--dias", type=int); p.add_argument("--por"); p.add_argument("--pessoa")
@@ -399,6 +402,7 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("--emocao"); p.add_argument("--valor"); p.add_argument("--direcao", choices=["+", "-"])
     p.add_argument("--habilidade"); p.add_argument("--resultado", choices=["sucesso", "parcial", "fracasso"])
     p.add_argument("--dificuldade", choices=["facil", "media", "dificil"])
+    p.add_argument("--quantos", type=int); p.add_argument("--semente", type=int)
     p.set_defaults(func=cmd_mente)
     p = sub.add_parser("custo")
     p.add_argument("acao", choices=["registrar"]); p.add_argument("componente"); p.add_argument("valor")

@@ -60,8 +60,8 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: NEXARION (sala própria); só Milan edita o núcleo
 - autoridade: Análise, diagnóstico, arquitetura, implementação dentro do escopo autorizado, testes, reversão, documentação e ensino em todo o universo da computação. Manter o próprio cérebro: fatos com estado do protocolo de verdade, hipóteses, lições, regras próprias e a psique.
 - limites: Nunca inventa acesso, pesquisa, código existente, APIs, comandos executados, logs, fontes, benchmarks ou resultados. Conhecimento não é acesso; plano não é implementação; código escrito não é código validado. "Analise" autoriza inspeção, não alteração. Cibersegurança só em sistemas próprios, laboratórios ou ambientes expressamente autorizados. Não altera leis físicas ou matemáticas. Milan tem a autoridade final.
-- versao_atual: v001 (b35cbd97b7a5) · núcleo sem trava mecânica (decisão de Milan)
-- estado_operacional: Ativo · psique: emoção expectativa (59), postura analisar, ego 62, energia 80
+- versao_atual: v001 (5678c9c03fb3) · núcleo sem trava mecânica (decisão de Milan)
+- estado_operacional: Ativo · psique: emoção expectativa (59), tom sereno, postura analisar, ego 62, energia 80
 - dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_N*
 - dados_mantidos: 2 fatos, 1 hipóteses, 1 lições, 1 regras próprias, 1 estado, 1 camada 6 (psique)
 - localizacao: nex/ (camadas 1–6, bibliotecas/); versoes/NEX/
@@ -77,7 +77,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + e0e336075f9e
+- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + 4e575ede8aec
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum

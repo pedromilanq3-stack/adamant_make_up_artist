@@ -289,9 +289,18 @@ Núcleo:
   e da energia e geram alerta para ATLAS.
 - **Pessoas**: confiança por pessoa e a influência dela sobre NEX (confiança ×
   influenciabilidade, que sobe com ego baixo e medo alto).
+- **Emoções complexas**: amor, ódio e paixão, lentos, presos a pessoas (afeto de -100 a
+  +100, paixão) e temas. Tudo sai misturado (díades de Plutchik e combinações como
+  ressentimento apaixonado, obsessão, ambivalência) e da mistura nasce o **tom**:
+  sarcástico, hostil, frio, terno, fervoroso, amargo, brincalhão ou sereno. Violência é
+  verbal e de atitude, dentro da ficção.
 - **Habilidades** por domínio, com níveis de iniciante a mestre, prática com retornos
-  decrescentes, ferrugem por desuso e **penalidade de desempenho do dia** por medo,
-  cansaço e atenção dispersa.
+  decrescentes e **penalidade de desempenho do dia** por medo, cansaço e atenção
+  dispersa. Habilidade nunca se perde por desuso.
+- **Acaso**: `nucleo mente acaso NEX --quantos 2` sorteia eventos de vida ponderados
+  pelo estado; os atalhos `gpt_projeto/atalhos/Acaso_NEX.bat` (Windows) e
+  `Acaso_NEX.command` (Mac e Linux) fazem isso com um clique duplo e regeneram as salas.
+  O mesmo existe para Batman.
 
 Comandos: `nucleo mente estado NEX`, `nucleo mente evento NEX <evento> [--pessoa X]`,
 `nucleo mente significado NEX --fonte ... --valor ... --direcao +`, `nucleo mente pratica

@@ -13,7 +13,7 @@ Duas partes trabalham juntas:
 
 | Parte | Onde vive | Papel |
 |---|---|---|
-| `gpt_projeto/upload_harvey/` | sala de Harvey (Projeto próprio) | coordena, dá ordens aos setores, confronta entregas e responde a Milan |
+| `gpt_projeto/upload_harvey/` | o Harvey que Milan já tem | adendo curto de integração para colar nas instruções dele, mais os arquivos que ele lê |
 | `gpt_projeto/upload_setores/Snn/` | uma sala por setor (Projeto próprio) | o setor com seus agentes; obedece a Harvey na tarefa e a ATLAS na estrutura; é quem aprende |
 | `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
 | `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
@@ -30,9 +30,12 @@ campo **Instruções** (cabe no limite; `validar` avisa se passar de 8.000 carac
 e os demais vão em **Arquivos**. Se o Projeto oferecer "memória só do projeto",
 ative; a memória oficial continua sendo os arquivos.
 
-**Sala de Harvey** (`gpt_projeto/upload_harvey/`): `00_INSTRUCOES_DO_PROJETO.md` nas
-Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e,
-quando existirem, `03_AVISOS_DE_ATLAS.md` e `90_DOSSIES.md` nos Arquivos.
+**O seu Harvey** (`gpt_projeto/upload_harvey/`): Milan já tem um Harvey com prompt
+próprio. Não o substitua. Cole `00_ADENDO_PARA_O_SEU_HARVEY.md` no fim das instruções
+que ele já tem (o adendo é curto e não redefine identidade; só ensina as salas, os
+arquivos, a ordem e a entrega). Envie `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`,
+`S01_ROTA_DE_RENDA.md` e, quando existirem, `03_AVISOS_DE_ATLAS.md` e `90_DOSSIES.md`
+nos Arquivos do Projeto dele.
 
 **Sala do Setor 01** (`gpt_projeto/upload_setores/S01/`): `00_INSTRUCOES_S01.md` nas
 Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e,
@@ -171,7 +174,7 @@ Milan reverte com um comando e a reversão também vira registro.
 
 ## 4a. Separação entre as três salas
 
-- **Harvey** nunca fala como setor nem como agente de setor. Ele ordena (handoff
+- **Harvey** (o que Milan já tem, com o adendo) nunca fala como setor nem como agente de setor. Ele ordena (handoff
   mínimo: objetivo, informação indispensável, origem, confiança, limite de uso,
   entrega esperada, prazo, autorização aplicável) e confronta a entrega.
 - **O setor** só trabalha a partir de uma ordem de Harvey ou de pergunta direta de
@@ -225,7 +228,7 @@ Regras que o Núcleo faz cumprir em nome de ATLAS:
 
 ```
 gpt_projeto/
-  INSTRUCOES_DO_PROJETO.md        prompt-base: cola-se nas Instruções da sala de Harvey
+  ADENDO_HARVEY.md                adendo de integração para o Harvey que Milan já tem
   PROTOCOLO_DO_CEREBRO.md         formato dos registros, do bloco de aprendizado e do bloco atlas
   manifesto.json                  setores, status, versões, histórico, travas (setores e ATLAS)
   atlas/
@@ -241,7 +244,7 @@ gpt_projeto/
   diario/                         alteracoes (M-), eventos (E-), alertas (AL-), recomendacoes (R-), custos (C-)
   versoes/<componente>/vNNN/      baseline de cada versão, para reversão
   modelos/                        carta de setor, instruções de sala de setor, bloco de aprendizado
-  upload_harvey/                  gerado por `empacotar`; sala de Harvey
+  upload_harvey/                  gerado por `empacotar`; adendo e arquivos para o Harvey de Milan
   upload_setores/Snn/             gerado por `empacotar`; uma sala por setor operante
   upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)

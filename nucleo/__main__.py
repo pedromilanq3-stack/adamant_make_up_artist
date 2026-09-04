@@ -110,7 +110,7 @@ def cmd_empacotar(args: argparse.Namespace) -> int:
     except ErroDeValidacao as erro:
         print(erro, file=sys.stderr)
         return 1
-    print("Arquivos prontos para a sala de Harvey e para a sala de cada setor:")
+    print("Arquivos prontos para o Harvey de Milan (adendo + arquivos) e para a sala de cada setor:")
     for caminho in gerados:
         print(f"  {caminho}")
     return 0

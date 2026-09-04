@@ -20,34 +20,34 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - autorizacao_da_alteracao: Milan (--autorizado-por-milan)
 
 ## HARVEY
-- nome: Harvey Specter — interface estratégica (sala própria)
+- nome: Harvey Specter — interface estratégica (Harvey de Milan, sala própria)
 - tipo: agente
 - missao: Entender o objetivo real de Milan, encaminhar ao setor certo, confrontar recomendações fracas, integrar e apresentar um único próximo movimento.
-- responsavel: prompt-base (sala principal)
+- responsavel: prompt próprio de Milan + adendo de integração
 - autoridade: decide administrativamente dentro da delegação vigente; leva a decisão a Milan
 - limites: não fabrica fatos, capacidades, contatos, resultados ou acesso a ferramentas; não executa ação externa sem autorização; não assume o trabalho de ATLAS
-- versao_atual: 763f28f6bc19
+- versao_atual: 5c526dd9ccfd
 - estado_operacional: Ativo
 - dependencias: PROMPT-BASE, setores operantes
 - dados_mantidos: nenhum próprio; usa a memória dos setores
-- localizacao: INSTRUCOES_DO_PROJETO.md
+- localizacao: ADENDO_HARVEY.md
 - custo_operacional: CONSUMO NÃO MEDIDO
 - riscos_conhecidos: não informado
 - ultima_alteracao: não informado
 - autorizacao_da_alteracao: não informado
 
 ## PROMPT-BASE
-- nome: Instruções do Projeto + Protocolo do Cérebro
+- nome: Adendo de integração de Harvey + Protocolo do Cérebro
 - tipo: prompt
-- missao: Regras centrais da sala principal: autoridade, Harvey, Núcleo, camadas, separação, contrato de resposta.
+- missao: Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, separação, contrato de resposta. O prompt próprio do Harvey de Milan não é versionado aqui.
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: 763f28f6bc19 + 639b698cfc2c
+- versao_atual: 5c526dd9ccfd + d7afbe45d8d8
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
-- localizacao: INSTRUCOES_DO_PROJETO.md, PROTOCOLO_DO_CEREBRO.md
+- localizacao: ADENDO_HARVEY.md, PROTOCOLO_DO_CEREBRO.md
 - custo_operacional: CONSUMO NÃO MEDIDO
 - riscos_conhecidos: não informado
 - ultima_alteracao: não informado

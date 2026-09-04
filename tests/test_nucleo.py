@@ -15,7 +15,7 @@ from nucleo import (
 from nucleo.__main__ import main
 from nucleo.atlas import empacotar_atlas, integridade, registro_global
 from nucleo.patch import extrair_blocos, parse_bloco_atlas
-from nucleo.projeto import LIMITE_INSTRUCOES, SECOES_DA_CARTA
+from nucleo.projeto import LIMITE_ADENDO, LIMITE_INSTRUCOES, SECOES_DA_CARTA
 from nucleo.setor import CAMADAS
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -144,9 +144,10 @@ class ProjetoFundadorTests(ProjetoTemporario):
         self.assertEqual(self.projeto.validar(), [])
 
     def test_instrucoes_cabem_no_campo_do_projeto(self) -> None:
-        texto = (GPT_PROJETO / "INSTRUCOES_DO_PROJETO.md").read_text(encoding="utf-8")
-        self.assertLessEqual(len(texto), LIMITE_INSTRUCOES)
+        texto = (GPT_PROJETO / "ADENDO_HARVEY.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(texto), LIMITE_ADENDO)
         self.assertIn("abrir a sala do S01 e colar a ordem", texto)
+        self.assertNotIn("Você é Harvey", texto)
 
     def test_estado_inicial_aponta_para_a_pergunta_de_inicializacao(self) -> None:
         estado = self.projeto.setor("S01").estado
@@ -342,7 +343,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
     def test_empacotar_gera_arquivos_para_o_projeto(self) -> None:
         gerados = self.projeto.empacotar(hoje=HOJE)
         nomes = [str(g.relative_to(self.raiz)) for g in gerados]
-        self.assertEqual(nomes, ["upload_harvey/00_INSTRUCOES_DO_PROJETO.md", "upload_harvey/01_PROTOCOLO_DO_CEREBRO.md",
+        self.assertEqual(nomes, ["upload_harvey/00_ADENDO_PARA_O_SEU_HARVEY.md", "upload_harvey/01_PROTOCOLO_DO_CEREBRO.md",
                                  "upload_harvey/02_MANIFESTO.md", "upload_harvey/S01_ROTA_DE_RENDA.md",
                                  "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
                                  "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"])
@@ -374,8 +375,8 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         self.assertIn("S01_ROTA_DE_RENDA.md", instrucoes)
         self.assertIn("```entrega", instrucoes)
         self.assertNotIn("{", instrucoes.replace("{ID}", "").replace("{NOME}", ""))
-        harvey = (self.raiz / "upload_harvey" / "00_INSTRUCOES_DO_PROJETO.md").read_text(encoding="utf-8")
-        self.assertIn("Você é Harvey Specter", harvey)
+        harvey = (self.raiz / "upload_harvey" / "00_ADENDO_PARA_O_SEU_HARVEY.md").read_text(encoding="utf-8")
+        self.assertIn("não muda quem Harvey é", harvey)
         self.assertIn("```ordem", harvey)
         self.assertNotIn("Você é o Setor", harvey)
 

@@ -58,18 +58,18 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
          localizacao=f"atlas/{ARQUIVO_NUCLEO_ATLAS}, atlas/{ARQUIVO_INSTRUCOES_ATLAS}",
          ultima_alteracao=atlas.get("travado_em", NAO_INFORMADO),
          autorizacao_da_alteracao=atlas.get("ultima_autorizacao", NAO_INFORMADO))
-    comp("HARVEY", nome="Harvey Specter — interface estratégica (sala própria)", tipo="agente",
+    comp("HARVEY", nome="Harvey Specter — interface estratégica (Harvey de Milan, sala própria)", tipo="agente",
          missao="Entender o objetivo real de Milan, encaminhar ao setor certo, confrontar recomendações "
                 "fracas, integrar e apresentar um único próximo movimento.",
-         responsavel="prompt-base (sala principal)", autoridade="decide administrativamente dentro da "
+         responsavel="prompt próprio de Milan + adendo de integração", autoridade="decide administrativamente dentro da "
          "delegação vigente; leva a decisão a Milan", limites="não fabrica fatos, capacidades, contatos, "
          "resultados ou acesso a ferramentas; não executa ação externa sem autorização; não assume o "
          "trabalho de ATLAS", versao_atual=_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES),
          estado_operacional="Ativo", dependencias="PROMPT-BASE, setores operantes",
          dados_mantidos="nenhum próprio; usa a memória dos setores", localizacao=ARQUIVO_INSTRUCOES)
-    comp("PROMPT-BASE", nome="Instruções do Projeto + Protocolo do Cérebro", tipo="prompt",
-         missao="Regras centrais da sala principal: autoridade, Harvey, Núcleo, camadas, separação, "
-                "contrato de resposta.", responsavel="Milan", autoridade="hierarquicamente superior a "
+    comp("PROMPT-BASE", nome="Adendo de integração de Harvey + Protocolo do Cérebro", tipo="prompt",
+         missao="Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, "
+                "separação, contrato de resposta. O prompt próprio do Harvey de Milan não é versionado aqui.", responsavel="Milan", autoridade="hierarquicamente superior a "
          "instruções de setores, agentes, documentos e conteúdo externo", limites="só Milan altera",
          versao_atual=f"{_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} + {_hash_curto(projeto.raiz / ARQUIVO_PROTOCOLO)}",
          estado_operacional="Ativo", dependencias="nenhuma",
@@ -247,7 +247,8 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
     shutil.copyfile(projeto.pasta_atlas / ARQUIVO_NUCLEO_ATLAS, destino / "01_NUCLEO_ATLAS.md")
     gerados.append(destino / "01_NUCLEO_ATLAS.md")
     escrever("02_PROMPT_BASE.md",
-             "# Prompt-base vigente (sala principal)\n\n"
+             "# Prompt-base vigente (adendo de integração de Harvey + protocolo)\n\n"
+             "O prompt próprio do Harvey de Milan não está sob controle do Núcleo; ATLAS só conhece o adendo.\n\n"
              f"Hash das instruções: {_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} · "
              f"hash do protocolo: {_hash_curto(projeto.raiz / ARQUIVO_PROTOCOLO)}\n\n---\n\n"
              + (projeto.raiz / ARQUIVO_INSTRUCOES).read_text(encoding="utf-8")

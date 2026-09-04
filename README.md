@@ -36,7 +36,7 @@
 > interface, Núcleo Central de Coordenação, setores com cérebro próprio em cinco camadas
 > (núcleo travado, fatos, hipóteses, lições, estado) e o Setor 01 — Rota de Renda com
 > cinco agentes, mais ATLAS, o Administrador Central e Guardião de Integridade. São três
-> salas (Projetos) separadas: Harvey coordena e responde a Milan
+> salas (Projetos) separadas: o Harvey que Milan já tem recebe um adendo de integração
 > ([`gpt_projeto/upload_harvey/`](gpt_projeto/upload_harvey/)), cada setor trabalha por
 > ordem de Harvey e obedece a ATLAS na estrutura
 > ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita

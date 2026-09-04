@@ -57,12 +57,13 @@ SECOES_DA_CARTA = (
 )
 CAMPOS_DO_DOSSIE = ("para", "fato", "fonte", "confianca", "restricao", "pergunta")
 ARQUIVO_MANIFESTO = "manifesto.json"
-ARQUIVO_INSTRUCOES = "INSTRUCOES_DO_PROJETO.md"
+ARQUIVO_INSTRUCOES = "ADENDO_HARVEY.md"
 ARQUIVO_PROTOCOLO = "PROTOCOLO_DO_CEREBRO.md"
 PASTA_ATLAS = "atlas"
 ARQUIVO_INSTRUCOES_ATLAS = "INSTRUCOES_ATLAS.md"
 ARQUIVO_NUCLEO_ATLAS = "NUCLEO_ATLAS.md"
 LIMITE_INSTRUCOES = 8000
+LIMITE_ADENDO = 4500  # o adendo é somado às instruções que o Harvey de Milan já tem
 AGENTE = re.compile(r"^###\s+(.+?)\s*$", re.MULTILINE)
 
 
@@ -127,7 +128,7 @@ class Projeto:
 
     @property
     def pasta_upload(self) -> Path:
-        """Sala de Harvey."""
+        """Sala do Harvey que Milan já tem: adendo de integração + arquivos."""
         return self.raiz / "upload_harvey"
 
     @property
@@ -179,14 +180,15 @@ class Projeto:
     # ------------------------------------------------------------- validar
     def validar(self) -> list[str]:
         problemas: list[str] = []
-        for arquivo in (ARQUIVO_INSTRUCOES, f"{PASTA_ATLAS}/{ARQUIVO_INSTRUCOES_ATLAS}"):
+        for arquivo, limite in ((ARQUIVO_INSTRUCOES, LIMITE_ADENDO),
+                                (f"{PASTA_ATLAS}/{ARQUIVO_INSTRUCOES_ATLAS}", LIMITE_INSTRUCOES)):
             caminho = self.raiz / arquivo
             if not caminho.exists():
                 problemas.append(f"falta {arquivo}")
-            elif len(caminho.read_text(encoding="utf-8")) > LIMITE_INSTRUCOES:
+            elif len(caminho.read_text(encoding="utf-8")) > limite:
                 problemas.append(
-                    f"{arquivo} passa de {LIMITE_INSTRUCOES} caracteres; o campo de instruções do "
-                    "Projeto pode cortar o texto"
+                    f"{arquivo} passa de {limite} caracteres; o campo de instruções do Projeto pode "
+                    "cortar o texto"
                 )
         for arquivo in (ARQUIVO_PROTOCOLO, f"{PASTA_ATLAS}/{ARQUIVO_NUCLEO_ATLAS}"):
             if not (self.raiz / arquivo).exists():
@@ -925,7 +927,7 @@ class Projeto:
             shutil.rmtree(destino)
         destino.mkdir(parents=True)
         gerados: list[Path] = []
-        for origem, nome in ((ARQUIVO_INSTRUCOES, "00_INSTRUCOES_DO_PROJETO.md"),
+        for origem, nome in ((ARQUIVO_INSTRUCOES, "00_ADENDO_PARA_O_SEU_HARVEY.md"),
                              (ARQUIVO_PROTOCOLO, "01_PROTOCOLO_DO_CEREBRO.md")):
             gerados.append(destino / nome)
             shutil.copyfile(self.raiz / origem, destino / nome)

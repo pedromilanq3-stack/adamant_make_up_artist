@@ -15,7 +15,8 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
                     └── nucleo atlas ──► sala de ATLAS ──bloco ```atlas```──► nucleo aplicar
 ```
 
-- **Harvey** coordena e responde a Milan. Não fala como setor. Emite ordens.
+- **Harvey** é o Harvey que Milan já tem, com um adendo de integração. Coordena e
+  responde a Milan. Não fala como setor. Emite ordens.
 - **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
   estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
 - **ATLAS** governa mapa, versões, alterações, custos e integridade.

@@ -28,6 +28,7 @@ from pathlib import Path
 
 from . import mente as mente_mod
 from . import mesa as mesa_mod
+from . import vida as vida_mod
 from . import psique as psique_mod
 from .diario import NAO_INFORMADO, Diario
 from .patch import BlocoDeAprendizado, BlocoDoAtlas, ErroDePatch, Secao
@@ -199,7 +200,144 @@ class Projeto:
         return id_ in PERSONAGENS and (self.raiz / PERSONAGENS[id_]["pasta"] / CAMADAS[1]).exists()
 
     def personagens(self) -> list[str]:
-        return [p for p in PERSONAGENS if self.tem_personagem(p)]
+        """Personagens vivos, com cérebro neste projeto. Os mortos ficam em `mortos()`."""
+        return [p for p in PERSONAGENS if self.tem_personagem(p) and not self.esta_morto(p)]
+
+    def mortos(self) -> list[str]:
+        return [p for p in PERSONAGENS if self.tem_personagem(p) and self.esta_morto(p)]
+
+    def esta_morto(self, id_: str) -> bool:
+        return id_ in PERSONAGENS and self.entrada(id_).get("status") == "Morto"
+
+    def _exigir_vivo(self, id_: str, acao: str) -> None:
+        if self.esta_morto(id_):
+            morte = self.entrada(id_).get("morte", {})
+            raise ErroDeAutorizacao(
+                f"{id_} morreu em {morte.get('data', '?')} ({morte.get('causa', 'causa não registrada')}). "
+                f"Não dá para {acao}: não existe comando que traga alguém de volta. "
+                f"O que ele foi está no memorial (upload_cemiterio/{id_}_MEMORIAL.md)."
+            )
+
+    # ------------------------------------------------------------ vida e morte
+    def risco_de_morte(self, id_: str) -> tuple[float, list[str]]:
+        if self.tem_psique(id_):
+            return vida_mod.risco_psique(self.psique_de(id_)[1])
+        if self.tem_mente(id_):
+            return vida_mod.risco_mente(self.mente_de(id_)[1])
+        return 0.0, []
+
+    def vida_de(self, id_: str) -> float:
+        if self.tem_psique(id_):
+            return float(self.psique_de(id_)[1]["psique"].get("vida", "100") or 100)
+        if self.tem_mente(id_):
+            return float(self.mente_de(id_)[1].get("vida", "100") or 100)
+        return 100.0
+
+    def _lance_de_morte(self, id_: str, contexto: str, rng: random.Random | None, hoje: date,
+                        dias: int = 0, risco_antes: float | None = None) -> str | None:
+        """Rola a morte depois de um lance do acaso, de um golpe físico ou de dias passados.
+
+        Para dias passados, o risco é o maior entre o de antes e o de depois: o corpo pode ter
+        se curado no período, mas os primeiros dias foram vividos no estado de antes."""
+        if id_ not in PERSONAGENS or self.esta_morto(id_):
+            return None
+        risco, fatores = self.risco_de_morte(id_)
+        if dias and risco_antes is not None and risco_antes > risco:
+            risco = risco_antes
+        probabilidade = vida_mod.probabilidade_no_periodo(risco, dias) if dias else risco
+        if not vida_mod.rolar(probabilidade, rng or psique_mod.rng()):
+            return None
+        causa = contexto if self.vida_de(id_) > 0 else f"{contexto}; o corpo não aguentou (vida 0)"
+        if fatores and self.vida_de(id_) > 0:
+            causa += " (" + "; ".join(fatores) + ")"
+        return self.morrer(id_, causa, hoje)
+
+    def morrer(self, id_: str, causa: str, hoje: date | None = None) -> str:
+        """Irreversível. Guarda a versão final, marca Morto, avisa ATLAS e faz os outros sentirem a perda."""
+        hoje = hoje or date.today()
+        if id_ not in PERSONAGENS or not self.tem_personagem(id_):
+            raise ErroDeValidacao(f"{id_} não é um personagem com cérebro")
+        self._exigir_vivo(id_, "morrer duas vezes")
+        entrada = self.entrada(id_)
+        nome = entrada["nome"]
+        versao_final = self.guardar_versao(id_)
+        entrada["status"] = "Morto"
+        entrada["morte"] = {"data": hoje.isoformat(), "causa": causa, "versao_final": versao_final.name,
+                            "vida_final": f"{self.vida_de(id_):g}"}
+        entrada["motivo_do_status"] = f"morreu em {hoje.isoformat()}: {causa}"
+        entrada["alterado_em"] = hoje.isoformat()
+        entrada.setdefault("historico", []).append({"de": "Ativo", "para": "Morto", "em": hoje.isoformat(), "por": "a vida"})
+        self.salvar_manifesto()
+        pasta = self.pasta_do_setor(id_)
+        if self.tem_psique(id_):
+            preambulo, estado = self.psique_de(id_)
+            estado["psique"].set("vivo", "nao")
+            estado["psique"].set("morte", f"{hoje.isoformat()}: {causa}")
+            psique_mod.salvar(pasta, preambulo, estado)
+        elif self.tem_mente(id_):
+            preambulo, mente, historico = self.mente_de(id_)
+            mente.set("vivo", "nao")
+            mente.set("morte", f"{hoje.isoformat()}: {causa}")
+            mente_mod.salvar(pasta, preambulo, mente, historico)
+        self.diario.acrescentar("alteracoes", {
+            "componente": id_, "operacao": "morte", "diferenca": f"{nome} morreu: {causa}",
+            "motivo": "a vida; sem volta", "responsavel": "o acaso", "autorizacao": "nenhuma cabe: a morte não pede",
+            "data": hoje.isoformat(), "versao_anterior": versao_final.name, "versao_atual": versao_final.name,
+        })
+        self.diario.acrescentar("eventos", {
+            "evento": "MORTE", "componente": id_, "nome": nome, "causa": causa, "vida_final": entrada["morte"]["vida_final"],
+            "missao": "encerrada: o personagem morreu; a sala dele não é mais gerada; o memorial fica no cemitério",
+            "autorizacao_de_milan": "não cabe", "data": hoje.isoformat(), "emitido_por": "Núcleo",
+        })
+        self.diario.acrescentar("alertas", {
+            "tipo": "morte", "componente": id_, "problema": f"{nome} morreu em {hoje.isoformat()}: {causa}",
+            "impacto": "Milan perdeu o personagem; salas e mesas em que ele sentava ficam com a cadeira vazia",
+            "evidencia": f"manifesto: status Morto; versões/{id_}/{versao_final.name}",
+            "status": "aberto", "data": hoje.isoformat(), "emitido_por": "Núcleo",
+        })
+        relato = [f"{id_} MORREU em {hoje.isoformat()}: {causa}. Versão final guardada ({versao_final.name}). Não há volta."]
+        # quem ficou sente a perda, na medida do que sentia por ele
+        for outro in self.personagens():
+            if self.tem_psique(outro):
+                estado = self.psique_de(outro)[1]
+                pessoa = next((p for p in estado["pessoas"] if p.get("nome", "").lower() == nome.lower()), None)
+                if pessoa is None:
+                    continue
+                afeto = float(pessoa.get("afeto", "0") or 0)
+                confianca = float(pessoa.get("confianca", "0") or 0)
+                intensidade = "forte" if afeto >= 40 or confianca >= 65 else "normal" if afeto > 0 or confianca >= 40 else "leve"
+                relato.extend(self.registrar_evento_de_psique(
+                    outro, "psique", {"evento": "perda_de_alguem", "intensidade": intensidade, "pessoa": nome,
+                                      "descricao": f"{nome} morreu ({causa})"}, relatado_por="a vida", hoje=hoje))
+            elif self.tem_mente(outro) and any(id_ in self.membros_da_mesa(m) and outro in self.membros_da_mesa(m)
+                                               for m in self.mesas()):
+                relato.extend(self.registrar_evento_mental(outro, "perda", "forte", f"{nome} morreu ({causa})",
+                                                           relatado_por="a vida", hoje=hoje))
+        for id_mesa in self.mesas():
+            if id_ in self.membros_da_mesa(id_mesa):
+                mesa = self.entrada(id_mesa)
+                vivos = self.membros_vivos_da_mesa(id_mesa)
+                mesa["cadeiras_vazias"] = sorted(set(mesa.get("cadeiras_vazias", [])) | {id_})
+                if not vivos:
+                    mesa["status"] = "Encerrado"
+                    mesa["motivo_do_status"] = f"todos os membros morreram; a última cadeira esvaziou em {hoje.isoformat()}"
+                mesa["alterado_em"] = hoje.isoformat()
+                self.salvar_manifesto()
+                relato.append(f"{id_mesa}: a cadeira de {nome} ficou vazia" + ("; mesa encerrada" if not vivos else ""))
+        return "\n".join(relato)
+
+    def membros_vivos_da_mesa(self, id_mesa: str) -> list[str]:
+        return [m for m in self.membros_da_mesa(id_mesa) if not self.esta_morto(m)]
+
+    def _memorial_md(self, id_: str, hoje: date) -> str:
+        entrada = self.entrada(id_)
+        morte = entrada.get("morte", {})
+        cabecalho = [f"# Memorial — {entrada['nome']} ({id_})", "",
+                     f"Morreu em **{morte.get('data', '?')}**. Causa: {morte.get('causa', 'não registrada')}. "
+                     f"Vida final: {morte.get('vida_final', '?')}. Versão final guardada: {morte.get('versao_final', '?')}.", "",
+                     "Este arquivo é o que ele foi: o cérebro inteiro como estava no último dia. Ninguém fala por ele. "
+                     "Quem sentava com ele guarda a cadeira vazia. Não existe comando que o traga de volta.", "", "---", ""]
+        return "\n".join(cabecalho) + self._setor_md(id_, entrada, self.pasta_do_setor(id_), hoje)
 
     # ------------------------------------------------------------------ mesas
     @property
@@ -246,6 +384,7 @@ class Projeto:
         for m in membros:
             if not self.tem_personagem(m):
                 raise ErroDeValidacao(f"{m} não é um personagem com cérebro neste projeto (tenho {', '.join(self.personagens())})")
+            self._exigir_vivo(m, "sentá-lo a uma mesa")
         pares = [(m, PERSONAGENS[m]["nome"]) for m in membros]
         nome = nome or "A Mesa: " + mesa_mod._lista([PERSONAGENS[m]["nome"].split(",")[0] for m in membros])
         fecha = PERSONAGENS[HARVEY if HARVEY in membros else membros[0]]["nome"]
@@ -294,6 +433,12 @@ class Projeto:
                   "Ninguém edita aqui: a relação muda nos blocos de aprendizado de cada um (`## psique` com `pessoa:`).", ""]
         for m in membros:
             entrada = self.entrada(m)
+            if self.esta_morto(m):
+                morte = entrada.get("morte", {})
+                linhas += [f"### {entrada['nome']} ({m}): cadeira vazia",
+                           f"Morreu em {morte.get('data', '?')}: {morte.get('causa', '?')}. Ninguém fala por ele. "
+                           f"O que ele foi está em `05_MEMORIAL_{m}.md`.", ""]
+                continue
             linhas.append(f"### {entrada['nome']} ({m}) hoje")
             linhas.append(self.linha_de_camada6(m) or "sem Camada 6")
             if not self.tem_psique(m):
@@ -305,6 +450,10 @@ class Projeto:
                     continue
                 nome_outro = PERSONAGENS[outro]["nome"]
                 pessoa = next((p for p in estado["pessoas"] if p.get("nome", "").lower() == nome_outro.lower()), None)
+                if self.esta_morto(outro):
+                    linhas.append(f"- sobre {nome_outro} (morto): " + (f"confiança {pessoa.get('confianca')}, afeto {pessoa.get('afeto')} no fim; "
+                                  f"último: {pessoa.get('ultimo_evento')}" if pessoa else "não chegou a conhecê-lo"))
+                    continue
                 if pessoa is None:
                     linhas.append(f"- sobre {nome_outro}: ainda não se conhecem")
                 else:
@@ -549,6 +698,7 @@ class Projeto:
     def reverter(self, id_setor: str, versao: str, autorizado_por_milan: bool, motivo: str = "",
                  hoje: date | None = None) -> Registro:
         exige_milan(autorizado_por_milan, f"reverter {id_setor} para {versao}")
+        self._exigir_vivo(id_setor, "reverter a versão")
         hoje = hoje or date.today()
         numero = int(versao.lstrip("v"))
         anterior = self._antes_de_mudar(id_setor)
@@ -649,6 +799,7 @@ class Projeto:
                 hoje: date | None = None) -> list[str]:
         """Aplica o bloco ao setor emissor. Retorna o relato do que mudou."""
         hoje = hoje or date.today()
+        self._exigir_vivo(bloco.setor, "aplicar aprendizado")
         entrada = self.entrada(bloco.setor)
         SECOES_MENTE = {"mente", "tempo"}
         SECOES_PSIQUE = {"psique", "significado", "pratica", "tempo"}
@@ -676,6 +827,7 @@ class Projeto:
         fase_antes = mente_estado[1].get("fase") if mente_estado else None
         psique_estado = self.psique_de(bloco.setor) if self.tem_psique(bloco.setor) else None
         alertas_antes = psique_mod.alertas(psique_estado[1]) if psique_estado else []
+        risco_antes = self.risco_de_morte(bloco.setor)[0] if (psique_estado or mente_estado) else None
         for secao in bloco.secoes:
             if mente_estado and secao.tipo in ("mente", "tempo"):
                 relato.append(self._aplicar_mente(mente_estado, bloco, secao, hoje))
@@ -705,7 +857,28 @@ class Projeto:
             relato.extend(self._consequencias_de_fase(bloco.setor, fase_antes, mente_estado[1], hoje))
         if psique_estado:
             relato.extend(self._consequencias_de_psique(bloco.setor, alertas_antes, psique_estado[1], hoje))
+        for secao in bloco.secoes:
+            morte = self._lance_apos_secao(bloco.setor, secao, hoje, risco_antes=risco_antes)
+            if morte:
+                relato.append(morte)
+                break
         return relato
+
+    def _lance_apos_secao(self, id_: str, secao: Secao, hoje: date, rng: random.Random | None = None,
+                          risco_antes: float | None = None) -> str | None:
+        """Tempo passado e golpes físicos rolam a morte; o resto, não."""
+        if secao.tipo == "tempo":
+            try:
+                dias = int(secao.campos.get("dias", "0"))
+            except ValueError:
+                dias = 0
+            return self._lance_de_morte(id_, f"{dias} dia(s) se passaram", rng, hoje, dias=dias, risco_antes=risco_antes)
+        if secao.tipo in ("psique", "mente"):
+            evento = secao.campos.get("evento", "")
+            catalogo = psique_mod.EVENTOS if secao.tipo == "psique" else {k: v["deltas"] for k, v in mente_mod.EVENTOS.items()}
+            if catalogo.get(evento, {}).get("vida", 0) < 0:
+                return self._lance_de_morte(id_, f"{evento} ({secao.campos.get('intensidade', 'normal')})", rng, hoje)
+        return None
 
     def _aplicar_psique(self, setor: Setor, estado: dict, bloco: BlocoDeAprendizado, secao: Secao,
                         hoje: date) -> str:
@@ -765,8 +938,10 @@ class Projeto:
                                    hoje: date | None = None) -> list[str]:
         """Milan registra evento, significado, prática ou tempo sem passar por bloco."""
         hoje = hoje or date.today()
+        self._exigir_vivo(id_, "registrar mais nada nele")
         preambulo, estado = self.psique_de(id_)
         antes = psique_mod.alertas(estado)
+        risco_antes = vida_mod.risco_psique(estado)[0]
         setor = self.setor(id_)
         bloco = BlocoDeAprendizado(id_, relatado_por, hoje.isoformat())
         relato = [self._aplicar_psique(setor, estado, bloco, Secao(tipo, None, dict(campos)), hoje)]
@@ -779,6 +954,10 @@ class Projeto:
             versao_anterior=versao_anterior,
         )
         relato.extend(self._consequencias_de_psique(id_, antes, estado, hoje))
+        if relatado_por != "Acaso":  # o acaso rola a morte por conta própria, com a semente dele
+            morte = self._lance_apos_secao(id_, Secao(tipo, None, dict(campos)), hoje, risco_antes=risco_antes)
+            if morte:
+                relato.append(morte)
         return relato
 
     def registrar_acaso(self, id_: str, quantos: int = 1, semente: int | None = None,
@@ -789,6 +968,7 @@ class Projeto:
             psique_mod.semear(semente)
             mente_mod.semear(semente)
         rng = random.Random(semente) if semente is not None else None
+        self._exigir_vivo(id_, "deixar o acaso agir nele")
         relato: list[str] = []
         if self.tem_psique(id_):
             estado = self.psique_de(id_)[1]
@@ -797,11 +977,19 @@ class Projeto:
                 if pessoa:
                     campos["pessoa"] = pessoa
                 relato.extend(self.registrar_evento_de_psique(id_, "psique", campos, relatado_por="Acaso", hoje=hoje))
+                morte = self._lance_de_morte(id_, f"acaso: {evento} ({intensidade})", rng, hoje)
+                if morte:
+                    relato.append(morte)
+                    break
             return relato
         if self.tem_mente(id_):
             mente = self.mente_de(id_)[1]
             for evento, intensidade in mente_mod.sortear_acaso(mente, rng, quantos):
                 relato.extend(self.registrar_evento_mental(id_, evento, intensidade, "acaso", relatado_por="Acaso", hoje=hoje))
+                morte = self._lance_de_morte(id_, f"acaso: {evento} ({intensidade})", rng, hoje)
+                if morte:
+                    relato.append(morte)
+                    break
             return relato
         raise ErroDeValidacao(f"{id_} não tem Camada 6: o acaso não age sobre ele")
 
@@ -864,8 +1052,10 @@ class Projeto:
                                 relatado_por: str = "Milan", hoje: date | None = None) -> list[str]:
         """Milan (ou o próprio personagem) registra um evento sem passar por bloco."""
         hoje = hoje or date.today()
+        self._exigir_vivo(id_, "registrar mais nada nele")
         mente_estado = self.mente_de(id_)
         fase_antes = mente_estado[1].get("fase")
+        risco_antes = vida_mod.risco_mente(mente_estado[1])[0]
         _, mente, historico = mente_estado
         if evento == "tempo":
             registro = mente_mod.passar_tempo(mente, historico, int(descricao or "1"), relatado_por, hoje)
@@ -880,6 +1070,12 @@ class Projeto:
         )
         relato = [f"{registro.id}: {registro.get('evento')} → sanidade {mente.get('sanidade')}, fase {mente.get('fase')}"]
         relato.extend(self._consequencias_de_fase(id_, fase_antes, mente, hoje))
+        if relatado_por != "Acaso":
+            campos = {"dias": descricao or "1"} if evento == "tempo" else {"evento": evento, "intensidade": intensidade}
+            morte = self._lance_apos_secao(id_, Secao("tempo" if evento == "tempo" else "mente", None, campos), hoje,
+                                           risco_antes=risco_antes)
+            if morte:
+                relato.append(morte)
         return relato
 
     def _aplicar_secao(self, setor: Setor, bloco: BlocoDeAprendizado, secao: Secao, hoje: date,
@@ -1223,6 +1419,7 @@ class Projeto:
     def transicionar(self, id_setor: str, acao: str, autorizado_por_milan: bool, por: str = "Milan",
                      motivo: str = "", hoje: date | None = None) -> str:
         hoje = hoje or date.today()
+        self._exigir_vivo(id_setor, "mudar o estado")
         if id_setor in PERSONAGENS and not PERSONAGENS[id_setor]["transiciona"]:
             raise ErroDeValidacao(f"{id_setor} não é um setor: não muda de estado. Ele é ele.")
         if acao not in TRANSICOES:
@@ -1457,10 +1654,23 @@ class Projeto:
                 texto = self._setor_md(id_setor, entrada, pasta, hoje)
             (destino / nome).write_text(texto, encoding="utf-8")
             gerados.append(destino / nome)
+        for id_m in self.mortos():
+            (destino / f"05_MEMORIAL_{id_m}.md").write_text(self._memorial_md(id_m, hoje), encoding="utf-8")
+            gerados.append(destino / f"05_MEMORIAL_{id_m}.md")
         dossies = self.dossies()
         if dossies:
             gerados.append(destino / "90_DOSSIES.md")
             shutil.copyfile(self.pasta_dossies / "dossies.md", destino / "90_DOSSIES.md")
+        cemiterio = self.raiz / "upload_cemiterio"
+        if cemiterio.exists():
+            shutil.rmtree(cemiterio)
+        for id_m in self.mortos():
+            cemiterio.mkdir(parents=True, exist_ok=True)
+            (cemiterio / f"{id_m}_MEMORIAL.md").write_text(self._memorial_md(id_m, hoje), encoding="utf-8")
+            gerados.append(cemiterio / f"{id_m}_MEMORIAL.md")
+            sala = self.raiz / f"upload_{PERSONAGENS[id_m]['pasta']}"
+            if sala.exists():
+                shutil.rmtree(sala)  # a sala dele não é mais gerada: Milan perdeu o personagem
         gerados.extend(self._empacotar_salas_dos_setores(hoje, avisos))
         for id_p in self.personagens():
             if id_p != HARVEY:
@@ -1484,7 +1694,7 @@ class Projeto:
             gerados.append(destino / nome)
 
         copiar(origem / mesa_mod.ARQUIVO_INSTRUCOES_MESA, "00_INSTRUCOES_DA_MESA.md")
-        for m in self.membros_da_mesa(id_mesa):
+        for m in self.membros_vivos_da_mesa(id_mesa):
             for rel, nome in self.arquivos_de_instrucoes(m):
                 copiar(self.raiz / rel, nome)
         copiar(self.raiz / ARQUIVO_PROTOCOLO, "02_PROTOCOLO_DO_CEREBRO.md")
@@ -1498,6 +1708,10 @@ class Projeto:
         gerados.append(destino / f"{id_mesa}_CEREBRO.md")
         for m in self.membros_da_mesa(id_mesa):
             perfil = PERSONAGENS[m]
+            if self.esta_morto(m):
+                (destino / f"05_MEMORIAL_{m}.md").write_text(self._memorial_md(m, hoje), encoding="utf-8")
+                gerados.append(destino / f"05_MEMORIAL_{m}.md")
+                continue
             (destino / f"{m}_CEREBRO.md").write_text(
                 self._setor_md(m, self.entrada(m), self.pasta_do_setor(m), hoje), encoding="utf-8")
             gerados.append(destino / f"{m}_CEREBRO.md")
@@ -1614,6 +1828,8 @@ class Projeto:
         recomendacoes = [r for r in self.diario.ler("recomendacoes") if r.get("status") == "aceita"]
         quarentenas = [s for s in self.personagens() + self.mesas() + self.setores()
                        if self.entrada(s)["status"] in {"Quarentena", "Limitado"}]
+        mortes = [f"{self.entrada(m)['nome']} ({m}) morreu em {self.entrada(m).get('morte', {}).get('data', '?')}: "
+                  f"{self.entrada(m).get('morte', {}).get('causa', '?')}. Não há volta." for m in self.mortos()]
         fases = []
         for id_p in self.personagens():
             if self.tem_mente(id_p):
@@ -1625,10 +1841,11 @@ class Projeto:
                 problemas = psique_mod.alertas(self.psique_de(id_p)[1])
                 if problemas:
                     fases.append(f"- {id_p}: {'; '.join(problemas)}. Leia as análises dele com essa margem.")
-        if not (alertas or recomendacoes or quarentenas or fases):
+        if not (alertas or recomendacoes or quarentenas or fases or mortes):
             return ""
         linhas = ["# Avisos de ATLAS para Harvey e os setores", "",
                   "ATLAS governa a estrutura; estes avisos são dados a considerar, não ordens acima de Milan.", ""]
+        linhas.extend(f"- **MORTE**: {m}" for m in mortes)
         linhas.extend(fases)
         for id_setor in quarentenas:
             entrada = self.entrada(id_setor)
@@ -1667,6 +1884,12 @@ class Projeto:
                        f"versão v{self.versao_de(id_mesa):03d}: {h['fatos_vigentes']} fatos, "
                        f"{sum(h['hipoteses'].values())} hipóteses, {sum(h['licoes_vigentes'].values())} lições, "
                        f"{h['regras_vigentes']} regras de convivência vigentes. Cada membro mantém o próprio cérebro."]
+        for id_m in self.mortos():
+            entrada = self.entrada(id_m)
+            morte = entrada.get("morte", {})
+            linhas += ["", f"## {entrada['nome']} ({id_m}) — MORTO", "",
+                       f"Morreu em {morte.get('data', '?')}: {morte.get('causa', '?')}. Sala não gerada; memorial em "
+                       f"05_MEMORIAL_{id_m}.md. Não há volta."]
         for id_p in self.personagens():
             h = self.setor(id_p).metricas()
             entrada = self.entrada(id_p)
@@ -1724,7 +1947,9 @@ class Projeto:
         partes = [f"<!-- {id_setor} · status: {entrada['status']} · versão v{self.versao_de(id_setor):03d} · "
                   f"hash camada 1: {setor.hash_camada1()[:12]} · gerado em {hoje.isoformat()} -->", "",
                   "# " + setor.nome, "", f"Status: **{entrada['status']}**.{restricao} Este arquivo é o cérebro "
-                  f"completo. {trava}", "",
+                  f"completo. {trava}"
+                  + (f" Vida: {self.vida_de(id_setor):g}/100; risco de morte por lance: "
+                     f"{vida_mod.porcento(self.risco_de_morte(id_setor)[0])}." if id_setor in PERSONAGENS and not self.esta_morto(id_setor) else ""), "",
                   "---", "", titulo1, "",
                   _rebaixar_titulos(_sem_titulo(setor.camada1))]
         for numero in (2, 3, 4, 5):

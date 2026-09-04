@@ -47,7 +47,8 @@
 > Dr. House com dor crônica e dependência ([`gpt_projeto/upload_house/`](gpt_projeto/upload_house/)),
 > Jordan Belfort, o Lobo, conselheiro de vendas com impulso e ego ([`gpt_projeto/upload_lobo/`](gpt_projeto/upload_lobo/)),
 > a Mesa M01, onde Harvey e o Lobo sentam juntos com um cérebro modular compartilhado e cada um
-> mantém o próprio ([`gpt_projeto/upload_mesas/M01/`](gpt_projeto/upload_mesas/M01/)),
+> mantém o próprio ([`gpt_projeto/upload_mesas/M01/`](gpt_projeto/upload_mesas/M01/)); todos com
+> vida e risco real de morrer, sem volta (o memorial fica em `upload_cemiterio/`),
 > cada setor trabalha por
 > ordem de Harvey e obedece a ATLAS na estrutura
 > ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita

@@ -4,6 +4,7 @@ Extensão [E] do Work. Ninguém edita à mão: o Núcleo calcula tudo a partir d
 
 ## PSIQUE
 - nome: Gregory House
+- vida: 66
 - dor_base: 65
 - dor: 62
 - plasticidade: 89

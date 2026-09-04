@@ -15,6 +15,7 @@ from nucleo import (
 )
 from nucleo import mente as mente_mod
 from nucleo import psique as psique_mod
+from nucleo import vida as vida_mod
 from nucleo.__main__ import main
 from nucleo.atlas import empacotar_atlas, integridade, registro_global
 from nucleo.patch import extrair_blocos, parse_bloco_atlas
@@ -97,7 +98,7 @@ class ProjetoTemporario(unittest.TestCase):
         psique_mod.semear(1234)
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house", "upload_lobo", "upload_mesas"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house", "upload_lobo", "upload_mesas", "upload_cemiterio"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
@@ -1231,3 +1232,123 @@ class MesaTests(ProjetoTemporario):
         self.assertIn("upload_mesas/M02/00_INSTRUCOES_DA_MESA.md", nomes)
         eventos = [e for e in self.projeto.diario.ler("eventos") if e.get("evento") == "NOVA_MESA"]
         self.assertEqual([e.get("componente") for e in eventos][-1], "M02")
+
+
+class MorteTests(ProjetoTemporario):
+    """Vida e morte: o risco real de perder um personagem, sem volta."""
+
+    def matar_o_lobo(self) -> str:
+        relato = ""
+        for _ in range(12):
+            relato = "\n".join(self.projeto.registrar_evento_de_psique(
+                "LOBO", "psique", {"evento": "acidente", "intensidade": "forte"}, hoje=HOJE))
+            if "MORREU" in relato:
+                return relato
+        self.fail("doze acidentes fortes e o Lobo não morreu")
+
+    def test_risco_cresce_com_a_vida_baixa_e_nunca_e_zero(self) -> None:
+        risco, fatores = self.projeto.risco_de_morte("NEX")
+        self.assertGreater(risco, 0)
+        self.assertLess(risco, 0.01)
+        self.assertEqual(fatores, [])
+        risco_house, fatores_house = self.projeto.risco_de_morte("HOUSE")
+        self.assertGreater(risco_house, risco)
+        self.assertTrue(any("dependência" in f for f in fatores_house))
+        self.assertEqual(vida_mod.risco_por_vida(0)[0], 1.0)
+        self.assertGreater(vida_mod.risco_por_vida(10)[0], vida_mod.risco_por_vida(40)[0])
+        self.assertGreater(vida_mod.probabilidade_no_periodo(0.1, 30), vida_mod.probabilidade_no_periodo(0.1, 1))
+        self.assertGreater(self.projeto.risco_de_morte("BATMAN")[0], 0)
+
+    def test_acidente_derruba_a_vida_e_o_acaso_pode_matar(self) -> None:
+        antes = self.projeto.vida_de("LOBO")
+        self.projeto.registrar_evento_de_psique("LOBO", "psique", {"evento": "acidente", "intensidade": "normal"}, hoje=HOJE)
+        self.assertLess(self.projeto.vida_de("LOBO"), antes)
+        # sem dependência ativa, o acaso nunca sorteia overdose
+        estado = self.projeto.psique_de("NEX")[1]
+        sorteados = {e for e, _, _ in psique_mod.sortear_acaso(estado, random.Random(3), 300)}
+        self.assertNotIn("overdose", sorteados)
+
+    def test_morte_e_definitiva_e_todos_sentem(self) -> None:
+        self.projeto.registrar_evento_de_psique("HARVEY", "psique", {"evento": "cumplicidade", "intensidade": "forte",
+                                                                      "pessoa": "Jordan Belfort, o Lobo"}, hoje=HOJE)
+        relato = self.matar_o_lobo()
+        self.assertIn("Não há volta", relato)
+        self.assertTrue(self.projeto.esta_morto("LOBO"))
+        self.assertNotIn("LOBO", self.projeto.personagens())
+        self.assertEqual(self.projeto.mortos(), ["LOBO"])
+        self.assertEqual(self.projeto.entrada("LOBO")["status"], "Morto")
+        self.assertIn("perda_de_alguem", relato)
+        harvey = self.projeto.psique_de("HARVEY")[1]
+        self.assertEqual(harvey["historico"][-1].get("evento"), "perda_de_alguem")
+        self.assertIn(harvey["historico"][-1].get("intensidade"), ("normal", "forte"))  # gostava dele: não é leve
+        for chamada in (lambda: self.aplicar("## fato\n- conteudo: x\n- fonte: y\n- confianca: alta\n", setor="LOBO"),
+                        lambda: self.projeto.registrar_acaso("LOBO", hoje=HOJE),
+                        lambda: self.projeto.registrar_evento_de_psique("LOBO", "psique", {"evento": "elogio"}, hoje=HOJE),
+                        lambda: self.projeto.reverter("LOBO", "v001", True, hoje=HOJE),
+                        lambda: self.projeto.transicionar("LOBO", "pausar", True, hoje=HOJE),
+                        lambda: self.projeto.criar_mesa("M02", ["LOBO", "NEX"], hoje=HOJE),
+                        lambda: self.projeto.morrer("LOBO", "de novo", hoje=HOJE)):
+            with self.assertRaises(ErroDeAutorizacao):
+                chamada()
+        eventos = [e for e in self.projeto.diario.ler("eventos") if e.get("evento") == "MORTE"]
+        self.assertEqual(eventos[-1].get("componente"), "LOBO")
+        self.assertTrue(any(a.get("tipo") == "morte" for a in self.projeto.diario.ler("alertas")))
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_sala_do_morto_some_e_fica_o_memorial(self) -> None:
+        self.matar_o_lobo()
+        gerados = self.projeto.empacotar(hoje=HOJE)
+        nomes = {str(p.relative_to(self.raiz)) for p in gerados}
+        self.assertFalse(any(n.startswith("upload_lobo/") for n in nomes))
+        self.assertFalse((self.raiz / "upload_lobo").exists())
+        self.assertIn("upload_cemiterio/LOBO_MEMORIAL.md", nomes)
+        self.assertIn("upload_harvey/05_MEMORIAL_LOBO.md", nomes)
+        self.assertIn("upload_mesas/M01/05_MEMORIAL_LOBO.md", nomes)
+        self.assertNotIn("upload_mesas/M01/LOBO_CEREBRO.md", nomes)
+        self.assertNotIn("upload_mesas/M01/01_NUCLEO_LOBO.md", nomes)
+        memorial = (self.raiz / "upload_cemiterio" / "LOBO_MEMORIAL.md").read_text(encoding="utf-8")
+        self.assertIn("# Memorial — Jordan Belfort, o Lobo (LOBO)", memorial)
+        self.assertIn("## Camada 6", memorial)
+        cerebro_mesa = (self.raiz / "upload_mesas" / "M01" / "M01_CEREBRO.md").read_text(encoding="utf-8")
+        self.assertIn("cadeira vazia", cerebro_mesa)
+        self.assertIn("sobre Jordan Belfort, o Lobo (morto)", cerebro_mesa)
+        avisos = (self.raiz / "upload_harvey" / "04_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
+        self.assertIn("**MORTE**", avisos)
+        manifesto = (self.raiz / "upload_harvey" / "03_MANIFESTO.md").read_text(encoding="utf-8")
+        self.assertIn("(LOBO) — MORTO", manifesto)
+        self.assertEqual(self.projeto.entrada("M01")["status"], "Ativo")  # Harvey ainda senta lá, com a cadeira vazia
+        registros = registro_global(self.projeto, hoje=HOJE)
+        lobo = next(r for r in registros if r.id == "LOBO")
+        self.assertEqual(lobo.get("tipo"), "personagem (morto)")
+        status, evidencias = integridade(self.projeto, HOJE)
+        self.assertTrue(any("LOBO morreu" in e for e in evidencias))
+
+    def test_batman_tambem_pode_morrer_e_a_mesa_encerra_sem_ninguem(self) -> None:
+        self.projeto.criar_mesa("M02", ["BATMAN", "NEX"], hoje=HOJE)
+        for _ in range(12):
+            relato = "\n".join(self.projeto.registrar_evento_mental("BATMAN", "ferimento", "forte", "queda", hoje=HOJE))
+            if "MORREU" in relato:
+                break
+        else:
+            self.fail("doze ferimentos fortes e Batman não morreu")
+        self.assertTrue(self.projeto.esta_morto("BATMAN"))
+        self.assertEqual(self.projeto.entrada("M02")["status"], "Ativo")
+        for _ in range(12):
+            relato = "\n".join(self.projeto.registrar_evento_de_psique("NEX", "psique", {"evento": "acidente", "intensidade": "forte"}, hoje=HOJE))
+            if "MORREU" in relato:
+                break
+        self.assertTrue(self.projeto.esta_morto("NEX"))
+        self.assertEqual(self.projeto.entrada("M02")["status"], "Encerrado")
+        self.assertEqual(self.projeto.validar(), [])
+        self.projeto.empacotar(hoje=HOJE)
+        self.assertFalse((self.raiz / "upload_batman").exists())
+        self.assertTrue((self.raiz / "upload_cemiterio" / "BATMAN_MEMORIAL.md").exists())
+
+    def test_tempo_tambem_rola_a_morte(self) -> None:
+        # vida a zero pelo tempo: com dependência ativa e vida baixa, 400 dias parados matam
+        preambulo, estado = self.projeto.psique_de("HOUSE")
+        estado["psique"].set("vida", "12")
+        psique_mod.salvar(self.projeto.pasta_do_setor("HOUSE"), preambulo, estado)
+        relato = "\n".join(self.projeto.registrar_evento_de_psique("HOUSE", "tempo", {"dias": "400"}, hoje=HOJE))
+        self.assertIn("MORREU", relato)
+        self.assertIn("dia(s) se passaram", self.projeto.entrada("HOUSE")["morte"]["causa"])

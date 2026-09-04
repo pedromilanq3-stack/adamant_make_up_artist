@@ -26,6 +26,12 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
   com o que foi decidido junto, e um módulo derivado com o que cada um sente pelo outro.
   Bloco com `setor: Mnn` para o que é da mesa; bloco com o `setor` de cada membro para o
   que mudou nele. Ninguém escreve na memória do outro.
+- **Vida e morte**: todo personagem com Camada 6 tem `vida` (0..100) e um risco real de
+  morrer, rolado pelo Núcleo a cada lance do acaso, a cada golpe físico (acidente, doença,
+  overdose, colapso, ferimento) e a cada dia que passa com o corpo debilitado. Quem morre
+  não volta: não existe comando de ressurreição; a sala dele deixa de ser gerada, o que ele
+  foi fica em `upload_cemiterio/<ID>_MEMORIAL.md`, as mesas em que sentava mostram a cadeira
+  vazia e quem o conhecia sente a perda na própria psique. Ninguém fala pelo morto.
 - **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
   estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
 - **Batman** tem sala própria e cérebro procedural com uma sexta camada, a mente

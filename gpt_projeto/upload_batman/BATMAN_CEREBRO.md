@@ -2,7 +2,7 @@
 
 # BATMAN — O detetive, o estrategista e o guardião da contingência
 
-Status: **Ativo**. Este arquivo é o cérebro completo. A Camada 1 é a identidade de Batman; sem trava mecânica, por decisão de Milan.
+Status: **Ativo**. Este arquivo é o cérebro completo. A Camada 1 é a identidade de Batman; sem trava mecânica, por decisão de Milan. Vida: 88/100; risco de morte por lance: 0.2%.
 
 ---
 
@@ -143,7 +143,7 @@ Lições (L-nnn) vêm de resultados, experimentos, correções de Milan e evidê
 
 ## Camada 6 — Mente
 
-Fase mental atual: **ESTÁVEL** (sanidade 85).
+Fase mental atual: **ESTÁVEL** (sanidade 85). **Vida:** 88/100 · risco de morte por lance: 0.2% (nada além do acaso).
 
 | Variável | Valor |
 |---|---|

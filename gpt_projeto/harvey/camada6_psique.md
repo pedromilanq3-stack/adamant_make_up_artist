@@ -4,6 +4,7 @@ O cérebro vivo de Harvey, nascido da ficha inicial de Milan. Ninguém edita à 
 
 ## PSIQUE
 - nome: Harvey Specter
+- vida: 95
 - dor_base: 0
 - dor: 0
 - plasticidade: 89

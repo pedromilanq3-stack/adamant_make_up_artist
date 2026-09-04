@@ -30,7 +30,7 @@ Psique hoje: emoção expectativa (58), tom sereno, postura analisar, ego 56, en
 ## Dr. Gregory House (HOUSE)
 
 Status **Ativo**, cérebro próprio (HOUSE_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
-Psique hoje: emoção expectativa (58), tom sarcástico (39), postura analisar, ego 86, energia 86; ativo sem nome: 1 quadro(s).
+Psique hoje: emoção expectativa (58), tom sarcástico (39), postura analisar, ego 86, energia 86; ativo sem nome: 1 quadro(s); vida 66.
 
 ## Jordan Belfort, o Lobo (LOBO)
 

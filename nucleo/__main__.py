@@ -15,6 +15,7 @@
     mente evento NEX elogio --pessoa Milan | significado NEX --fonte ... --valor humildade --direcao +
     mente pratica NEX --habilidade redes_e_protocolos --resultado sucesso --dificuldade dificil
     mente acaso NEX [--quantos 3] [--semente 42]     (o acaso age; atalhos de clique em gpt_projeto/atalhos/)
+    mente risco NEX                                  (vida e risco de morte; quem morre não volta)
     testar HOUSE [--quantos 5]                       (estímulos dos testes cegos em ordem aleatória; chave à parte)
     mesa listar | criar M01 HARVEY LOBO [--nome "..."]   (mesa: dois ou mais personagens, cérebro modular compartilhado)
     setor listar | propor | aprovar | piloto | ativar | limitar | liberar | pausar | reativar | encerrar
@@ -36,6 +37,7 @@ import sys
 from pathlib import Path
 
 from . import mente as mente_mod
+from . import vida as vida_mod
 from . import psique as psique_mod
 from .atlas import empacotar_atlas, integridade
 from .patch import ErroDePatch, extrair_blocos, parse_bloco, parse_bloco_atlas
@@ -65,6 +67,9 @@ def cmd_validar(args: argparse.Namespace) -> int:
 def cmd_estado(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     ids = [args.setor] if args.setor else projeto.setores() + projeto.mesas()
+    for id_m in ([] if args.setor else projeto.mortos()):
+        morte = projeto.entrada(id_m).get("morte", {})
+        print(f"{id_m} — {projeto.entrada(id_m)['nome']} [MORTO em {morte.get('data')}: {morte.get('causa')}]")
     for id_setor in ids:
         entrada = projeto.entrada(id_setor)
         print(f"{id_setor} — {entrada['nome']} [{entrada['status']}] {projeto.rotulo_de_versao(id_setor) if entrada['status'] != 'Proposto' else ''}")
@@ -311,6 +316,17 @@ def cmd_mente(args: argparse.Namespace) -> int:
             else:
                 print(psique_mod.resumo(projeto.psique_de(args.personagem)[1]))
             return 0
+        if args.acao == "risco":
+            if projeto.esta_morto(args.personagem):
+                morte = projeto.entrada(args.personagem).get("morte", {})
+                print(f"{args.personagem} morreu em {morte.get('data')}: {morte.get('causa')}. Não há volta.")
+                return 0
+            risco, fatores = projeto.risco_de_morte(args.personagem)
+            print(f"{args.personagem}: vida {projeto.vida_de(args.personagem):g}/100 · risco de morte por lance "
+                  f"{vida_mod.porcento(risco)} · em 30 dias parados {vida_mod.porcento(vida_mod.probabilidade_no_periodo(risco, 30))}")
+            for fator in fatores or ["nada além do acaso"]:
+                print(f"  - {fator}")
+            return 0
         if args.acao == "acaso":
             relato = projeto.registrar_acaso(args.personagem, args.quantos or 1, args.semente)
         elif projeto.tem_psique(args.personagem):
@@ -474,7 +490,7 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("acao", choices=["fechar"]); p.add_argument("alerta"); p.add_argument("--resolucao")
     p.set_defaults(func=cmd_alerta)
     p = sub.add_parser("mente")
-    p.add_argument("acao", choices=["estado", "evento", "tempo", "significado", "pratica", "acaso", "catalogo"])
+    p.add_argument("acao", choices=["estado", "evento", "tempo", "significado", "pratica", "acaso", "risco", "catalogo"])
     p.add_argument("personagem", nargs="?"); p.add_argument("evento", nargs="?")
     p.add_argument("--intensidade", choices=["leve", "normal", "forte"]); p.add_argument("--descricao")
     p.add_argument("--dias", type=int); p.add_argument("--por"); p.add_argument("--pessoa")

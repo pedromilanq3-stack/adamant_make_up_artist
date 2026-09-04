@@ -36,6 +36,7 @@ import random
 from datetime import date
 from pathlib import Path
 
+from . import vida as vida_mod
 from .registros import Registro, parse_registros, proximo_id, render_registros
 
 ARQUIVO = "camada6_psique.md"
@@ -120,6 +121,14 @@ EVENTOS: dict[str, dict] = {
     "brincadeira": {"descricao": "humor compartilhado, riso de verdade", "e": {"alegria": 12, "confianca": 6, "surpresa": 4}, "pessoa": 3, "afeto": 5, "amor": 3},
     "reconciliacao": {"descricao": "fizeram as pazes", "e": {"alegria": 8, "confianca": 10, "tristeza": -6, "raiva": -10}, "pessoa": 10, "afeto": 15, "odio": -15, "amor": 6},
     "injustica_presenciada": {"descricao": "viu alguém ser tratado injustamente", "e": {"raiva": 16, "nojo": 8, "tristeza": 6}, "odio": 8, "valor": ("justica", 2)},
+    # corpo: o que pode matar e o que cura
+    "acidente": {"descricao": "acidente: o corpo levou um golpe de verdade", "e": {"medo": 20, "surpresa": 15, "tristeza": 6}, "energia": -25, "dor": 20, "vida": -25, "c": {"panico": 6, "ansiedade": 6}},
+    "doenca": {"descricao": "adoeceu; dias de cama", "e": {"tristeza": 8, "medo": 8, "expectativa": -6}, "energia": -25, "vida": -15, "c": {"depressao": 4, "insonia": 4}},
+    "overdose": {"descricao": "passou do ponto no alívio químico; só acontece com dependência ativa", "e": {"medo": 20, "tristeza": 12, "nojo": 8}, "energia": -30, "vida": -35, "c": {"dependencia": 6, "depressao": 6}},
+    "colapso": {"descricao": "o corpo desligou: exaustão, insônia, sobrecarga", "e": {"medo": 12, "tristeza": 10}, "energia": -35, "vida": -15, "c": {"burnout": 8, "insonia": 6, "depressao": 4}},
+    "ferimento": {"descricao": "se machucou numa briga ou numa queda", "e": {"raiva": 10, "medo": 8}, "energia": -12, "dor": 15, "vida": -12},
+    "recuperacao_fisica": {"descricao": "o corpo se recompôs: repouso, comida, dias calmos", "e": {"alegria": 6, "medo": -6}, "energia": 15, "vida": 12},
+    "cuidado_medico": {"descricao": "foi cuidado por quem sabe; só Milan decide", "e": {"confianca": 8, "medo": -8}, "energia": 8, "vida": 25, "dor": -10, "c": {"dependencia": -2}},
     "perda_de_alguem": {"descricao": "perdeu alguém que amava", "e": {"tristeza": 25, "medo": 8, "raiva": 6}, "energia": -15, "amor": -5, "c": {"depressao": 12}, "valor": ("cuidado", 2)},
 }
 TONS = {
@@ -172,6 +181,10 @@ def semear(semente: int | None) -> None:
     """Semente para reproduzir; sem semente, tudo é aleatório de verdade."""
     global _RNG
     _RNG = random.Random(semente)
+
+
+def rng() -> random.Random:
+    return _RNG
 
 
 def _ruido(amplitude: float = 0.4) -> float:
@@ -267,6 +280,8 @@ def carregar(pasta: Path) -> tuple[str, dict]:
         psique.set("dor_base", "0")
     if not psique.get("dor"):
         psique.set("dor", "0")
+    if not psique.get("vida"):
+        psique.set("vida", "100")
     return preambulo, {
         "psique": psique, "saude": saude, "habilidades": habilidades,
         "pessoas": [r for r in registros if r.id.startswith("P-")],
@@ -282,7 +297,7 @@ def salvar(pasta: Path, preambulo: str, estado: dict) -> None:
 def validar(estado: dict) -> list[str]:
     problemas = []
     psique, saude = estado["psique"], estado["saude"]
-    campos = ["plasticidade", "ego", "energia"] + [f"t_{t}" for t in TRACOS] + [f"e_{e}" for e in EMOCOES] \
+    campos = ["plasticidade", "ego", "energia", "vida"] + [f"t_{t}" for t in TRACOS] + [f"e_{e}" for e in EMOCOES] \
         + [f"v_{v}" for v in VALORES] + list(COMPLEXAS)
     for campo in campos:
         try:
@@ -558,6 +573,12 @@ def aplicar_evento(estado: dict, evento: str, intensidade: str = "normal", descr
         d = dados["dor"] * fator * _ruido(0.3)
         psique.set("dor", str(_clamp(_num(psique, "dor") + d)))
         deltas["dor"] = d
+    if "vida" in dados:
+        d = dados["vida"] * fator * _ruido(0.3)
+        if d < 0 and _num(psique, "t_resiliencia") > 0:
+            d *= 1.15 - 0.3 * _num(psique, "t_resiliencia") / 100  # o resiliente aguenta um pouco mais
+        psique.set("vida", str(_clamp(_num(psique, "vida") + d)))
+        deltas["vida"] = d
     cargas = {}
     resiliencia = _num(psique, "t_resiliencia") / 100
     for transtorno, delta in dados.get("c", {}).items():
@@ -706,6 +727,12 @@ def passar_tempo(estado: dict, dias: int, relatado_por: str = "Milan", hoje: dat
             cargas[transtorno] = cargas.get(transtorno, 0) - (1.5 if transtorno != "tdah" else 0.5) * _ruido(0.5)
         ego = _num(psique, "ego")
         psique.set("ego", str(max(0.0, min(100.0, ego + (50 - ego) * 0.05 + _RNG.uniform(-1.5, 1.5)))))
+        vida = _num(psique, "vida")
+        desgaste = sum(0.6 for t in ("dependencia", "depressao", "burnout", "insonia") if ativos.get(t))
+        desgaste += 0.3 if _num(psique, "dor") > 60 else 0.0
+        desgaste += 0.3 if _num(psique, "energia") < 20 else 0.0
+        cura = (100 - vida) * 0.02 * _ruido(0.5)  # o corpo cura devagar, mais quando está longe do teto
+        psique.set("vida", str(max(0.0, min(100.0, vida + cura - desgaste * _ruido(0.5)))))
         for complexa in COMPLEXAS:  # amor, ódio e paixão são lentos e caprichosos
             psique.set(complexa, str(max(0.0, _num(psique, complexa) * _RNG.uniform(0.96, 0.995))))
     for complexa in COMPLEXAS:
@@ -715,6 +742,7 @@ def passar_tempo(estado: dict, dias: int, relatado_por: str = "Milan", hoje: dat
     psique.set("energia", str(_clamp(_num(psique, "energia"))))
     psique.set("ego", str(_clamp(_num(psique, "ego"))))
     psique.set("dor", str(_clamp(_num(psique, "dor"))))
+    psique.set("vida", str(_clamp(_num(psique, "vida"))))
     mudancas = _atualizar_saude(saude, cargas, hoje)
     deltas = {e: _num(psique, f"e_{e}") - inicio[e] for e in EMOCOES}
     return _gravar(estado, "tempo", "normal", f"{dias} dia(s) se passaram"
@@ -731,8 +759,12 @@ def sortear_acaso(estado: dict, rng: random.Random | None = None, quantos: int =
     pessoas = [p.get("nome") for p in estado["pessoas"]]
     pesos: dict[str, float] = {}
     for nome, dados in EVENTOS.items():
-        if nome in ("avaliacao", "medicacao", "terapia"):
+        if nome in ("avaliacao", "medicacao", "terapia", "cuidado_medico"):
             continue  # só Milan decide tratamento e avaliação
+        if nome == "overdose" and saude.get("dependencia_estado") != "ativo":
+            continue
+        if nome == "colapso" and not any(saude.get(f"{t}_estado") == "ativo" for t in ("burnout", "insonia")):
+            continue
         peso = 1.0
         if nome in RECUPERACAO:
             peso *= 1.4 if energia < 40 else 0.8
@@ -748,6 +780,12 @@ def sortear_acaso(estado: dict, rng: random.Random | None = None, quantos: int =
             peso *= 0.25  # raros
         if nome in ("dor_forte", "analgesico", "abstinencia", "fisioterapia"):
             peso *= 1.6 if _num(psique, "dor_base") > 0 else 0.0
+        if nome in ("acidente", "doenca", "ferimento"):
+            peso *= 0.12 + (0.15 if _num(psique, "energia") < 25 else 0.0) + (0.1 if _num(psique, "impulso") >= 60 else 0.0)
+        if nome in ("overdose", "colapso"):
+            peso *= 0.35
+        if nome == "recuperacao_fisica":
+            peso *= 1.2 if _num(psique, "vida") < 70 else 0.3
         pesos[nome] = peso
     escolhidos = []
     nomes = list(pesos)
@@ -772,6 +810,8 @@ def resumo(estado: dict, ultimos: int = 8) -> str:
               "", f"**Mistura do momento:** {psique.get('mistura')}.", f"**Tom:** {psique.get('tom')}.",
               f"Amor {psique.get('amor')} · ódio {psique.get('odio')} · paixão {psique.get('paixao')}"
               + (f" · dor {psique.get('dor')} (base {psique.get('dor_base')})" if _num(psique, "dor_base") or _num(psique, "dor") else "") + ".",
+              f"**Vida:** {psique.get('vida')}/100 · risco de morte por lance: {vida_mod.porcento(vida_mod.risco_psique(estado)[0])}"
+              + (" (" + "; ".join(vida_mod.risco_psique(estado)[1]) + ")" if vida_mod.risco_psique(estado)[1] else " (nada além do acaso)") + ".",
               "", f"Caráter (valores mais fortes): {psique.get('carater')}."
               + (f" Propósito: {psique.get('proposito')}." if psique.get("proposito") else "")
               + (f" Princípio: {psique.get('principio')}" if psique.get("principio") else "")
@@ -812,6 +852,8 @@ def linha_de_estado(estado: dict) -> str:
     psique, saude = estado["psique"], estado["saude"]
     ativos = _ativos(saude)
     extra = f"; ativo sem nome: {len(ativos)} quadro(s)" if ativos else ""
+    if _num(psique, "vida") < 70:
+        extra += f"; vida {psique.get('vida')}"
     return (f"emoção {psique.get('emocao_dominante')}, tom {psique.get('tom')}, postura {psique.get('postura')}, "
             f"ego {psique.get('ego')}, energia {psique.get('energia')}{extra}")
 
@@ -834,4 +876,9 @@ def alertas(estado: dict) -> list[str]:
         saida.append("ódio alto: tom hostil provável")
     if _num(psique, "dor") >= 75:
         saida.append("dor acima do suportável: julgamento e paciência reduzidos")
+    risco, fatores = vida_mod.risco_psique(estado)
+    if _num(psique, "vida") < 50:
+        saida.append(f"vida {psique.get('vida')}: risco real de morrer ({vida_mod.porcento(risco)} por lance)")
+    elif risco >= 0.03:
+        saida.append(f"risco de morte {vida_mod.porcento(risco)} por lance: {'; '.join(fatores)}")
     return saida

@@ -289,6 +289,31 @@ de cada membro: o que cada um sente pelo outro (confiança, afeto, paixão, infl
   manifesto, `Mnn_CEREBRO.md`, os cérebros e as bibliotecas dos membros, os setores e,
   quando existirem, avisos de ATLAS e dossiês.
 
+## 4a-bis-3. Vida e morte: o risco de perder um personagem
+
+Por decisão de Milan, os personagens podem morrer, e a morte é definitiva. Cada Camada 6
+(psique ou mente) carrega `vida` (0..100). Ela cai com os eventos físicos do catálogo
+(`acidente`, `doenca`, `overdose` só com dependência ativa, `colapso`, `ferimento`) e com
+dias passados sob dependência, depressão, burnout, insônia, dor alta ou energia esgotada;
+sobe devagar com o tempo e com `recuperacao_fisica` e `cuidado_medico` (este só por
+Milan). Batman tem `ferimento` e `hospital`.
+
+O risco de morrer por lance (`nucleo mente risco NEX`) parte de 0,2% com tudo em ordem
+(o acaso nunca é zero) e sobe com vida baixa (abaixo de 50: 4%; de 30: 12%; de 15: 30%;
+zero: certa), dependência ativa (mais ainda junto com depressão), burnout com insônia, dor
+acima de 80, energia esgotada, ódio com impulso; na mente, fase CORINGA ou LIMIAR,
+exaustão e exposição ao caos acima de 85. O Núcleo rola a morte a cada evento do acaso
+(`mente acaso`), a cada golpe físico registrado e a cada dia de `tempo` (um décimo do
+risco por dia). Tudo aleatório e semeável.
+
+Quando alguém morre: a versão final é guardada; o manifesto marca `Morto`; o diário recebe
+alteração, evento MORTE e alerta para ATLAS; a sala dele deixa de ser gerada e o cérebro
+inteiro vai para `upload_cemiterio/<ID>_MEMORIAL.md` (e como `05_MEMORIAL_<ID>.md` na sala
+de Harvey e nas mesas em que sentava); as mesas mostram a cadeira vazia e encerram se não
+sobrar ninguém; quem o tinha na lista de pessoas sente `perda_de_alguem` na própria
+psique, forte se gostava dele. `aplicar`, `mente`, `acaso`, `reverter` e `setor` recusam o
+morto, e `mesa criar` não o senta. Não há comando que traga alguém de volta.
+
 ## 4a-ter. A mente de Batman: sanidade, fases e o Coringa
 
 Batman tem a Camada 6, `batman/camada6_mente.md`: seis variáveis de 0 a 100

@@ -60,7 +60,7 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
          ultima_alteracao=atlas.get("travado_em", NAO_INFORMADO),
          autorizacao_da_alteracao=atlas.get("ultima_autorizacao", NAO_INFORMADO))
     for id_p, perfil in PERSONAGENS.items():
-        if not projeto.tem_personagem(id_p):
+        if not projeto.tem_personagem(id_p) or projeto.esta_morto(id_p):
             continue
         personagem = projeto.setor(id_p)
         entrada = projeto.entrada(id_p)
@@ -161,6 +161,16 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
              localizacao=f"setores/{entrada['pasta']}/camada[2-5]_*.md",
              ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
              autorizacao_da_alteracao=entrada.get("ultima_autorizacao", NAO_INFORMADO))
+    for id_m in projeto.mortos():
+        entrada = projeto.entrada(id_m)
+        morte = entrada.get("morte", {})
+        comp(id_m, nome=entrada["nome"], tipo="personagem (morto)", missao="encerrada: morreu",
+             responsavel="ninguém fala por ele", autoridade="nenhuma", limites="não recebe aprendizado, evento, acaso nem reversão",
+             versao_atual=morte.get("versao_final", NAO_INFORMADO), estado_operacional=f"Morto em {morte.get('data', '?')}",
+             dependencias="nenhuma", dados_mantidos="cérebro final preservado no memorial",
+             localizacao=f"upload_cemiterio/{id_m}_MEMORIAL.md; versoes/{id_m}/",
+             riscos_conhecidos="nenhum: acabou", ultima_alteracao=morte.get("data", NAO_INFORMADO),
+             autorizacao_da_alteracao="não cabe: a morte não pede (causa: " + morte.get("causa", "?") + ")")
     for id_mesa in projeto.mesas():
         entrada = projeto.entrada(id_mesa)
         mesa = projeto.setor(id_mesa)
@@ -233,10 +243,15 @@ def integridade(projeto: Projeto, hoje: date | None = None) -> tuple[str, list[s
             atencoes.append(f"{id_setor} Limitado: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
         elif entrada["status"] == "Proposto":
             atencoes.append(f"{id_setor} Proposto aguarda decisão de Milan (evento {entrada.get('evento', '?')})")
+    for id_m in projeto.mortos():
+        morte = projeto.entrada(id_m).get("morte", {})
+        atencoes.append(f"{id_m} morreu em {morte.get('data', '?')}: {morte.get('causa', '?')} (sem volta)")
     for id_mesa in projeto.mesas():
         entrada = projeto.entrada(id_mesa)
         if entrada["status"] == "Quarentena":
             bloqueios.append(f"{id_mesa} em Quarentena: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
+        elif entrada["status"] == "Encerrado":
+            atencoes.append(f"{id_mesa} encerrada: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
     for id_p in projeto.personagens():
         entrada = projeto.entrada(id_p)
         if entrada["status"] == "Quarentena":

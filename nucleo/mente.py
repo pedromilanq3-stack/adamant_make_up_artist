@@ -22,6 +22,7 @@ import random
 from datetime import date
 from pathlib import Path
 
+from . import vida as vida_mod
 from .registros import Registro, parse_registros, proximo_id, render_registros
 
 ARQUIVO = "camada6_mente.md"
@@ -41,6 +42,10 @@ EVENTOS: dict[str, dict] = {
                         "deltas": {"sanidade": -15, "esperanca": -12, "controle": -5}},
     "perda": {"descricao": "perda de alguém ou de algo que importava",
               "deltas": {"sanidade": -12, "esperanca": -10, "isolamento": 10}},
+    "ferimento": {"descricao": "se machucou em campo: queda, golpe, tiro de raspão",
+                  "deltas": {"exaustao": 15, "controle": -5, "vida": -20}},
+    "hospital": {"descricao": "foi tratado por quem sabe (Alfred, Leslie, um hospital); só Milan decide",
+                 "deltas": {"exaustao": -15, "isolamento": 5, "vida": 25}},
     "noite_em_claro": {"descricao": "trabalhou sem dormir ou sem parar",
                        "deltas": {"exaustao": 20, "controle": -5}},
     "descanso": {"descricao": "dormiu, parou, recuperou",
@@ -117,6 +122,8 @@ def carregar(pasta: Path) -> tuple[str, Registro, list[Registro]]:
     if mente is None:
         raise ErroDeMente(f"{caminho}: falta o registro '## MENTE'")
     historico = [r for r in registros if r.id.startswith("MH-")]
+    if not mente.get("vida"):
+        mente.set("vida", "100")
     return preambulo, mente, historico
 
 
@@ -188,7 +195,11 @@ def aplicar_evento(mente: Registro, historico: list[Registro], evento: str, inte
         raise ErroDeMente("intensidade deve ser leve, normal ou forte")
     fator = INTENSIDADES[intensidade]
     valores = _valores(mente)
-    deltas = {k: v * fator * _ruido() for k, v in EVENTOS[evento]["deltas"].items()}
+    deltas = {k: v * fator * _ruido() for k, v in EVENTOS[evento]["deltas"].items() if k != "vida"}
+    delta_vida = 0.0
+    if "vida" in EVENTOS[evento]["deltas"]:
+        delta_vida = EVENTOS[evento]["deltas"]["vida"] * fator * _ruido(0.3)
+        mente.set("vida", str(_clamp(float(mente.get("vida", "100") or 100) + delta_vida)))
     if _RNG.random() < 0.2:  # ricochete: algo a mais que ninguém previu
         extra = _RNG.choice(VARIAVEIS)
         deltas[extra] = deltas.get(extra, 0) + _RNG.uniform(-6, 6)
@@ -198,6 +209,8 @@ def aplicar_evento(mente: Registro, historico: list[Registro], evento: str, inte
         for chave, delta in _pressoes(valores).items():
             valores[chave] += delta
             deltas[chave] = deltas.get(chave, 0) + delta
+    if delta_vida:
+        deltas["vida"] = delta_vida
     return _gravar(mente, historico, valores, deltas, evento, intensidade, descricao, relatado_por, hoje)
 
 
@@ -219,13 +232,19 @@ def passar_tempo(mente: Registro, historico: list[Registro], dias: int, relatado
             valores["sanidade"] = max(0, valores["sanidade"] - 1 * _ruido(0.5))
         if _RNG.random() < 0.1:  # uma noite ruim ou uma boa notícia sem registro
             valores["sanidade"] = max(0, min(100, valores["sanidade"] + _RNG.uniform(-3, 3)))
+        vida = float(mente.get("vida", "100") or 100)
+        desgaste = (0.5 if valores["exaustao"] >= 85 else 0.0) + (0.3 if valores["exposicao_ao_caos"] >= 85 else 0.0)
+        mente.set("vida", str(max(0.0, min(100.0, vida + (100 - vida) * 0.02 * _ruido(0.5) - desgaste * _ruido(0.5)))))
     deltas = {k: valores[k] - inicio[k] for k in VARIAVEIS if valores[k] != inicio[k]}
     return _gravar(mente, historico, valores, deltas, "tempo", "normal", f"{dias} dia(s) se passaram",
                    relatado_por, hoje)
 
 
 def resumo(mente: Registro, historico: list[Registro], ultimos: int = 8) -> str:
-    linhas = [f"Fase mental atual: **{mente.get('fase')}** (sanidade {mente.get('sanidade')}).", "",
+    risco, fatores = vida_mod.risco_mente(mente)
+    linhas = [f"Fase mental atual: **{mente.get('fase')}** (sanidade {mente.get('sanidade')}). "
+              f"**Vida:** {mente.get('vida', '100')}/100 · risco de morte por lance: {vida_mod.porcento(risco)}"
+              + (" (" + "; ".join(fatores) + ")" if fatores else " (nada além do acaso)") + ".", "",
               "| Variável | Valor |", "|---|---|"]
     linhas += [f"| {v} | {mente.get(v)} |" for v in VARIAVEIS]
     linhas += ["", f"Último evento: {mente.get('ultimo_evento')} em {mente.get('atualizado_em')}.", ""]
@@ -243,9 +262,9 @@ def sortear_acaso(mente: Registro, rng: random.Random | None = None, quantos: in
     sanidade = float(mente.get("sanidade", "70") or 70)
     recuperacao = {"descanso", "alfred", "gordon", "familia", "bruce_wayne", "fundacao_wayne", "debriefing",
                    "vitoria_limpa", "treino"}
-    excluidos = {"terapia", "tentacao_cedida"}  # terapia é decisão de Milan; ceder é escolha, não acaso
+    excluidos = {"terapia", "tentacao_cedida", "hospital"}  # terapia e hospital são decisão de Milan; ceder é escolha
     nomes = [n for n in EVENTOS if n not in excluidos]
     pesos = [(1.3 if (n in recuperacao) == (sanidade >= 50) else 0.8) * (0.3 if n in ("perda", "dano_a_inocente") else 1.0)
-             for n in nomes]
+             * (0.25 if n == "ferimento" else 1.0) for n in nomes]
     return [(rng.choices(nomes, weights=pesos)[0], rng.choices(list(INTENSIDADES), weights=[3, 5, 2])[0])
             for _ in range(quantos)]

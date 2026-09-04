@@ -4,6 +4,7 @@ O cérebro vivo do Lobo. Ninguém edita à mão: o Núcleo calcula tudo a partir
 
 ## PSIQUE
 - nome: Jordan Belfort
+- vida: 82
 - dor_base: 0
 - dor: 0
 - plasticidade: 91

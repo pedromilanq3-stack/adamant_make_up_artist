@@ -399,3 +399,11 @@ gerando ansiedade, solidão com serotonina baixa gerando depressão, ciclotimia 
 mania e depressão, cérebro estável permanecendo estável, sono e privação de sono; e o
 chat local: página e recursos, fluxo completo pela API (criar, dizer, estado, acaso,
 registrar), erros e nomes duplicados.
+
+## Por dentro
+
+Como o pacote se sustenta por dentro — camadas por velocidade de mudança, quem pode
+escrever no quê, a ordem do ciclo de um turno, os freios de cada laço de
+realimentação, determinismo, versão do estado salvo e o checklist para acrescentar um
+módulo — está em [`docs/ARQUITETURA_CEREBRO.md`](ARQUITETURA_CEREBRO.md). Leia antes
+de mexer numa constante ou de acrescentar um módulo novo.

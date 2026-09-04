@@ -39,5 +39,14 @@
     "trava": "nenhuma, por decisão de Milan (Harvey é Harvey por caráter)",
     "ultima_autorizacao": "Milan (documento fundador, 2026-09-04)",
     "alterado_em": "2026-09-04"
+  },
+  "batman": {
+    "nome": "Batman",
+    "pasta": "batman",
+    "status": "Ativo",
+    "versao": 1,
+    "trava": "nenhuma, por decisão de Milan (a mente muda; o núcleo, só Milan)",
+    "ultima_autorizacao": "Milan (Arquitetura Compósita v2, 2026-09-04)",
+    "alterado_em": "2026-09-04"
   }
 }

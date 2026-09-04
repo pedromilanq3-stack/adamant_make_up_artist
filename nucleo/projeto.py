@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+from . import mente as mente_mod
 from .diario import NAO_INFORMADO, Diario
 from .patch import BlocoDeAprendizado, BlocoDoAtlas, ErroDePatch, Secao
 from .registros import Registro, parse_registros, proximo_id, render_registros
@@ -61,6 +62,15 @@ ARQUIVO_INSTRUCOES = "harvey/INSTRUCOES_HARVEY.md"
 ARQUIVO_ADENDO = "ADENDO_HARVEY.md"
 PASTA_HARVEY = "harvey"
 HARVEY = "HARVEY"
+BATMAN = "BATMAN"
+# Personagens: componentes com sala própria e cérebro procedural, fora do ciclo de setores.
+PERSONAGENS = {
+    HARVEY: {"pasta": "harvey", "chave": "harvey", "nome": "Harvey Specter", "mente": False,
+             "transiciona": False, "instrucoes": "INSTRUCOES_HARVEY.md", "nucleo": None, "prefixo_bib": "BIB_"},
+    BATMAN: {"pasta": "batman", "chave": "batman", "nome": "Batman", "mente": True,
+             "transiciona": True, "instrucoes": "INSTRUCOES_BATMAN.md", "nucleo": "NUCLEO_BATMAN.md",
+             "prefixo_bib": "BIB_B"},
+}
 ARQUIVO_PROTOCOLO = "PROTOCOLO_DO_CEREBRO.md"
 PASTA_ATLAS = "atlas"
 ARQUIVO_INSTRUCOES_ATLAS = "INSTRUCOES_ATLAS.md"
@@ -144,25 +154,40 @@ class Projeto:
         return self.raiz / PASTA_ATLAS
 
     def entrada(self, id_setor: str) -> dict:
-        if id_setor == HARVEY:
-            harvey = self.manifesto.setdefault("harvey", {})
-            harvey.setdefault("nome", "Harvey Specter")
-            harvey.setdefault("pasta", PASTA_HARVEY)
-            harvey.setdefault("status", "Ativo")
-            return harvey
+        if id_setor in PERSONAGENS:
+            perfil = PERSONAGENS[id_setor]
+            entrada = self.manifesto.setdefault(perfil["chave"], {})
+            entrada.setdefault("nome", perfil["nome"])
+            entrada.setdefault("pasta", perfil["pasta"])
+            entrada.setdefault("status", "Ativo")
+            return entrada
         try:
             return self.manifesto["setores"][id_setor]
         except KeyError:
             raise ErroDeValidacao(f"setor {id_setor} não existe no manifesto") from None
 
     def pasta_do_setor(self, id_setor: str) -> Path:
-        if id_setor == HARVEY:
-            return self.raiz / PASTA_HARVEY
+        if id_setor in PERSONAGENS:
+            return self.raiz / PERSONAGENS[id_setor]["pasta"]
         return self.pasta_setores / self.entrada(id_setor)["pasta"]
+
+    def tem_personagem(self, id_: str) -> bool:
+        return id_ in PERSONAGENS and (self.raiz / PERSONAGENS[id_]["pasta"] / CAMADAS[1]).exists()
+
+    def personagens(self) -> list[str]:
+        return [p for p in PERSONAGENS if self.tem_personagem(p)]
 
     @property
     def tem_harvey(self) -> bool:
-        return (self.raiz / PASTA_HARVEY / CAMADAS[1]).exists()
+        return self.tem_personagem(HARVEY)
+
+    def tem_mente(self, id_: str) -> bool:
+        return id_ in PERSONAGENS and PERSONAGENS[id_]["mente"]
+
+    def mente_de(self, id_: str) -> tuple[str, Registro, list[Registro]]:
+        if not self.tem_mente(id_):
+            raise mente_mod.ErroDeMente(f"{id_} não tem Camada 6 (mente)")
+        return mente_mod.carregar(self.pasta_do_setor(id_))
 
     def setor(self, id_setor: str) -> Setor:
         return Setor.carregar(id_setor, self.pasta_do_setor(id_setor))
@@ -214,15 +239,30 @@ class Projeto:
             problemas.append("ATLAS: núcleo não está travado (use 'travar ATLAS')")
         elif hash_atlas and trava_atlas != hash_atlas:
             problemas.append("ATLAS: núcleo foi alterado sem autorização (hash difere da trava)")
-        if self.tem_harvey:
+        for id_p in self.personagens():
+            perfil = PERSONAGENS[id_p]
             try:
-                harvey = self.setor(HARVEY)
+                personagem = self.setor(id_p)
             except (ErroDeValidacao, ValueError) as erro:
                 problemas.append(str(erro))
-            else:
-                problemas.extend(harvey.validar())
-                if not self.diario.versoes(HARVEY):
-                    problemas.append("HARVEY: sem versão guardada para reversão (use 'versoes guardar HARVEY')")
+                continue
+            problemas.extend(personagem.validar())
+            if not self.diario.versoes(id_p):
+                problemas.append(f"{id_p}: sem versão guardada para reversão (use 'versoes guardar {id_p}')")
+            caminho = self.raiz / perfil["pasta"] / perfil["instrucoes"]
+            if not caminho.exists():
+                problemas.append(f"falta {perfil['pasta']}/{perfil['instrucoes']}")
+            elif len(caminho.read_text(encoding="utf-8")) > LIMITE_INSTRUCOES:
+                problemas.append(f"{perfil['pasta']}/{perfil['instrucoes']} passa de {LIMITE_INSTRUCOES} caracteres")
+            if perfil["nucleo"] and not (self.raiz / perfil["pasta"] / perfil["nucleo"]).exists():
+                problemas.append(f"falta {perfil['pasta']}/{perfil['nucleo']}")
+            if perfil["mente"]:
+                try:
+                    _, mente, _ = self.mente_de(id_p)
+                except mente_mod.ErroDeMente as erro:
+                    problemas.append(f"{id_p}: {erro}")
+                else:
+                    problemas.extend(f"{id_p}/{m}" for m in mente_mod.validar(mente))
         for id_setor in self.setores():
             entrada = self.entrada(id_setor)
             if entrada.get("status") not in ESTADOS_DE_SETOR:
@@ -335,7 +375,7 @@ class Projeto:
         restaurados = self.diario.restaurar_versao(id_setor, numero, self.pasta_do_setor(id_setor))
         setor = self.setor(id_setor)
         entrada = self.entrada(id_setor)
-        if id_setor != HARVEY:
+        if id_setor not in PERSONAGENS:
             entrada["trava_camada1"] = setor.hash_camada1()
         return self._depois_de_mudar(
             id_setor, operacao="reversao", diferenca=f"restaurados {len(restaurados)} arquivo(s) de v{numero:03d}",
@@ -351,8 +391,8 @@ class Projeto:
         hoje = hoje or date.today()
         if id_setor.upper() == "ATLAS":
             return self._travar_atlas(motivo, hoje)
-        if id_setor == HARVEY:
-            raise ErroDeValidacao("HARVEY não tem trava mecânica, por decisão de Milan: ele é ele. "
+        if id_setor in PERSONAGENS:
+            raise ErroDeValidacao(f"{id_setor} não tem trava mecânica, por decisão de Milan: ele é ele. "
                                   "Só Milan edita o núcleo; a mudança fica no diário via 'versoes guardar'.")
         setor = self.setor(id_setor)
         problemas = [p for p in setor.validar() if "/camada1" in p]
@@ -428,11 +468,15 @@ class Projeto:
         """Aplica o bloco ao setor emissor. Retorna o relato do que mudou."""
         hoje = hoje or date.today()
         entrada = self.entrada(bloco.setor)
-        if entrada["status"] not in ESTADOS_OPERANTES:
+        so_mente = all(secao.tipo in ("mente", "tempo") for secao in bloco.secoes)
+        if entrada["status"] not in ESTADOS_OPERANTES and not (so_mente and self.tem_mente(bloco.setor)):
             raise ErroDeAutorizacao(
                 f"{bloco.setor} está '{entrada['status']}' e não opera; só setores em "
                 f"{sorted(ESTADOS_OPERANTES)} recebem aprendizado"
+                + (" (eventos de mente e tempo continuam aceitos)" if self.tem_mente(bloco.setor) else "")
             )
+        if any(secao.tipo in ("mente", "tempo") for secao in bloco.secoes) and not self.tem_mente(bloco.setor):
+            raise ErroDePatch(f"{bloco.setor} não tem Camada 6 (mente); '## mente' e '## tempo' só valem para BATMAN")
         trava = entrada.get("trava_camada1")
         setor = self.setor(bloco.setor)
         if trava and trava != setor.hash_camada1():
@@ -441,13 +485,20 @@ class Projeto:
             )
         relato: list[str] = []
         pendentes: list[Registro] = []
+        mente_estado = self.mente_de(bloco.setor) if self.tem_mente(bloco.setor) else None
+        fase_antes = mente_estado[1].get("fase") if mente_estado else None
         for secao in bloco.secoes:
+            if secao.tipo in ("mente", "tempo"):
+                relato.append(self._aplicar_mente(mente_estado, bloco, secao, hoje))
+                continue
             relato.append(self._aplicar_secao(setor, bloco, secao, hoje, autorizado_por_milan, pendentes))
         problemas = setor.validar()
         if problemas:
             raise ErroDePatch("o bloco deixaria o setor inválido:\n  " + "\n  ".join(problemas))
         versao_anterior = self._antes_de_mudar(bloco.setor)
         setor.salvar()
+        if mente_estado:
+            mente_mod.salvar(self.pasta_do_setor(bloco.setor), *mente_estado)
         for dossie in pendentes:
             self._gravar_dossie(dossie)
         self._depois_de_mudar(
@@ -456,6 +507,85 @@ class Projeto:
             autorizacao="Milan (--autorizado-por-milan)" if autorizado_por_milan
             else "não exigida: memória do próprio setor", hoje=hoje, versao_anterior=versao_anterior,
         )
+        if mente_estado:
+            relato.extend(self._consequencias_de_fase(bloco.setor, fase_antes, mente_estado[1], hoje))
+        return relato
+
+    def _aplicar_mente(self, mente_estado, bloco: BlocoDeAprendizado, secao: Secao, hoje: date) -> str:
+        _, mente, historico = mente_estado
+        if secao.tipo == "tempo":
+            try:
+                dias = int(secao.campos.get("dias", "0"))
+            except ValueError:
+                raise ErroDePatch("'## tempo' precisa de 'dias: N'") from None
+            registro = mente_mod.passar_tempo(mente, historico, dias, relatado_por=bloco.emitido_por, hoje=hoje)
+            return f"{registro.id}: {dias} dia(s) → sanidade {mente.get('sanidade')}, fase {mente.get('fase')}"
+        evento = secao.campos.get("evento", "")
+        try:
+            registro = mente_mod.aplicar_evento(
+                mente, historico, evento, secao.campos.get("intensidade", "normal"),
+                secao.campos.get("descricao", ""), relatado_por=bloco.emitido_por, hoje=hoje)
+        except mente_mod.ErroDeMente as erro:
+            raise ErroDePatch(str(erro)) from None
+        return f"{registro.id}: {evento} → sanidade {mente.get('sanidade')}, fase {mente.get('fase')}"
+
+    def _consequencias_de_fase(self, id_: str, fase_antes: str | None, mente: Registro, hoje: date) -> list[str]:
+        """Mudança de fase entra no diário; LIMIAR alerta; CORINGA vai à Quarentena."""
+        fase = mente.get("fase")
+        relato: list[str] = []
+        if fase != fase_antes:
+            self.diario.registrar_alteracao(
+                componente=id_, operacao="mudanca_de_fase", versao_anterior=f"fase {fase_antes}",
+                versao_nova=f"fase {fase} (sanidade {mente.get('sanidade')})",
+                diferenca=f"último evento: {mente.get('ultimo_evento')}", motivo="estado mental procedural",
+                responsavel="Núcleo (cálculo)", autorizacao="não exigida: consequência do que o personagem viveu",
+                hoje=hoje,
+            )
+            relato.append(f"fase mental: {fase_antes} → {fase}")
+        entrada = self.entrada(id_)
+        ordem = mente_mod.ORDEM_DAS_FASES
+        if fase in ("LIMIAR", "OBSESSIVO") and fase != fase_antes and ordem.index(fase) < ordem.index(fase_antes or "ESTÁVEL"):
+            alerta = self.diario.acrescentar("alertas", {
+                "tipo": "mente", "componente": id_, "problema": f"{id_} entrou na fase {fase} (sanidade {mente.get('sanidade')})",
+                "impacto": "análise pode estar comprometida; risco de decisão ruim",
+                "recomendacao": "Milan registra descanso, alfred, terapia ou gordon; ATLAS avalia Limitado",
+                "evidencia": f"camada6_mente.md, último evento {mente.get('ultimo_evento')}",
+                "status": "aberto", "data": hoje.isoformat(), "emitido_por": "Núcleo",
+            })
+            relato.append(f"{alerta.id}: alerta de mente registrado para ATLAS e Milan")
+        if fase == "CORINGA" and entrada["status"] in ESTADOS_OPERANTES:
+            self.transicionar(id_, "quarentena", False, por="NUCLEO",
+                              motivo=f"fase CORINGA: sanidade {mente.get('sanidade')}; cedeu à sanidade do Coringa",
+                              hoje=hoje)
+            alerta = self.diario.acrescentar("alertas", {
+                "tipo": "quarentena", "componente": id_, "problema": f"{id_} cedeu à sanidade do Coringa (sanidade {mente.get('sanidade')})",
+                "impacto": "bloqueante: nenhuma ordem ou entrega até recuperação",
+                "recomendacao": "Milan registra eventos de recuperação (descanso, alfred, terapia, gordon, familia) e reativa quando a fase voltar a SOMBRIO ou melhor",
+                "evidencia": "camada6_mente.md", "status": "aberto", "data": hoje.isoformat(), "emitido_por": "Núcleo",
+            })
+            relato.append(f"{id_} em Quarentena automática ({alerta.id}); só Milan reativa")
+        return relato
+
+    def registrar_evento_mental(self, id_: str, evento: str, intensidade: str = "normal", descricao: str = "",
+                                relatado_por: str = "Milan", hoje: date | None = None) -> list[str]:
+        """Milan (ou o próprio personagem) registra um evento sem passar por bloco."""
+        hoje = hoje or date.today()
+        mente_estado = self.mente_de(id_)
+        fase_antes = mente_estado[1].get("fase")
+        _, mente, historico = mente_estado
+        if evento == "tempo":
+            registro = mente_mod.passar_tempo(mente, historico, int(descricao or "1"), relatado_por, hoje)
+        else:
+            registro = mente_mod.aplicar_evento(mente, historico, evento, intensidade, descricao, relatado_por, hoje)
+        versao_anterior = self._antes_de_mudar(id_)
+        mente_mod.salvar(self.pasta_do_setor(id_), *mente_estado)
+        self._depois_de_mudar(
+            id_, operacao="evento_mental", diferenca=f"{registro.id}: {registro.get('evento')} ({registro.get('deltas')})",
+            motivo=descricao or registro.get("descricao", ""), responsavel=relatado_por,
+            autorizacao="não exigida: registro de evento vivido", hoje=hoje, versao_anterior=versao_anterior,
+        )
+        relato = [f"{registro.id}: {registro.get('evento')} → sanidade {mente.get('sanidade')}, fase {mente.get('fase')}"]
+        relato.extend(self._consequencias_de_fase(id_, fase_antes, mente, hoje))
         return relato
 
     def _aplicar_secao(self, setor: Setor, bloco: BlocoDeAprendizado, secao: Secao, hoje: date,
@@ -544,7 +674,7 @@ class Projeto:
         if tipo != "fato":
             return
         origem = campos.get("setor_origem", setor.id)
-        if origem == setor.id or setor.id == HARVEY:
+        if origem == setor.id or setor.id in PERSONAGENS:
             return
         referencia = campos.get("dossie")
         if not referencia:
@@ -794,13 +924,13 @@ class Projeto:
     def transicionar(self, id_setor: str, acao: str, autorizado_por_milan: bool, por: str = "Milan",
                      motivo: str = "", hoje: date | None = None) -> str:
         hoje = hoje or date.today()
-        if id_setor == HARVEY:
-            raise ErroDeValidacao("HARVEY não é um setor: não muda de estado. Ele é ele.")
+        if id_setor in PERSONAGENS and not PERSONAGENS[id_setor]["transiciona"]:
+            raise ErroDeValidacao(f"{id_setor} não é um setor: não muda de estado. Ele é ele.")
         if acao not in TRANSICOES:
             raise ValueError(f"ação desconhecida '{acao}'; use {sorted(TRANSICOES)}")
         if acao == "quarentena":
-            if por not in {"Milan", "ATLAS"}:
-                raise ErroDeAutorizacao("quarentena preventiva só por ATLAS ou Milan")
+            if por not in {"Milan", "ATLAS", "NUCLEO"}:
+                raise ErroDeAutorizacao("quarentena preventiva só por ATLAS, Milan ou pelo Núcleo (fase CORINGA)")
             if not motivo:
                 raise ErroDeValidacao("quarentena exige --motivo com a causa, que vai imediatamente a Milan")
             autorizacao = "Milan (--autorizado-por-milan)" if autorizado_por_milan else \
@@ -817,6 +947,13 @@ class Projeto:
                 f"{id_setor} está '{entrada['status']}'; '{acao}' exige {' ou '.join(origens)}"
             )
         anterior = entrada["status"]
+        if destino in ESTADOS_OPERANTES and self.tem_mente(id_setor):
+            fase = self.mente_de(id_setor)[1].get("fase")
+            if fase in ("CORINGA", "LIMIAR"):
+                raise ErroDeValidacao(
+                    f"{id_setor} ainda está na fase {fase}; registre eventos de recuperação "
+                    "(descanso, alfred, terapia, gordon, familia) até SOMBRIO ou melhor antes de reativar"
+                )
         versao_anterior = f"{anterior}" if anterior == "Proposto" else self._antes_de_mudar(id_setor)
         if anterior == "Quarentena":
             for alerta in self.diario.ler("alertas"):
@@ -918,10 +1055,17 @@ class Projeto:
     def pendencias(self, hoje: date | None = None) -> dict[str, list[str]]:
         hoje = hoje or date.today()
         resultado: dict[str, list[str]] = {}
-        if self.tem_harvey:
-            itens = self.setor(HARVEY).pendencias(hoje)
+        for id_p in self.personagens():
+            itens = self.setor(id_p).pendencias(hoje)
+            if self.tem_mente(id_p):
+                fase = self.mente_de(id_p)[1].get("fase")
+                status = self.entrada(id_p)["status"]
+                if fase in ("OBSESSIVO", "LIMIAR", "CORINGA"):
+                    itens.append(f"MENTE: fase {fase}; Milan decide descanso, alfred, terapia, gordon ou familia")
+                if status == "Quarentena" and fase in ("SOMBRIO", "ESTÁVEL"):
+                    itens.append(f"MENTE: recuperou para {fase}; Milan pode reativar ({id_p})")
             if itens:
-                resultado[HARVEY] = itens
+                resultado[id_p] = itens
         for id_setor in self.setores_com_camadas():
             if self.entrada(id_setor)["status"] not in ESTADOS_OPERANTES:
                 continue
@@ -949,8 +1093,15 @@ class Projeto:
         return resultado
 
     def metricas(self) -> dict[str, dict[str, object]]:
-        ids = ([HARVEY] if self.tem_harvey else []) + self.setores_com_camadas()
-        return {s: self.setor(s).metricas() for s in ids}
+        saida: dict[str, dict[str, object]] = {}
+        for id_ in self.personagens() + self.setores_com_camadas():
+            saida[id_] = self.setor(id_).metricas()
+            if self.tem_mente(id_):
+                _, mente, historico = self.mente_de(id_)
+                saida[id_]["mente"] = {v: int(mente.get(v)) for v in mente_mod.VARIAVEIS}
+                saida[id_]["mente"]["fase"] = mente.get("fase")
+                saida[id_]["mente"]["eventos"] = len(historico)
+        return saida
 
     # ---------------------------------------------------------- empacotar
     def empacotar(self, hoje: date | None = None) -> list[Path]:
@@ -974,10 +1125,11 @@ class Projeto:
         if avisos:
             gerados.append(destino / "04_AVISOS_DE_ATLAS.md")
             (destino / "04_AVISOS_DE_ATLAS.md").write_text(avisos, encoding="utf-8")
+        for id_p in self.personagens():
+            gerados.append(destino / f"{id_p}_CEREBRO.md")
+            (destino / f"{id_p}_CEREBRO.md").write_text(
+                self._setor_md(id_p, self.entrada(id_p), self.pasta_do_setor(id_p), hoje), encoding="utf-8")
         if self.tem_harvey:
-            gerados.append(destino / "HARVEY_CEREBRO.md")
-            (destino / "HARVEY_CEREBRO.md").write_text(
-                self._setor_md(HARVEY, self.entrada(HARVEY), self.raiz / PASTA_HARVEY, hoje), encoding="utf-8")
             for biblioteca in sorted((self.raiz / PASTA_HARVEY / "bibliotecas").glob("BIB_*.md")):
                 shutil.copyfile(biblioteca, destino / biblioteca.name)
                 gerados.append(destino / biblioteca.name)
@@ -997,6 +1149,46 @@ class Projeto:
             gerados.append(destino / "90_DOSSIES.md")
             shutil.copyfile(self.pasta_dossies / "dossies.md", destino / "90_DOSSIES.md")
         gerados.extend(self._empacotar_salas_dos_setores(hoje, avisos))
+        for id_p in self.personagens():
+            if id_p != HARVEY:
+                gerados.extend(self._empacotar_sala_de_personagem(id_p, hoje, avisos))
+        return gerados
+
+    def _empacotar_sala_de_personagem(self, id_p: str, hoje: date, avisos: str) -> list[Path]:
+        perfil = PERSONAGENS[id_p]
+        destino = self.raiz / f"upload_{perfil['pasta']}"
+        if destino.exists():
+            shutil.rmtree(destino)
+        destino.mkdir(parents=True)
+        gerados: list[Path] = []
+        origem = self.raiz / perfil["pasta"]
+        shutil.copyfile(origem / perfil["instrucoes"], destino / f"00_{perfil['instrucoes']}")
+        gerados.append(destino / f"00_{perfil['instrucoes']}")
+        if perfil["nucleo"]:
+            shutil.copyfile(origem / perfil["nucleo"], destino / f"01_{perfil['nucleo']}")
+            gerados.append(destino / f"01_{perfil['nucleo']}")
+        shutil.copyfile(self.raiz / ARQUIVO_PROTOCOLO, destino / "02_PROTOCOLO_DO_CEREBRO.md")
+        gerados.append(destino / "02_PROTOCOLO_DO_CEREBRO.md")
+        (destino / "03_MANIFESTO.md").write_text(self._manifesto_md(hoje), encoding="utf-8")
+        gerados.append(destino / "03_MANIFESTO.md")
+        if avisos:
+            (destino / "04_AVISOS_DE_ATLAS.md").write_text(avisos, encoding="utf-8")
+            gerados.append(destino / "04_AVISOS_DE_ATLAS.md")
+        (destino / f"{id_p}_CEREBRO.md").write_text(
+            self._setor_md(id_p, self.entrada(id_p), origem, hoje), encoding="utf-8")
+        gerados.append(destino / f"{id_p}_CEREBRO.md")
+        for biblioteca in sorted((origem / "bibliotecas").glob(f"{perfil['prefixo_bib']}*.md")):
+            shutil.copyfile(biblioteca, destino / biblioteca.name)
+            gerados.append(destino / biblioteca.name)
+        for id_setor in self.setores_com_camadas():
+            entrada = self.entrada(id_setor)
+            nome = f"{id_setor}_{slug(entrada['nome']).upper()}.md"
+            (destino / nome).write_text(self._setor_md(id_setor, entrada, self.pasta_do_setor(id_setor), hoje),
+                                        encoding="utf-8")
+            gerados.append(destino / nome)
+        if self.dossies():
+            shutil.copyfile(self.pasta_dossies / "dossies.md", destino / "90_DOSSIES.md")
+            gerados.append(destino / "90_DOSSIES.md")
         return gerados
 
     def _empacotar_salas_dos_setores(self, hoje: date, avisos: str) -> list[Path]:
@@ -1060,11 +1252,20 @@ class Projeto:
     def _avisos_de_atlas_md(self) -> str:
         alertas = [a for a in self.diario.ler("alertas") if a.get("status") == "aberto"]
         recomendacoes = [r for r in self.diario.ler("recomendacoes") if r.get("status") == "aceita"]
-        quarentenas = [s for s in self.setores() if self.entrada(s)["status"] in {"Quarentena", "Limitado"}]
-        if not (alertas or recomendacoes or quarentenas):
+        quarentenas = [s for s in self.personagens() + self.setores()
+                       if self.entrada(s)["status"] in {"Quarentena", "Limitado"}]
+        fases = []
+        for id_p in self.personagens():
+            if self.tem_mente(id_p):
+                mente = self.mente_de(id_p)[1]
+                if mente.get("fase") != "ESTÁVEL":
+                    fases.append(f"- {id_p} está na fase mental **{mente.get('fase')}** (sanidade {mente.get('sanidade')}): "
+                                 "leia as análises dele com essa margem.")
+        if not (alertas or recomendacoes or quarentenas or fases):
             return ""
         linhas = ["# Avisos de ATLAS para Harvey e os setores", "",
                   "ATLAS governa a estrutura; estes avisos são dados a considerar, não ordens acima de Milan.", ""]
+        linhas.extend(fases)
         for id_setor in quarentenas:
             entrada = self.entrada(id_setor)
             linhas.append(f"- {id_setor} está em **{entrada['status']}**: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
@@ -1093,13 +1294,19 @@ class Projeto:
                 f"{setor.hash_camada1()[:12]} | {m['fatos_vigentes']} | "
                 f"{sum(m['hipoteses'].values())} | {sum(m['licoes_vigentes'].values())} |"
             )
-        if self.tem_harvey:
-            h = self.setor(HARVEY).metricas()
-            linhas += ["", "## Harvey", "",
-                       f"Harvey tem cérebro próprio (HARVEY_CEREBRO.md), versão v{self.versao_de(HARVEY):03d}: "
+        for id_p in self.personagens():
+            h = self.setor(id_p).metricas()
+            entrada = self.entrada(id_p)
+            linhas += ["", f"## {entrada['nome']} ({id_p})", "",
+                       f"Status **{entrada['status']}**, cérebro próprio ({id_p}_CEREBRO.md), versão v{self.versao_de(id_p):03d}: "
                        f"{h['fatos_vigentes']} fatos, {sum(h['hipoteses'].values())} hipóteses, "
                        f"{sum(h['licoes_vigentes'].values())} lições, {h['regras_vigentes']} regras próprias vigentes. "
                        "Núcleo sem trava mecânica, por decisão de Milan."]
+            if self.tem_mente(id_p):
+                mente = self.mente_de(id_p)[1]
+                linhas.append(f"Fase mental: **{mente.get('fase')}** (sanidade {mente.get('sanidade')}, "
+                              f"exaustão {mente.get('exaustao')}, isolamento {mente.get('isolamento')}, "
+                              f"exposição ao caos {mente.get('exposicao_ao_caos')}).")
         ultimo = self.manifesto["atlas"].get("ultimo_status")
         linhas += ["", "## ATLAS", "",
                    f"Último status de integridade emitido por ATLAS: "
@@ -1130,8 +1337,8 @@ class Projeto:
         titulos = {2: "Camada 2 — Fatos verificados", 3: "Camada 3 — Hipóteses",
                    4: "Camada 4 — Lições e resultados", 5: "Camada 5 — Estado atual"}
         restricao = f" Motivo: {entrada['motivo_do_status']}." if entrada.get("motivo_do_status") else ""
-        if id_setor == HARVEY:
-            trava = "A Camada 1 é a identidade de Harvey; sem trava mecânica, por decisão de Milan."
+        if id_setor in PERSONAGENS:
+            trava = f"A Camada 1 é a identidade de {PERSONAGENS[id_setor]['nome']}; sem trava mecânica, por decisão de Milan."
             titulo1 = "## Camada 1 — Núcleo de identidade"
         else:
             trava = f"A Camada 1 é travada (hash {setor.hash_camada1()[:12]})."
@@ -1145,6 +1352,9 @@ class Projeto:
         for numero in (2, 3, 4, 5):
             texto = render_registros(_sem_titulo(setor.preambulos[numero]), setor.registros[numero])
             partes += ["", "---", "", f"## {titulos[numero]}", "", _rebaixar_titulos(texto)]
+        if self.tem_mente(id_setor):
+            _, mente, historico = self.mente_de(id_setor)
+            partes += ["", "---", "", "## Camada 6 — Mente", "", mente_mod.resumo(mente, historico)]
         return "\n".join(partes).rstrip("\n") + "\n"
 
 

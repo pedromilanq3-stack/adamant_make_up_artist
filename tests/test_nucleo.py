@@ -12,6 +12,7 @@ from nucleo import (
     ErroDeAutorizacao, ErroDeFormato, ErroDeIsolamento, ErroDePatch, ErroDeValidacao, Projeto,
     parse_bloco, parse_registros, render_registros,
 )
+from nucleo import mente as mente_mod
 from nucleo.__main__ import main
 from nucleo.atlas import empacotar_atlas, integridade, registro_global
 from nucleo.patch import extrair_blocos, parse_bloco_atlas
@@ -92,14 +93,15 @@ class ProjetoTemporario(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def aplicar(self, corpo, setor="S01", autorizado=False):
-        return self.projeto.aplicar(bloco(setor, corpo=corpo), autorizado_por_milan=autorizado, hoje=HOJE)
+        emitido_por = setor if setor in ("HARVEY", "BATMAN") else "RAIO-X"
+        return self.projeto.aplicar(bloco(setor, emitido_por, corpo), autorizado_por_milan=autorizado, hoje=HOJE)
 
     def recarregar(self) -> Projeto:
         self.projeto = Projeto.abrir(self.raiz)
@@ -345,11 +347,18 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         nomes = [str(g.relative_to(self.raiz)) for g in gerados]
         bibliotecas = [f"upload_harvey/{b.name}" for b in sorted((GPT_PROJETO / "harvey" / "bibliotecas").glob("BIB_*.md"))]
         self.assertEqual(len(bibliotecas), 10)
-        self.assertEqual(nomes, ["upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
-                                 "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
-                                 "upload_harvey/HARVEY_CEREBRO.md", *bibliotecas, "upload_harvey/S01_ROTA_DE_RENDA.md",
-                                 "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
-                                 "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"])
+        esperado = [
+            "upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
+            "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
+            "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", *bibliotecas,
+            "upload_harvey/S01_ROTA_DE_RENDA.md",
+            "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
+            "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"]
+        self.assertEqual(nomes[:len(esperado)], esperado)
+        self.assertIn("upload_batman/00_INSTRUCOES_BATMAN.md", nomes)
+        self.assertIn("upload_batman/01_NUCLEO_BATMAN.md", nomes)
+        self.assertIn("upload_batman/BATMAN_CEREBRO.md", nomes)
+        self.assertEqual(sum(1 for n in nomes if n.startswith("upload_batman/BIB_B")), 10)
         setor_md = (self.raiz / "upload_harvey" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
         for trecho in ("## Camada 1", "### Missão", "### F-001", "### H-001", "### L-001", "### ESTADO",
                        "hash camada 1"):
@@ -404,7 +413,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
     def test_pacote_versionado_esta_sincronizado_com_as_camadas(self) -> None:
         """Os pacotes commitados devem refletir as camadas atuais (rode `nucleo empacotar`)."""
         self.projeto.empacotar(hoje=HOJE)
-        for pasta in ("upload_harvey", "upload_setores"):
+        for pasta in ("upload_harvey", "upload_setores", "upload_batman"):
             for caminho in sorted((self.raiz / pasta).rglob("*.md")):
                 relativo = caminho.relative_to(self.raiz)
                 atual = GPT_PROJETO / relativo
@@ -644,6 +653,105 @@ class HarveyTests(ProjetoTemporario):
         self.assertEqual(list(harvey_md), [])
 
 
+class BatmanTests(ProjetoTemporario):
+    def mente(self):
+        return self.projeto.mente_de("BATMAN")[1]
+
+    def test_batman_tem_cerebro_com_mente_valida(self) -> None:
+        self.assertEqual(self.projeto.validar(), [])
+        self.assertEqual(self.mente().get("fase"), "ESTÁVEL")
+        self.assertEqual(mente_mod.fase_de(70), "ESTÁVEL")
+        self.assertEqual(mente_mod.fase_de(69), "SOMBRIO")
+        self.assertEqual(mente_mod.fase_de(30), "OBSESSIVO")
+        self.assertEqual(mente_mod.fase_de(29), "LIMIAR")
+        self.assertEqual(mente_mod.fase_de(14), "CORINGA")
+        nucleo = (GPT_PROJETO / "batman" / "NUCLEO_BATMAN.md").read_text(encoding="utf-8")
+        self.assertIn("## 2. A REGRA", nucleo)
+        self.assertNotIn("REGISTRO DE ALTERAÇÕES", nucleo)
+        instrucoes = (GPT_PROJETO / "batman" / "INSTRUCOES_BATMAN.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(instrucoes), LIMITE_INSTRUCOES)
+        for fase in ("ESTÁVEL", "SOMBRIO", "OBSESSIVO", "LIMIAR", "CORINGA"):
+            self.assertIn(fase, instrucoes)
+
+    def test_bloco_com_mente_muda_fase_e_registra_no_diario(self) -> None:
+        relato = self.aplicar(
+            "## fato\n- conteudo: proposta pede taxa\n- fonte: print\n- rotulo: OBSERVADO\n- confianca: alta\n"
+            "## mente\n- evento: exposicao_ao_caos\n- intensidade: forte\n- descricao: golpista riu de Milan\n"
+            "## mente\n- evento: rejeitou_alfred\n", setor="BATMAN")
+        self.assertTrue(any("MH-001" in r for r in relato))
+        self.assertIn("fase mental: ESTÁVEL → SOMBRIO", relato)
+        mente = self.mente()
+        self.assertEqual(mente.get("fase"), "SOMBRIO")
+        self.assertEqual(mente.get("ultimo_evento"), "rejeitou_alfred")
+        historico = self.projeto.mente_de("BATMAN")[2]
+        self.assertEqual(len(historico), 2)
+        self.assertEqual(historico[0].get("relatado_por"), "BATMAN")
+        operacoes = [m.get("operacao") for m in self.projeto.diario.ler("alteracoes")]
+        self.assertIn("mudanca_de_fase", operacoes)
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_mente_so_para_quem_tem_camada6(self) -> None:
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## mente\n- evento: descanso\n", setor="HARVEY")
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## mente\n- evento: inventado\n", setor="BATMAN")
+        with self.assertRaises(mente_mod.ErroDeMente):
+            self.projeto.registrar_evento_mental("S01", "descanso", hoje=HOJE)
+
+    def test_descida_ate_o_coringa_poe_em_quarentena_e_so_milan_reativa(self) -> None:
+        for evento in ("perda", "exposicao_ao_caos", "exposicao_ao_caos", "piada_do_coringa", "tentacao_cedida"):
+            relato = self.projeto.registrar_evento_mental("BATMAN", evento, "forte", hoje=HOJE)
+        self.assertEqual(self.mente().get("fase"), "CORINGA")
+        self.assertEqual(self.projeto.entrada("BATMAN")["status"], "Quarentena")
+        self.assertTrue(any("Quarentena automática" in r for r in relato))
+        tipos = [a.get("tipo") for a in self.projeto.diario.ler("alertas")]
+        self.assertIn("mente", tipos)
+        self.assertIn("quarentena", tipos)
+        status, evidencias = integridade(self.projeto, HOJE)
+        self.assertEqual(status, "BLOQUEADO")
+        self.assertTrue(any("CORINGA" in e for e in evidencias))
+        with self.assertRaises(ErroDeAutorizacao):
+            self.aplicar(FATO.replace("- confianca", "- rotulo: DECLARADO\n- confianca"), setor="BATMAN")
+        self.aplicar("## mente\n- evento: descanso\n", setor="BATMAN")  # mente continua aceita
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.transicionar("BATMAN", "reativar", True, hoje=HOJE)
+        for _ in range(6):
+            for evento in ("descanso", "alfred", "terapia", "familia", "gordon", "fundacao_wayne"):
+                self.projeto.registrar_evento_mental("BATMAN", evento, "normal", hoje=HOJE)
+            if self.mente().get("fase") in ("SOMBRIO", "ESTÁVEL"):
+                break
+        self.assertIn(self.mente().get("fase"), ("SOMBRIO", "ESTÁVEL"))
+        self.assertTrue(any("pode reativar" in i for i in self.projeto.pendencias(HOJE).get("BATMAN", [])))
+        self.projeto.transicionar("BATMAN", "reativar", True, hoje=HOJE)
+        self.assertEqual(self.projeto.entrada("BATMAN")["status"], "Ativo")
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_tempo_cansa_e_dias_calmos_recuperam(self) -> None:
+        self.projeto.registrar_evento_mental("BATMAN", "tempo", descricao="10", hoje=HOJE)
+        mente = self.mente()
+        self.assertEqual(int(mente.get("exaustao")), 50)
+        self.assertEqual(int(mente.get("sanidade")), 94)
+        self.projeto.registrar_evento_mental("BATMAN", "noite_em_claro", "forte", hoje=HOJE)
+        self.projeto.registrar_evento_mental("BATMAN", "tempo", descricao="5", hoje=HOJE)
+        self.assertLess(int(self.mente().get("sanidade")), 94)
+
+    def test_batman_nao_trava_e_avisos_mostram_fase(self) -> None:
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.travar("BATMAN", True, hoje=HOJE)
+        self.projeto.registrar_evento_mental("BATMAN", "perda", "forte", hoje=HOJE)
+        self.projeto.registrar_evento_mental("BATMAN", "rejeitou_alfred", "forte", hoje=HOJE)
+        self.assertEqual(self.mente().get("fase"), "SOMBRIO")
+        self.projeto.empacotar(hoje=HOJE)
+        avisos = (self.raiz / "upload_harvey" / "04_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
+        self.assertIn("BATMAN está na fase mental **SOMBRIO**", avisos)
+        cerebro = (self.raiz / "upload_batman" / "BATMAN_CEREBRO.md").read_text(encoding="utf-8")
+        self.assertIn("## Camada 6 — Mente", cerebro)
+        self.assertIn("Fase mental atual: **SOMBRIO**", cerebro)
+        registro = next(r for r in registro_global(self.projeto, HOJE) if r.id == "BATMAN")
+        self.assertIn("fase mental SOMBRIO", registro.get("estado_operacional"))
+        self.assertIn("CORINGA", registro.get("riscos_conhecidos"))
+
+
 class CliTests(ProjetoTemporario):
     def rodar(self, *argv, entrada=""):
         saida, erro = io.StringIO(), io.StringIO()
@@ -703,6 +811,13 @@ class CliTests(ProjetoTemporario):
         self.assertIn("baselines: v001, v002, v003", self.rodar("versoes", "listar", "S01")[1])
         self.assertIn("HARVEY  atual v001", self.rodar("versoes", "listar")[1])
         self.assertIn('"HARVEY"', self.rodar("metricas")[1])
+        self.assertIn("exposicao_ao_caos", self.rodar("mente", "catalogo")[1])
+        self.assertIn("ESTÁVEL", self.rodar("mente", "estado", "BATMAN")[1])
+        codigo, saida, _ = self.rodar("mente", "evento", "BATMAN", "descanso", "--intensidade", "forte")
+        self.assertEqual(codigo, 0)
+        self.assertIn("MH-001", saida)
+        self.assertEqual(self.rodar("mente", "tempo", "BATMAN", "--dias", "2")[0], 0)
+        self.assertEqual(self.rodar("mente", "evento", "BATMAN", "inventado")[0], 1)
         self.assertEqual(self.rodar("custo", "registrar", "S01", "3", "creditos")[0], 0)
         self.assertIn("C-001", self.rodar("diario", "custos")[1])
 

@@ -40,6 +40,14 @@
     - status: confirmada | refutada | abandonada
     - resultado: ...
 
+    ## mente                      (só personagens com Camada 6, como BATMAN)
+    - evento: exposicao_ao_caos   (catálogo em nucleo/mente.py)
+    - intensidade: normal         (leve | normal | forte)
+    - descricao: ...
+
+    ## tempo
+    - dias: 3
+
     ## estado
     - tarefa_ativa: ...
     - prazo: 2026-09-11
@@ -67,7 +75,7 @@ from dataclasses import dataclass, field
 
 from .registros import ErroDeFormato, Registro, parse_registros
 
-TIPOS_SIMPLES = {"fato", "hipotese", "licao", "regra", "estado", "dossie", "correcao"}
+TIPOS_SIMPLES = {"fato", "hipotese", "licao", "regra", "estado", "dossie", "correcao", "mente", "tempo"}
 TIPOS_COM_ALVO = {"supera", "resultado"}
 TIPOS_ATLAS_SIMPLES = {"status", "alerta", "auditoria", "recomendacao"}
 TIPOS_ATLAS_COM_ALVO = {"quarentena", "evento_recebido"}

@@ -2,7 +2,7 @@
 
 # HARVEY — Harvey Specter, interface estratégica
 
-Status: **Ativo**. Este arquivo é o cérebro completo. A Camada 1 é a identidade de Harvey; sem trava mecânica, por decisão de Milan.
+Status: **Ativo**. Este arquivo é o cérebro completo. A Camada 1 é a identidade de Harvey Specter; sem trava mecânica, por decisão de Milan.
 
 ---
 

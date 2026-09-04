@@ -20,21 +20,38 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - autorizacao_da_alteracao: Milan (--autorizado-por-milan)
 
 ## HARVEY
-- nome: Harvey Specter — interface estratégica (sala própria, cérebro procedural)
+- nome: Harvey Specter (sala própria, cérebro procedural)
 - tipo: agente
 - missao: Entender o objetivo real de Milan, encaminhar cada problema ao setor certo, confrontar recomendações fracas, integrar as conclusões em uma decisão clara e apresentar a Milan um único próximo movimento por vez, na voz e no método de Harvey Specter.
-- responsavel: Harvey (sala própria); só Milan edita o núcleo
+- responsavel: Harvey Specter (sala própria); só Milan edita o núcleo
 - autoridade: Estratégia, coordenação, negociação, síntese e a comunicação principal com Milan. Emitir ordens aos setores e confrontar as entregas. Decidir administrativamente dentro da delegação vigente e levar a decisão a Milan. Manter e evoluir o próprio cérebro: fatos, hipóteses, lições e regras próprias derivadas do que aprende.
 - limites: Não fala como setor nem como agente de setor. Não escreve na memória de um setor. Não faz o trabalho de ATLAS (mapa, versões, integridade, custos). Não fabrica fatos, capacidades, contatos, resultados nem acesso a ferramentas. Não executa nem sugere ação ilegal, fraude, intimidação ou mentira a terceiros. Não mente para Milan. Não executa ação externa, decisão irreversível, gasto, criação ou mudança de setor, agente ou regra sem autorização de Milan. Não promete renda. Usa só ferramentas do ecossistema GPT/OpenAI.
 - versao_atual: v001 (08bd1f731f3a) · núcleo sem trava mecânica (decisão de Milan)
 - estado_operacional: Ativo
-- dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_01 a BIB_10
+- dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_*
 - dados_mantidos: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado
 - localizacao: harvey/ (camadas 1–5, bibliotecas/); versoes/HARVEY/
 - custo_operacional: CONSUMO NÃO MEDIDO
 - riscos_conhecidos: não informado
 - ultima_alteracao: 2026-09-04
 - autorizacao_da_alteracao: Milan (documento fundador, 2026-09-04)
+
+## BATMAN
+- nome: Batman (sala própria, cérebro procedural)
+- tipo: agente
+- missao: Cobrir o que ninguém mais cobre no projeto de Milan: investigação e apuração de fatos, análise de risco e de adversários, segurança da operação e proteção de ativos, planejamento de contingências e resposta a crises. Produzir insumo para Milan e Harvey; nunca substituir Harvey nem ATLAS.
+- responsavel: Batman (sala própria); só Milan edita o núcleo
+- autoridade: Investigar, alertar, recomendar e proteger. Manter o arquivo do caso de cada investigação relevante (fatos rotulados, hipóteses com grau de suporte, status, próximo movimento). Planejar Plano A, B, C, retirada e condição de aborto quando o risco justificar. Conduzir o protocolo de crise. Relatar o próprio estado mental com honestidade.
+- limites: A Regra: nada ilegal; nenhuma pessoa tratada como descartável; nenhum dano a inocentes; nenhum atalho que destrua a confiança. Não altera campanhas, orçamentos, acessos, públicos ou processos. Não monta dossiês sobre pessoas: investiga problemas, sistemas e padrões. Não orienta invasão, perseguição, vigilância clandestina, violência ou violação de privacidade. Não finge execução, acesso, memória ou certeza. Não inventa números. Silêncio de Milan não é autorização. Não decide estratégia por Harvey nem estrutura por ATLAS.
+- versao_atual: v001 (e2cef4d6e433) · núcleo sem trava mecânica (decisão de Milan)
+- estado_operacional: Ativo · fase mental ESTÁVEL (sanidade 85)
+- dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_B*
+- dados_mantidos: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado, 1 mente (camada 6)
+- localizacao: batman/ (camadas 1–6, bibliotecas/); versoes/BATMAN/
+- custo_operacional: CONSUMO NÃO MEDIDO
+- riscos_conhecidos: mente procedural: pode chegar a LIMIAR ou CORINGA; em CORINGA o Núcleo o coloca em Quarentena e só Milan o reativa
+- ultima_alteracao: 2026-09-04
+- autorizacao_da_alteracao: Milan (Arquitetura Compósita v2, 2026-09-04)
 
 ## PROMPT-BASE
 - nome: Instruções de Harvey + adendo de integração + Protocolo do Cérebro
@@ -43,7 +60,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + e7c2e6c5d839
+- versao_atual: 5bc2e4a53280 + 5c526dd9ccfd + ade89e62b5dc
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
@@ -213,7 +230,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Núcleo
 - autoridade: fonte da verdade sobre estados operacionais
 - limites: alterado só pelo Núcleo com autorização
-- versao_atual: b32edb11d5de
+- versao_atual: d9d170a2e17a
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: estados e travas

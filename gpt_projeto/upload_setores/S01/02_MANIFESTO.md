@@ -8,9 +8,14 @@ Gerado em 2026-09-04 pelo Núcleo. Se um arquivo de setor no Projeto tiver hash 
 |---|---|---|---|---|---|---|---|
 | S01 | Rota de Renda | Ativo | v001 | e100041c5166 | 6 | 1 | 1 |
 
-## Harvey
+## Harvey Specter (HARVEY)
 
-Harvey tem cérebro próprio (HARVEY_CEREBRO.md), versão v001: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+
+## Batman (BATMAN)
+
+Status **Ativo**, cérebro próprio (BATMAN_CEREBRO.md), versão v001: 3 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Fase mental: **ESTÁVEL** (sanidade 85, exaustão 30, isolamento 35, exposição ao caos 10).
 
 ## ATLAS
 

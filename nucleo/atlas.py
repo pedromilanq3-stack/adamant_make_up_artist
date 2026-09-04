@@ -16,9 +16,10 @@ from datetime import date
 from pathlib import Path
 
 from .diario import NAO_INFORMADO
+from . import mente as mente_mod
 from .projeto import (
     ARQUIVO_ADENDO, ARQUIVO_INSTRUCOES, ARQUIVO_INSTRUCOES_ATLAS, ARQUIVO_NUCLEO_ATLAS, ARQUIVO_PROTOCOLO,
-    ESTADOS_OPERANTES, HARVEY, Projeto, agentes_da_camada1, _secao,
+    ESTADOS_OPERANTES, HARVEY, PERSONAGENS, Projeto, agentes_da_camada1, _secao,
 )
 from .registros import Registro, render_registros
 from .setor import CAMADAS
@@ -58,28 +59,33 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
          localizacao=f"atlas/{ARQUIVO_NUCLEO_ATLAS}, atlas/{ARQUIVO_INSTRUCOES_ATLAS}",
          ultima_alteracao=atlas.get("travado_em", NAO_INFORMADO),
          autorizacao_da_alteracao=atlas.get("ultima_autorizacao", NAO_INFORMADO))
-    if projeto.tem_harvey:
-        harvey = projeto.setor(HARVEY)
-        entrada = projeto.entrada(HARVEY)
-        m = harvey.metricas()
-        comp("HARVEY", nome="Harvey Specter — interface estratégica (sala própria, cérebro procedural)", tipo="agente",
-             missao=_uma_linha(_secao(harvey.camada1, "Missão")),
-             responsavel="Harvey (sala própria); só Milan edita o núcleo",
-             autoridade=_uma_linha(_secao(harvey.camada1, "Responsabilidade")),
-             limites=_uma_linha(_secao(harvey.camada1, "Limites")),
-             versao_atual=projeto.rotulo_de_versao(HARVEY) + " · núcleo sem trava mecânica (decisão de Milan)",
-             estado_operacional=entrada.get("status", "Ativo"),
-             dependencias="PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_01 a BIB_10",
-             dados_mantidos=f"{len(harvey.fatos)} fatos, {len(harvey.hipoteses)} hipóteses, "
-                            f"{sum(m['licoes_vigentes'].values())} lições, {m['regras_vigentes']} regras próprias, 1 estado",
-             localizacao=f"harvey/ (camadas 1–5, bibliotecas/); versoes/{HARVEY}/",
+    for id_p, perfil in PERSONAGENS.items():
+        if not projeto.tem_personagem(id_p):
+            continue
+        personagem = projeto.setor(id_p)
+        entrada = projeto.entrada(id_p)
+        m = personagem.metricas()
+        extras = {}
+        estado = entrada.get("status", "Ativo")
+        if perfil["mente"]:
+            mente = projeto.mente_de(id_p)[1]
+            estado += f" · fase mental {mente.get('fase')} (sanidade {mente.get('sanidade')})"
+            extras["riscos_conhecidos"] = ("mente procedural: pode chegar a LIMIAR ou CORINGA; em CORINGA o Núcleo "
+                                           "o coloca em Quarentena e só Milan o reativa")
+        comp(id_p, nome=f"{perfil['nome']} (sala própria, cérebro procedural)", tipo="agente",
+             missao=_uma_linha(_secao(personagem.camada1, "Missão")),
+             responsavel=f"{perfil['nome']} (sala própria); só Milan edita o núcleo",
+             autoridade=_uma_linha(_secao(personagem.camada1, "Responsabilidade")),
+             limites=_uma_linha(_secao(personagem.camada1, "Limites")),
+             versao_atual=projeto.rotulo_de_versao(id_p) + " · núcleo sem trava mecânica (decisão de Milan)",
+             estado_operacional=estado,
+             dependencias="PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas " + perfil["prefixo_bib"] + "*",
+             dados_mantidos=f"{len(personagem.fatos)} fatos, {len(personagem.hipoteses)} hipóteses, "
+                            f"{sum(m['licoes_vigentes'].values())} lições, {m['regras_vigentes']} regras próprias, 1 estado"
+                            + (", 1 mente (camada 6)" if perfil["mente"] else ""),
+             localizacao=f"{perfil['pasta']}/ (camadas 1–{6 if perfil['mente'] else 5}, bibliotecas/); versoes/{id_p}/",
              ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
-             autorizacao_da_alteracao=entrada.get("ultima_autorizacao", "Milan (documento fundador)"))
-    else:
-        comp("HARVEY", nome="Harvey Specter — interface estratégica", tipo="agente",
-             missao="Coordenar setores e responder a Milan.", responsavel="Milan", autoridade="delegação vigente",
-             limites="não fabrica fatos", versao_atual="ausente", estado_operacional="ausente",
-             dependencias="PROMPT-BASE", dados_mantidos="nenhum", localizacao="harvey/")
+             autorizacao_da_alteracao=entrada.get("ultima_autorizacao", "Milan (documento fundador)"), **extras)
     comp("PROMPT-BASE", nome="Instruções de Harvey + adendo de integração + Protocolo do Cérebro", tipo="prompt",
          missao="Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, "
                 "separação, contrato de resposta.", responsavel="Milan", autoridade="hierarquicamente superior a "
@@ -207,6 +213,17 @@ def integridade(projeto: Projeto, hoje: date | None = None) -> tuple[str, list[s
             atencoes.append(f"{id_setor} Limitado: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
         elif entrada["status"] == "Proposto":
             atencoes.append(f"{id_setor} Proposto aguarda decisão de Milan (evento {entrada.get('evento', '?')})")
+    for id_p in projeto.personagens():
+        entrada = projeto.entrada(id_p)
+        if entrada["status"] == "Quarentena":
+            bloqueios.append(f"{id_p} em Quarentena: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
+        if projeto.tem_mente(id_p):
+            mente = projeto.mente_de(id_p)[1]
+            fase = mente.get("fase")
+            if fase == "CORINGA":
+                bloqueios.append(f"{id_p} na fase CORINGA (sanidade {mente.get('sanidade')}): cedeu à sanidade do Coringa")
+            elif fase in ("LIMIAR", "OBSESSIVO"):
+                atencoes.append(f"{id_p} na fase {fase} (sanidade {mente.get('sanidade')}): análise com margem reduzida")
     for chave, itens in projeto.pendencias(hoje).items():
         atencoes.extend(f"[{chave}] {item}" for item in itens)
     # duplicação de missão ou de agente entre setores operantes
@@ -302,7 +319,7 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
     linhas += [f"- {r.id}: {r.get('conteudo')}" for r in recomendacoes] or ["Nenhuma."]
     linhas += ["", "## Componentes ativos relacionados", ""]
     linhas += [f"- {s}: {projeto.entrada(s)['status']} {projeto.rotulo_de_versao(s)}"
-               for s in (([HARVEY] if projeto.tem_harvey else []) + projeto.setores_com_camadas())]
+               for s in (projeto.personagens() + projeto.setores_com_camadas())]
     linhas += ["", "## Autorizações aplicáveis", "",
                "- Toda ação reservada a Milan exige `--autorizado-por-milan` no Núcleo; sem isso não aconteceu.",
                "- ATLAS pode colocar setor em Quarentena preventiva (`## quarentena Snn` com motivo); só Milan libera."]
@@ -322,7 +339,7 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
 def _versoes_md(projeto: Projeto) -> str:
     linhas = ["# Registro de versões", "", "| Componente | Versão atual | Baselines guardadas | Reversão |",
               "|---|---|---|---|"]
-    componentes = ([HARVEY] if projeto.tem_harvey else []) + projeto.setores_com_camadas() \
+    componentes = projeto.personagens() + projeto.setores_com_camadas() \
         + (["ATLAS"] if projeto.manifesto["atlas"].get("versao") else [])
     for comp in componentes:
         versoes = [v.name for v in projeto.diario.versoes(comp)]

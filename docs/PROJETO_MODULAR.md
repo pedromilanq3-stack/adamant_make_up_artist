@@ -15,6 +15,7 @@ Duas partes trabalham juntas:
 |---|---|---|
 | `gpt_projeto/upload_harvey/` | sala de Harvey (Projeto próprio) | Harvey Specter fiel ao personagem, com cérebro procedural próprio e dez bibliotecas de habilidades e comunicação |
 | `gpt_projeto/upload_setores/Snn/` | uma sala por setor (Projeto próprio) | o setor com seus agentes; obedece a Harvey na tarefa e a ATLAS na estrutura; é quem aprende |
+| `gpt_projeto/upload_batman/` | sala de Batman (Projeto próprio) | Batman compósito com cérebro procedural e uma sexta camada, a mente, que pode ceder à sanidade do Coringa; dez bibliotecas com tudo o que ele conhece |
 | `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
 | `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
 
@@ -47,6 +48,13 @@ Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_REND
 quando existirem, `03_AVISOS_DE_ATLAS.md` e `90_DOSSIES.md` nos Arquivos. As
 instruções de cada setor são geradas pelo Núcleo a partir da Camada 1, então um setor
 novo ganha a própria sala automaticamente em `upload_setores/Snn/`.
+
+**Sala de Batman** (`gpt_projeto/upload_batman/`): `00_INSTRUCOES_BATMAN.md` nas
+Instruções. Nos Arquivos: `01_NUCLEO_BATMAN.md` (a Arquitetura Compósita v2 de Milan,
+sem trava mecânica), `BATMAN_CEREBRO.md` (seis camadas, a sexta é a mente), as dez
+bibliotecas `BIB_B01` a `BIB_B10`, protocolo, manifesto, cérebros dos setores, avisos e
+dossiês. Batman trabalha por ordem de Harvey em investigação, risco, segurança,
+contingência e crise.
 
 **Sala de ATLAS**: seção 1b.
 
@@ -126,6 +134,9 @@ python -m nucleo diario [alteracoes|eventos|alertas|recomendacoes|custos]
 python -m nucleo travar S01 --autorizado-por-milan [--motivo "..."]   # depois de Milan editar a Camada 1
 python -m nucleo travar ATLAS --autorizado-por-milan                  # depois de Milan editar o núcleo de ATLAS
 python -m nucleo versoes guardar HARVEY                               # Harvey não trava: só guarda baseline
+python -m nucleo mente estado BATMAN | catalogo
+python -m nucleo mente evento BATMAN descanso [--intensidade forte] [--descricao "..."]
+python -m nucleo mente tempo BATMAN --dias 3
 python -m nucleo versoes listar [S01]
 python -m nucleo versoes reverter S01 v002 --autorizado-por-milan
 python -m nucleo setor listar
@@ -213,6 +224,35 @@ Tudo passa pelo mesmo `nucleo aplicar`, entra no diário com versão e baseline,
 aparece no Registro Global de ATLAS. `nucleo metricas` mostra regras vigentes e
 superadas: é o termômetro de que o método de Harvey está evoluindo.
 
+## 4a-ter. A mente de Batman: sanidade, fases e o Coringa
+
+Batman tem a Camada 6, `batman/camada6_mente.md`: seis variáveis de 0 a 100
+(sanidade, controle, exaustão, isolamento, exposição ao caos, esperança) e um histórico
+MH-nnn. Ninguém edita a mente à mão. Batman relata no bloco de aprendizado o que viveu
+(`## mente` com `evento` do catálogo e `intensidade`; `## tempo` com `dias`), ou Milan
+registra com `nucleo mente evento BATMAN <evento>`. O Núcleo aplica deltas fixos e
+pressões, deriva a fase e registra tudo no diário.
+
+| Fase | Sanidade | O que muda |
+|---|---|---|
+| ESTÁVEL | 70 ou mais | o compósito do núcleo |
+| SOMBRIO | 50 a 69 | frio, Nível 2 por padrão, mais contingência, sem Bruce Wayne |
+| OBSESSIVO | 30 a 49 | Nível 3 sempre, trabalha sozinho, a Regra vira peso; alerta para ATLAS |
+| LIMIAR | 15 a 29 | a lógica do Coringa é audível; análise declaradamente comprometida; alerta |
+| CORINGA | abaixo de 15 | cedeu; Quarentena automática; só Milan reativa, e só de volta a SOMBRIO |
+
+Eventos de desgaste: falha, dano a inocente, perda, noite em claro, rejeitou Alfred,
+trabalhou sozinho, exposição ao caos, tentação cedida, piada do Coringa, e o tempo sem
+descanso. Eventos de recuperação (nunca punidos pelas pressões): descanso, Alfred,
+terapia, Gordon, família, Bruce Wayne, Fundação Wayne, debriefing, vitória limpa,
+treino. `nucleo mente catalogo` lista todos com os deltas; `nucleo mente estado BATMAN`
+mostra a mente e os últimos eventos. A Regra do Batman vale em qualquer fase: mesmo em
+CORINGA, o sistema não permite nada ilegal, dano ou sabotagem; o que muda é a voz e a
+recusa em operar.
+
+Próxima etapa combinada com Milan: o Coringa como personagem próprio, numa sala em que
+ele e Batman conversam; a exposição ao caos dessa sala alimenta a mente de Batman.
+
 ## 4b. ATLAS: o que ele governa e como se liga ao sistema
 
 ATLAS não substitui os especialistas; governa a estrutura em que trabalham. Ele
@@ -262,6 +302,11 @@ gpt_projeto/
     INSTRUCOES_HARVEY.md          núcleo de identidade: cola-se nas Instruções da sala de Harvey
     camada1..5_*.md               cérebro procedural de Harvey (regras próprias RG-nnn na camada 4)
     bibliotecas/BIB_01..10.md     habilidades e comunicação do personagem
+  batman/
+    INSTRUCOES_BATMAN.md          instruções da sala de Batman
+    NUCLEO_BATMAN.md              Arquitetura Compósita v2 (texto de Milan), sem trava mecânica
+    camada1..6_*.md               cérebro procedural; camada 6 é a mente (MENTE + histórico MH-nnn)
+    bibliotecas/BIB_B01..B10.md   tudo o que Batman conhece
   PROTOCOLO_DO_CEREBRO.md         formato dos registros, do bloco de aprendizado e do bloco atlas
   manifesto.json                  setores, status, versões, histórico, travas (setores e ATLAS)
   atlas/
@@ -279,6 +324,7 @@ gpt_projeto/
   modelos/                        carta de setor, instruções de sala de setor, bloco de aprendizado
   upload_harvey/                  gerado por `empacotar`; sala de Harvey (identidade, cérebro, bibliotecas)
   upload_setores/Snn/             gerado por `empacotar`; uma sala por setor operante
+  upload_batman/                  gerado por `empacotar`; sala de Batman
   upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)
 tests/test_nucleo.py              parsing, isolamento, correção, dossiês, ciclo de vida, diário, versões, ATLAS, CLI

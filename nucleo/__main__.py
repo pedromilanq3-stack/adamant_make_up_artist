@@ -11,6 +11,7 @@
     diario [alteracoes|eventos|alertas|recomendacoes|custos]
     travar S01|ATLAS --autorizado-por-milan [--motivo "..."]
     versoes listar S01 | guardar S01 | reverter S01 v002 --autorizado-por-milan
+    mente estado BATMAN | evento BATMAN descanso [--intensidade forte] | tempo BATMAN --dias 3 | catalogo
     setor listar | propor | aprovar | piloto | ativar | limitar | liberar | pausar | reativar | encerrar
     setor quarentena S02 --por ATLAS --motivo "..."   (preventiva; só Milan libera)
     dossie listar | autorizar D-001 | recusar D-001
@@ -29,6 +30,7 @@ import os
 import sys
 from pathlib import Path
 
+from . import mente as mente_mod
 from .atlas import empacotar_atlas, integridade
 from .patch import ErroDePatch, extrair_blocos, parse_bloco, parse_bloco_atlas
 from .projeto import ErroDeAutorizacao, ErroDeIsolamento, Projeto
@@ -179,7 +181,7 @@ def cmd_versoes(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     try:
         if args.acao == "listar":
-            todos = (["HARVEY"] if projeto.tem_harvey else []) + projeto.setores_com_camadas()
+            todos = projeto.personagens() + projeto.setores_com_camadas()
             for comp in ([args.setor] if args.setor else todos):
                 versoes = [v.name for v in projeto.diario.versoes(comp)]
                 print(f"{comp}  atual {projeto.rotulo_de_versao(comp)}  baselines: {', '.join(versoes) or 'nenhuma'}")
@@ -276,6 +278,38 @@ def cmd_alerta(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mente(args: argparse.Namespace) -> int:
+    projeto = Projeto.abrir(_raiz(args))
+    if args.acao == "catalogo":
+        for nome, dados in mente_mod.EVENTOS.items():
+            deltas = ", ".join(f"{k} {v:+d}" for k, v in dados["deltas"].items())
+            print(f"{nome:<22} {dados['descricao']}  [{deltas}]")
+        return 0
+    if not args.personagem:
+        print(f"uso: mente {args.acao} BATMAN ...", file=sys.stderr)
+        return 2
+    try:
+        if args.acao == "estado":
+            _, mente, historico = projeto.mente_de(args.personagem)
+            print(mente_mod.resumo(mente, historico))
+            return 0
+        if args.acao == "evento":
+            if not args.evento:
+                print("uso: mente evento BATMAN <evento> [--intensidade leve|normal|forte] [--descricao ...]", file=sys.stderr)
+                return 2
+            relato = projeto.registrar_evento_mental(args.personagem, args.evento, args.intensidade or "normal",
+                                                     args.descricao or "", relatado_por=args.por or "Milan")
+        else:
+            relato = projeto.registrar_evento_mental(args.personagem, "tempo", descricao=str(args.dias or 1),
+                                                     relatado_por=args.por or "Milan")
+    except (mente_mod.ErroDeMente, *ERROS) as erro:
+        print(erro, file=sys.stderr)
+        return 1
+    for linha in relato:
+        print(f"  - {linha}")
+    return 0
+
+
 def cmd_custo(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     try:
@@ -329,6 +363,12 @@ def construir_parser() -> argparse.ArgumentParser:
     p = milan(sub.add_parser("alerta"))
     p.add_argument("acao", choices=["fechar"]); p.add_argument("alerta"); p.add_argument("--resolucao")
     p.set_defaults(func=cmd_alerta)
+    p = sub.add_parser("mente")
+    p.add_argument("acao", choices=["estado", "evento", "tempo", "catalogo"])
+    p.add_argument("personagem", nargs="?"); p.add_argument("evento", nargs="?")
+    p.add_argument("--intensidade", choices=["leve", "normal", "forte"]); p.add_argument("--descricao")
+    p.add_argument("--dias", type=int); p.add_argument("--por")
+    p.set_defaults(func=cmd_mente)
     p = sub.add_parser("custo")
     p.add_argument("acao", choices=["registrar"]); p.add_argument("componente"); p.add_argument("valor")
     p.add_argument("unidade"); p.add_argument("--descricao")

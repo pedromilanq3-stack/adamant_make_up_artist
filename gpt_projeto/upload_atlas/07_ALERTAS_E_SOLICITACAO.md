@@ -19,6 +19,7 @@ Nenhuma.
 ## Componentes ativos relacionados
 
 - HARVEY: Ativo v001 (08bd1f731f3a)
+- BATMAN: Ativo v001 (e2cef4d6e433)
 - S01: Ativo v001 (85d4b4a71530)
 
 ## Autorizações aplicáveis

@@ -20,6 +20,11 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
   responde a Milan. Não fala como setor. Emite ordens. Aprende com `setor: HARVEY`.
 - **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
   estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
+- **Batman** tem sala própria e cérebro procedural com uma sexta camada, a mente
+  (`BATMAN_CEREBRO.md`): sanidade, controle, exaustão, isolamento, exposição ao caos e
+  esperança mudam com o que ele vive e relata; a fase mental (ESTÁVEL, SOMBRIO,
+  OBSESSIVO, LIMIAR, CORINGA) muda como ele pensa. Trabalha por ordem de Harvey em
+  investigação, risco, segurança, contingência e crise. Em CORINGA, Quarentena automática.
 - **ATLAS** governa mapa, versões, alterações, custos e integridade.
 - Milan está acima dos três e carrega as mensagens entre as salas.
 
@@ -218,3 +223,18 @@ risco, confiança, evidência necessária, recomendação, parecer do Contradit�
 autorização necessária). Milan cola a entrega na sala de Harvey, que a confronta e
 consolida. A ordem não transfere identidade, memória integral nem propriedade da
 função; um setor nunca decide pelo outro nem por Harvey.
+
+## 10. Mente procedural (Camada 6)
+
+Personagens com Camada 6 (hoje, Batman) têm o registro MENTE com seis variáveis de 0 a
+100 e um histórico MH-nnn. Ninguém edita a mente à mão: o personagem relata eventos
+no bloco de aprendizado (`## mente` com `evento` do catálogo e `intensidade` leve,
+normal ou forte; `## tempo` com `dias`), ou Milan registra com `nucleo mente evento`.
+O Núcleo aplica deltas fixos, pressões (exaustão, isolamento, exposição ao caos e
+desesperança altas corroem a sanidade) e a passagem do tempo, e deriva a fase:
+ESTÁVEL (sanidade 70 ou mais), SOMBRIO (50 a 69), OBSESSIVO (30 a 49), LIMIAR (15 a 29),
+CORINGA (abaixo de 15). Cada mudança de fase entra no diário. OBSESSIVO e LIMIAR
+geram alerta para ATLAS e Milan. CORINGA coloca o personagem em Quarentena
+automática: ele continua recebendo eventos de mente e tempo (é assim que se recupera),
+mas nenhuma ordem, entrega ou aprendizado comum; só Milan o reativa, e só quando a
+fase voltar a SOMBRIO ou melhor. O catálogo de eventos está em `nucleo mente catalogo`.

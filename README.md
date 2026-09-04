@@ -38,7 +38,9 @@
 > cinco agentes, mais ATLAS, o Administrador Central e Guardião de Integridade. São três
 > salas (Projetos) separadas: Harvey Specter, fiel ao personagem, com cérebro procedural
 > próprio e dez bibliotecas de habilidades e comunicação
-> ([`gpt_projeto/upload_harvey/`](gpt_projeto/upload_harvey/)), cada setor trabalha por
+> ([`gpt_projeto/upload_harvey/`](gpt_projeto/upload_harvey/)), Batman com cérebro procedural
+> e uma mente que pode ceder ao Coringa ([`gpt_projeto/upload_batman/`](gpt_projeto/upload_batman/)),
+> cada setor trabalha por
 > ordem de Harvey e obedece a ATLAS na estrutura
 > ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita
 > ([`gpt_projeto/upload_atlas/`](gpt_projeto/upload_atlas/)); o utilitário

@@ -1,2 +1,9 @@
 __pycache__/
 *.pyc
+
+# Artefatos de build e instalação (pip install -e .)
+*.egg-info/
+build/
+dist/
+.venv/
+venv/

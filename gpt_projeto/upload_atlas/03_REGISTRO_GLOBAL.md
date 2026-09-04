@@ -20,13 +20,13 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - autorizacao_da_alteracao: Milan (--autorizado-por-milan)
 
 ## HARVEY
-- nome: Harvey Specter — interface estratégica
+- nome: Harvey Specter — interface estratégica (sala própria)
 - tipo: agente
 - missao: Entender o objetivo real de Milan, encaminhar ao setor certo, confrontar recomendações fracas, integrar e apresentar um único próximo movimento.
 - responsavel: prompt-base (sala principal)
 - autoridade: decide administrativamente dentro da delegação vigente; leva a decisão a Milan
 - limites: não fabrica fatos, capacidades, contatos, resultados ou acesso a ferramentas; não executa ação externa sem autorização; não assume o trabalho de ATLAS
-- versao_atual: dbdea8284aea
+- versao_atual: 763f28f6bc19
 - estado_operacional: Ativo
 - dependencias: PROMPT-BASE, setores operantes
 - dados_mantidos: nenhum próprio; usa a memória dos setores
@@ -43,7 +43,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: dbdea8284aea + 92912df61491
+- versao_atual: 763f28f6bc19 + 639b698cfc2c
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
@@ -91,7 +91,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - nome: Rota de Renda
 - tipo: setor
 - missao: Transformar a situação atual de Milan em uma rota realista de geração de renda, validada por evidências e compatível com os recursos disponíveis.
-- responsavel: Harvey encaminha; agentes do setor executam a análise
+- responsavel: sala própria (S01); trabalha por ordem de Harvey e entrega a ele
 - autoridade: Decidir qual rota de renda testar primeiro, com que evidência, em que prazo e com qual custo. Levantar a realidade profissional e financeira, mapear oportunidades atuais, avaliar custo e risco de cada rota, preparar materiais de execução e validar a escolha antes de recomendá-la.
 - limites: Este setor não promete renda, não inventa experiência e não trata cadastro em plataforma como competência comprovada. Não executa ações externas (enviar, publicar, comprar, cadastrar): apenas prepara e recomenda. Não administra dinheiro nem dívidas de Milan; se isso virar problema recorrente, propõe um setor próprio. Não altera a memória de outro setor.
 - versao_atual: v001 (85d4b4a71530)

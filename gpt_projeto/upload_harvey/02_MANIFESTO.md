@@ -18,6 +18,7 @@ Nenhuma pendência.
 
 ## Regras de leitura
 
+- Três salas: Harvey coordena e responde a Milan; cada setor trabalha por ordem de Harvey e entrega a ele; ATLAS governa a estrutura. Ninguém fala pelo outro.
 - Setor Proposto, Quarentena, Pausado ou Encerrado não opera nem recebe aprendizado. Limitado opera com as restrições anotadas.
 - Cada setor lê somente o próprio arquivo. Outro setor entra apenas por dossiê autorizado (veja 90_DOSSIES.md, se existir).
 - A Camada 1 é travada: nunca proponha alterá-la dentro de um bloco de aprendizado.

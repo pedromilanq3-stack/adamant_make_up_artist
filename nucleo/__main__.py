@@ -100,7 +100,7 @@ def cmd_aplicar(args: argparse.Namespace) -> int:
         for linha in relato:
             print(f"  - {linha}")
     if codigo == 0:
-        print("Lembre-se: rode 'empacotar' (sala principal) e 'atlas' (sala de ATLAS) e reenvie os arquivos.")
+        print("Lembre-se: rode 'empacotar' (Harvey e setores) e 'atlas' (ATLAS) e reenvie os arquivos.")
     return codigo
 
 
@@ -110,7 +110,7 @@ def cmd_empacotar(args: argparse.Namespace) -> int:
     except ErroDeValidacao as erro:
         print(erro, file=sys.stderr)
         return 1
-    print("Arquivos prontos para a sala principal:")
+    print("Arquivos prontos para a sala de Harvey e para a sala de cada setor:")
     for caminho in gerados:
         print(f"  {caminho}")
     return 0

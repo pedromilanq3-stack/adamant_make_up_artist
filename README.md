@@ -35,13 +35,16 @@
 > é um cérebro organizacional para rodar em um Projeto do ChatGPT: Harvey Specter como
 > interface, Núcleo Central de Coordenação, setores com cérebro próprio em cinco camadas
 > (núcleo travado, fatos, hipóteses, lições, estado) e o Setor 01 — Rota de Renda com
-> cinco agentes, mais ATLAS, o Administrador Central e Guardião de Integridade, em sala
-> separada. Os arquivos prontos estão em [`gpt_projeto/upload/`](gpt_projeto/upload/)
-> (sala principal) e [`gpt_projeto/upload_atlas/`](gpt_projeto/upload_atlas/) (sala de
-> ATLAS); o utilitário `python -m nucleo` aplica os blocos de aprendizado que o GPT emite,
+> cinco agentes, mais ATLAS, o Administrador Central e Guardião de Integridade. São três
+> salas (Projetos) separadas: Harvey coordena e responde a Milan
+> ([`gpt_projeto/upload_harvey/`](gpt_projeto/upload_harvey/)), cada setor trabalha por
+> ordem de Harvey e obedece a ATLAS na estrutura
+> ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita
+> ([`gpt_projeto/upload_atlas/`](gpt_projeto/upload_atlas/)); o utilitário
+> `python -m nucleo` aplica os blocos de aprendizado que os setores emitem,
 > preserva histórico nas correções, impede que um setor altere outro, registra toda
 > alteração com versão e reversão, emite eventos para ATLAS, gerencia dossiês, quarentenas
-> e o ciclo de vida de novos setores, e regenera as duas salas para reenvio.
+> e o ciclo de vida de novos setores, e regenera as três salas para reenvio.
 >
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia

@@ -92,7 +92,7 @@ class ProjetoTemporario(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload", "upload_atlas"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
@@ -146,7 +146,7 @@ class ProjetoFundadorTests(ProjetoTemporario):
     def test_instrucoes_cabem_no_campo_do_projeto(self) -> None:
         texto = (GPT_PROJETO / "INSTRUCOES_DO_PROJETO.md").read_text(encoding="utf-8")
         self.assertLessEqual(len(texto), LIMITE_INSTRUCOES)
-        self.assertIn("No seu último emprego, o que você fazia no dia a dia?", texto)
+        self.assertIn("abrir a sala do S01 e colar a ordem", texto)
 
     def test_estado_inicial_aponta_para_a_pergunta_de_inicializacao(self) -> None:
         estado = self.projeto.setor("S01").estado
@@ -341,14 +341,16 @@ class PendenciasEPacoteTests(ProjetoTemporario):
 
     def test_empacotar_gera_arquivos_para_o_projeto(self) -> None:
         gerados = self.projeto.empacotar(hoje=HOJE)
-        nomes = [g.name for g in gerados]
-        self.assertEqual(nomes, ["00_INSTRUCOES_DO_PROJETO.md", "01_PROTOCOLO_DO_CEREBRO.md",
-                                 "02_MANIFESTO.md", "S01_ROTA_DE_RENDA.md"])
-        setor_md = (self.raiz / "upload" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
+        nomes = [str(g.relative_to(self.raiz)) for g in gerados]
+        self.assertEqual(nomes, ["upload_harvey/00_INSTRUCOES_DO_PROJETO.md", "upload_harvey/01_PROTOCOLO_DO_CEREBRO.md",
+                                 "upload_harvey/02_MANIFESTO.md", "upload_harvey/S01_ROTA_DE_RENDA.md",
+                                 "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
+                                 "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"])
+        setor_md = (self.raiz / "upload_harvey" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
         for trecho in ("## Camada 1", "### Missão", "### F-001", "### H-001", "### L-001", "### ESTADO",
                        "hash camada 1"):
             self.assertIn(trecho, setor_md)
-        manifesto = (self.raiz / "upload" / "02_MANIFESTO.md").read_text(encoding="utf-8")
+        manifesto = (self.raiz / "upload_harvey" / "02_MANIFESTO.md").read_text(encoding="utf-8")
         self.assertIn("| S01 | Rota de Renda | Ativo | v001 |", manifesto)
         self.assertIn("Nenhuma pendência", manifesto)
 
@@ -358,16 +360,50 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         with self.assertRaises(ErroDeValidacao):
             self.projeto.empacotar(hoje=HOJE)
 
-    def test_pacote_versionado_esta_sincronizado_com_as_camadas(self) -> None:
-        """O upload/ commitado deve refletir as camadas atuais (rode `nucleo empacotar`)."""
-        gerado = (self.raiz / "upload")
+    def test_sala_do_setor_e_o_setor_e_nao_harvey(self) -> None:
         self.projeto.empacotar(hoje=HOJE)
-        for caminho in sorted(gerado.glob("*.md")):
-            atual = (GPT_PROJETO / "upload" / caminho.name)
-            self.assertTrue(atual.exists(), f"falta gpt_projeto/upload/{caminho.name}: rode nucleo empacotar")
-            esperado = [l for l in caminho.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower()]
-            existente = [l for l in atual.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower()]
-            self.assertEqual(existente, esperado, f"gpt_projeto/upload/{caminho.name} desatualizado: rode nucleo empacotar")
+        instrucoes = (self.raiz / "upload_setores" / "S01" / "00_INSTRUCOES_S01.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(instrucoes), LIMITE_INSTRUCOES)
+        self.assertIn("Você é o Setor S01 — Rota de Renda", instrucoes)
+        self.assertIn("Você não é Harvey e não é ATLAS", instrucoes)
+        self.assertIn("**Harvey**", instrucoes)
+        self.assertIn("**ATLAS**", instrucoes)
+        for agente in ("RAIO-X", "RADAR", "CAIXA", "OFICINA", "CONTRADITÓRIO"):
+            self.assertIn(agente, instrucoes)
+        self.assertIn("No seu último emprego, o que você fazia no dia a dia?", instrucoes)
+        self.assertIn("S01_ROTA_DE_RENDA.md", instrucoes)
+        self.assertIn("```entrega", instrucoes)
+        self.assertNotIn("{", instrucoes.replace("{ID}", "").replace("{NOME}", ""))
+        harvey = (self.raiz / "upload_harvey" / "00_INSTRUCOES_DO_PROJETO.md").read_text(encoding="utf-8")
+        self.assertIn("Você é Harvey Specter", harvey)
+        self.assertIn("```ordem", harvey)
+        self.assertNotIn("Você é o Setor", harvey)
+
+    def test_sala_do_setor_recebe_so_os_proprios_dossies(self) -> None:
+        self.projeto.propor_setor("S02", CARTA, hoje=HOJE)
+        for acao in ("aprovar", "piloto", "ativar"):
+            self.projeto.transicionar("S02", acao, True, hoje=HOJE)
+        self.projeto.propor_setor("S03", CARTA.replace("Custos Fixos", "Terceiro"), hoje=HOJE)
+        for acao in ("aprovar", "piloto"):
+            self.projeto.transicionar("S03", acao, True, hoje=HOJE)
+        self.aplicar("## dossie\n- para: S02\n- fato: x\n- fonte: y\n- confianca: alta\n- restricao: r\n- pergunta: p\n")
+        self.projeto.empacotar(hoje=HOJE)
+        self.assertTrue((self.raiz / "upload_setores" / "S02" / "90_DOSSIES.md").exists())
+        self.assertTrue((self.raiz / "upload_setores" / "S01" / "90_DOSSIES.md").exists())
+        self.assertFalse((self.raiz / "upload_setores" / "S03" / "90_DOSSIES.md").exists())
+        self.assertTrue((self.raiz / "upload_setores" / "S03" / "00_INSTRUCOES_S03.md").exists())
+
+    def test_pacote_versionado_esta_sincronizado_com_as_camadas(self) -> None:
+        """Os pacotes commitados devem refletir as camadas atuais (rode `nucleo empacotar`)."""
+        self.projeto.empacotar(hoje=HOJE)
+        for pasta in ("upload_harvey", "upload_setores"):
+            for caminho in sorted((self.raiz / pasta).rglob("*.md")):
+                relativo = caminho.relative_to(self.raiz)
+                atual = GPT_PROJETO / relativo
+                self.assertTrue(atual.exists(), f"falta gpt_projeto/{relativo}: rode nucleo empacotar")
+                esperado = [l for l in caminho.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower()]
+                existente = [l for l in atual.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower()]
+                self.assertEqual(existente, esperado, f"gpt_projeto/{relativo} desatualizado: rode nucleo empacotar")
 
 
 class DiarioEVersoesTests(ProjetoTemporario):
@@ -489,8 +525,9 @@ class AtlasTests(ProjetoTemporario):
         self.projeto.transicionar("S02", "limitar", True, motivo="só leitura de custos", hoje=HOJE)
         self.aplicar(FATO, setor="S02")
         self.projeto.empacotar(hoje=HOJE)
-        avisos = (self.raiz / "upload" / "03_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
+        avisos = (self.raiz / "upload_harvey" / "03_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
         self.assertIn("S02 está em **Limitado**: só leitura de custos", avisos)
+        self.assertTrue((self.raiz / "upload_setores" / "S02" / "03_AVISOS_DE_ATLAS.md").exists())
         self.assertEqual(integridade(self.projeto, HOJE)[0], "ATENÇÃO")
 
     def test_pacote_de_atlas_cumpre_o_contrato_de_integracao(self) -> None:
@@ -574,7 +611,7 @@ class CliTests(ProjetoTemporario):
         self.assertIn("E-001", self.rodar("diario", "eventos")[1])
         self.assertEqual(self.rodar("dossie", "listar")[1].strip(), "Nenhum dossiê.")
         self.assertEqual(self.rodar("empacotar")[0], 0)
-        self.assertTrue((self.raiz / "upload" / "S02_CUSTOS_FIXOS.md").exists())
+        self.assertTrue((self.raiz / "upload_harvey" / "S02_CUSTOS_FIXOS.md").exists())
 
     def test_atlas_integridade_e_versoes_na_cli(self) -> None:
         self.assertEqual(self.rodar("integridade")[0], 0)

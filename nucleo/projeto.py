@@ -127,7 +127,13 @@ class Projeto:
 
     @property
     def pasta_upload(self) -> Path:
-        return self.raiz / "upload"
+        """Sala de Harvey."""
+        return self.raiz / "upload_harvey"
+
+    @property
+    def pasta_upload_setores(self) -> Path:
+        """Uma sala por setor operante."""
+        return self.raiz / "upload_setores"
 
     @property
     def pasta_atlas(self) -> Path:
@@ -216,6 +222,8 @@ class Projeto:
                 problemas.append(
                     f"{id_setor}: camada 1 foi alterada sem autorização (hash difere da trava)"
                 )
+            if not (self.raiz / "modelos" / "instrucoes_de_setor.md").exists() and id_setor == self.setores()[0]:
+                problemas.append("falta modelos/instrucoes_de_setor.md (sala de cada setor)")
             if entrada.get("status") in ESTADOS_OPERANTES and not self.diario.versoes(id_setor):
                 problemas.append(f"{id_setor}: sem versão guardada para reversão (use 'versoes guardar')")
             for fato in setor.fatos:
@@ -942,7 +950,66 @@ class Projeto:
         if dossies:
             gerados.append(destino / "90_DOSSIES.md")
             shutil.copyfile(self.pasta_dossies / "dossies.md", destino / "90_DOSSIES.md")
+        gerados.extend(self._empacotar_salas_dos_setores(hoje, avisos))
         return gerados
+
+    def _empacotar_salas_dos_setores(self, hoje: date, avisos: str) -> list[Path]:
+        """Cada setor tem a própria sala: instruções geradas da Camada 1 + o seu cérebro."""
+        raiz = self.pasta_upload_setores
+        if raiz.exists():
+            shutil.rmtree(raiz)
+        gerados: list[Path] = []
+        modelo = (self.raiz / "modelos" / "instrucoes_de_setor.md").read_text(encoding="utf-8")
+        for id_setor in self.setores_com_camadas():
+            entrada = self.entrada(id_setor)
+            destino = raiz / id_setor
+            destino.mkdir(parents=True)
+            nome_arquivo = f"{id_setor}_{slug(entrada['nome']).upper()}.md"
+            instrucoes = self.instrucoes_do_setor(id_setor, modelo, nome_arquivo)
+            if len(instrucoes) > LIMITE_INSTRUCOES:
+                raise ErroDeValidacao(
+                    f"instruções da sala de {id_setor} passam de {LIMITE_INSTRUCOES} caracteres; "
+                    "encurte Missão, Limites ou Agentes na Camada 1"
+                )
+            (destino / f"00_INSTRUCOES_{id_setor}.md").write_text(instrucoes, encoding="utf-8")
+            gerados.append(destino / f"00_INSTRUCOES_{id_setor}.md")
+            shutil.copyfile(self.raiz / ARQUIVO_PROTOCOLO, destino / "01_PROTOCOLO_DO_CEREBRO.md")
+            gerados.append(destino / "01_PROTOCOLO_DO_CEREBRO.md")
+            (destino / "02_MANIFESTO.md").write_text(self._manifesto_md(hoje), encoding="utf-8")
+            gerados.append(destino / "02_MANIFESTO.md")
+            if avisos:
+                (destino / "03_AVISOS_DE_ATLAS.md").write_text(avisos, encoding="utf-8")
+                gerados.append(destino / "03_AVISOS_DE_ATLAS.md")
+            (destino / nome_arquivo).write_text(
+                self._setor_md(id_setor, entrada, self.pasta_do_setor(id_setor), hoje), encoding="utf-8")
+            gerados.append(destino / nome_arquivo)
+            proprios = [d for d in self.dossies()
+                        if id_setor in (d.get("de"), d.get("para")) and d.get("status") in {"autorizado", "entregue"}]
+            if proprios:
+                (destino / "90_DOSSIES.md").write_text(render_registros(
+                    f"# Dossiês autorizados que envolvem {id_setor}\n\nÚnico conhecimento de outros setores "
+                    "que este setor pode usar, dentro da restrição de uso de cada dossiê.", proprios),
+                    encoding="utf-8")
+                gerados.append(destino / "90_DOSSIES.md")
+        return gerados
+
+    def instrucoes_do_setor(self, id_setor: str, modelo: str, nome_arquivo: str) -> str:
+        setor = self.setor(id_setor)
+        camada1 = setor.camada1
+        agentes = []
+        for nome in agentes_da_camada1(camada1):
+            linha = next((l for l in AGENTE.findall(_secao(camada1, "Agentes")) if l.startswith(nome)), nome)
+            agentes.append(f"- {linha}")
+        estado = setor.estado
+        inicializacao = ("## Inicialização\n"
+                         "Ao receber \"iniciar\" ou a primeira ordem de Harvey, não apresente plano completo. "
+                         f"Siga a próxima ação do ESTADO da Camada 5: {estado.get('proxima_acao')}")
+        return (modelo.replace("{ID}", id_setor).replace("{NOME}", setor.nome.split("—", 1)[-1].strip())
+                .replace("{ARQUIVO_SETOR}", nome_arquivo)
+                .replace("{MISSAO}", " ".join(_secao(camada1, "Missão").split()) or "(ver Camada 1)")
+                .replace("{LIMITES}", " ".join(_secao(camada1, "Limites").split()) or "(ver Camada 1)")
+                .replace("{AGENTES}", "\n".join(agentes) or "- (nenhum agente definido na Camada 1)")
+                .replace("{INICIALIZACAO}", inicializacao))
 
     def _avisos_de_atlas_md(self) -> str:
         alertas = [a for a in self.diario.ler("alertas") if a.get("status") == "aberto"]
@@ -994,6 +1061,8 @@ class Projeto:
             linhas.extend(f"- {item}" for item in itens)
             linhas.append("")
         linhas += ["", "## Regras de leitura", "",
+                   "- Três salas: Harvey coordena e responde a Milan; cada setor trabalha por ordem de Harvey "
+                   "e entrega a ele; ATLAS governa a estrutura. Ninguém fala pelo outro.",
                    "- Setor Proposto, Quarentena, Pausado ou Encerrado não opera nem recebe aprendizado. "
                    "Limitado opera com as restrições anotadas.",
                    "- Cada setor lê somente o próprio arquivo. Outro setor entra apenas por dossiê "

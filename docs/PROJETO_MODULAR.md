@@ -13,35 +13,43 @@ Duas partes trabalham juntas:
 
 | Parte | Onde vive | Papel |
 |---|---|---|
-| `gpt_projeto/upload/` | sala principal (Projeto "Reconstrução") | Harvey e os setores: o cérebro que o GPT lê a cada conversa |
-| `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto separado) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
-| `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as duas salas |
+| `gpt_projeto/upload_harvey/` | sala de Harvey (Projeto próprio) | coordena, dá ordens aos setores, confronta entregas e responde a Milan |
+| `gpt_projeto/upload_setores/Snn/` | uma sala por setor (Projeto próprio) | o setor com seus agentes; obedece a Harvey na tarefa e a ATLAS na estrutura; é quem aprende |
+| `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
+| `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
 
 O GPT não consegue editar os próprios arquivos. Por isso a evolução acontece num
 ciclo curto: o GPT **propõe** (bloco de aprendizado), o Núcleo **aplica** com regras
 duras, Milan **reenvia** os arquivos. Tudo o que é reservado a Milan exige a flag
 `--autorizado-por-milan`; sem ela o Núcleo recusa.
 
-## 1. Instalar o cérebro no ChatGPT (primeira vez)
+## 1. Instalar as salas no ChatGPT (primeira vez)
 
-Requer apenas os arquivos de `gpt_projeto/upload/` (já gerados neste repositório).
+Cada sala é um Projeto separado do ChatGPT. Em cada um, o arquivo `00_...` vai no
+campo **Instruções** (cabe no limite; `validar` avisa se passar de 8.000 caracteres)
+e os demais vão em **Arquivos**. Se o Projeto oferecer "memória só do projeto",
+ative; a memória oficial continua sendo os arquivos.
 
-1. No ChatGPT, crie um **Projeto** chamado, por exemplo, "Reconstrução".
-2. Em **Instruções** do Projeto, cole o conteúdo inteiro de
-   `gpt_projeto/upload/00_INSTRUCOES_DO_PROJETO.md` (cabe no limite do campo; o
-   comando `validar` avisa se passar de 8.000 caracteres).
-3. Em **Arquivos** do Projeto, envie todos os outros arquivos de `upload/`:
-   `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e, quando
-   existir, `90_DOSSIES.md`.
-4. Se o Projeto oferecer "memória só do projeto", ative. Isso ajuda, mas a memória
-   oficial continua sendo os arquivos.
-5. Abra uma conversa e diga "iniciar". Harvey ativa o Setor 01 com o RAIO-X e faz
-   somente a pergunta de inicialização: "No seu último emprego, o que você fazia no
-   dia a dia?".
+**Sala de Harvey** (`gpt_projeto/upload_harvey/`): `00_INSTRUCOES_DO_PROJETO.md` nas
+Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e,
+quando existirem, `03_AVISOS_DE_ATLAS.md` e `90_DOSSIES.md` nos Arquivos.
+
+**Sala do Setor 01** (`gpt_projeto/upload_setores/S01/`): `00_INSTRUCOES_S01.md` nas
+Instruções; `01_PROTOCOLO_DO_CEREBRO.md`, `02_MANIFESTO.md`, `S01_ROTA_DE_RENDA.md` e,
+quando existirem, `03_AVISOS_DE_ATLAS.md` e `90_DOSSIES.md` nos Arquivos. As
+instruções de cada setor são geradas pelo Núcleo a partir da Camada 1, então um setor
+novo ganha a própria sala automaticamente em `upload_setores/Snn/`.
+
+**Sala de ATLAS**: seção 1b.
+
+Para começar: diga "iniciar" na sala de Harvey. Ele não apresenta plano; emite uma
+única ordem para o S01 (agente RAIO-X) e pede que você a cole na sala do S01. Lá, o
+RAIO-X faz somente a pergunta de inicialização: "No seu último emprego, o que você
+fazia no dia a dia?".
 
 ## 1b. Instalar a sala de ATLAS
 
-ATLAS opera em **outro Projeto** do ChatGPT, para que nenhum setor fale em nome dele.
+ATLAS opera em **outro Projeto** do ChatGPT, para que nenhum setor nem Harvey fale em nome dele.
 
 1. Crie um segundo Projeto chamado, por exemplo, "ATLAS".
 2. Em **Instruções**, cole `gpt_projeto/upload_atlas/00_INSTRUCOES_ATLAS.md`.
@@ -56,16 +64,21 @@ Antes de cada sessão de ATLAS, regenere a sala com `python -m nucleo atlas
 --solicitacao "o que você quer que ele audite"` e substitua os arquivos. O Núcleo
 marca o que ATLAS já viu, e o arquivo de diferenças traz só o que mudou desde então.
 
-## 2. O ciclo de evolução (a cada conversa que ensina algo)
+## 2. O ciclo de trabalho e de evolução
 
 ```
-1. conversar          Harvey responde; se algo mudou, termina com ```aprendizado```
-2. copiar             copie a resposta inteira (ou só o bloco) para um arquivo, ex.: bloco.md
-3. aplicar            python -m nucleo aplicar bloco.md
-4. empacotar          python -m nucleo empacotar        (sala principal)
-                      python -m nucleo atlas            (sala de ATLAS, quando for auditar)
-5. reenviar           substitua em cada Projeto os arquivos de upload/ e upload_atlas/ que mudaram
+1. ordem              na sala de Harvey, ele termina com um bloco ```ordem``` para um setor
+2. colar a ordem      na sala do setor; o setor trabalha com seus agentes
+3. entrega            o setor termina com ```entrega``` (para Harvey) e ```aprendizado``` (memória)
+4. aplicar            python -m nucleo aplicar resposta.md      (o Núcleo acha o bloco sozinho)
+5. empacotar          python -m nucleo empacotar   (salas de Harvey e dos setores)
+                      python -m nucleo atlas       (sala de ATLAS, quando for auditar)
+6. reenviar           substitua em cada Projeto os arquivos que mudaram
+7. colar a entrega    na sala de Harvey; ele confronta, consolida e dá a Milan um próximo movimento
 ```
+
+Harvey não emite bloco de aprendizado: quem aprende é o setor. O que Harvey concluir e
+o setor precisar guardar vai dentro da ordem.
 
 O mesmo `aplicar` aceita a resposta de ATLAS: ele emite um bloco ```atlas``` com
 status, alertas, auditorias, recomendações, `quarentena Snn` e `evento_recebido E-nnn`.
@@ -94,7 +107,7 @@ do bloco. Depois, `validar` confere.
 python -m nucleo validar                 # camadas, travas, versões, dossiês
 python -m nucleo estado [S01]            # estado atual + pendências
 python -m nucleo aplicar bloco.md        # blocos ```aprendizado``` e ```atlas```; ou via stdin
-python -m nucleo empacotar               # regenera gpt_projeto/upload/ (sala principal)
+python -m nucleo empacotar               # regenera upload_harvey/ e upload_setores/Snn/
 python -m nucleo atlas [--solicitacao "..."]   # regenera gpt_projeto/upload_atlas/ (sala de ATLAS)
 python -m nucleo integridade             # ÍNTEGRO / ATENÇÃO / BLOQUEADO calculado por evidência
 python -m nucleo revisar                 # fatos voláteis vencidos, hipóteses a revisar, prazos, autorizações
@@ -156,6 +169,18 @@ versão proposta, diferença, motivo, benefício, risco, custo, teste, plano de 
 responsável e autorização. A baseline de cada versão fica em `versoes/<setor>/vNNN/`;
 Milan reverte com um comando e a reversão também vira registro.
 
+## 4a. Separação entre as três salas
+
+- **Harvey** nunca fala como setor nem como agente de setor. Ele ordena (handoff
+  mínimo: objetivo, informação indispensável, origem, confiança, limite de uso,
+  entrega esperada, prazo, autorização aplicável) e confronta a entrega.
+- **O setor** só trabalha a partir de uma ordem de Harvey ou de pergunta direta de
+  Milan. Não decide estratégia, não consolida o projeto e não dá a Milan a decisão
+  final. Se o manifesto o mostrar em Quarentena, Pausado ou Encerrado, ele para.
+  Ordem fora do escopo volta a Harvey pela entrega, com o setor responsável indicado.
+- **ATLAS** governa a estrutura das duas outras salas: estados, versões, alterações,
+  custos, integridade. Nenhuma das três altera o núcleo travado da outra.
+
 ## 4b. ATLAS: o que ele governa e como se liga ao sistema
 
 ATLAS não substitui os especialistas; governa a estrutura em que trabalham. Ele
@@ -192,7 +217,7 @@ Regras que o Núcleo faz cumprir em nome de ATLAS:
   recomendações (que ficam aguardando Milan). Alertas abertos, quarentenas e
   recomendações aceitas chegam à sala principal em `03_AVISOS_DE_ATLAS.md`, como dados
   a considerar, nunca como ordem acima de Milan.
-- **Harvey não faz o trabalho de ATLAS.** As instruções da sala principal mandam Harvey
+- **Harvey não faz o trabalho de ATLAS.** As instruções da sala de Harvey mandam Harvey
   apontar duplicação, mudança não registrada ou desperdício em prosa, para Milan levar
   a ATLAS.
 
@@ -200,7 +225,7 @@ Regras que o Núcleo faz cumprir em nome de ATLAS:
 
 ```
 gpt_projeto/
-  INSTRUCOES_DO_PROJETO.md        cola-se nas Instruções do Projeto principal
+  INSTRUCOES_DO_PROJETO.md        prompt-base: cola-se nas Instruções da sala de Harvey
   PROTOCOLO_DO_CEREBRO.md         formato dos registros, do bloco de aprendizado e do bloco atlas
   manifesto.json                  setores, status, versões, histórico, travas (setores e ATLAS)
   atlas/
@@ -215,9 +240,10 @@ gpt_projeto/
   dossies/dossies.md              D-nnn (criado no primeiro dossiê)
   diario/                         alteracoes (M-), eventos (E-), alertas (AL-), recomendacoes (R-), custos (C-)
   versoes/<componente>/vNNN/      baseline de cada versão, para reversão
-  modelos/                        carta de setor e bloco de aprendizado em branco
-  upload/                         gerado por `empacotar`; vai à sala principal
-  upload_atlas/                   gerado por `atlas`; vai à sala de ATLAS
+  modelos/                        carta de setor, instruções de sala de setor, bloco de aprendizado
+  upload_harvey/                  gerado por `empacotar`; sala de Harvey
+  upload_setores/Snn/             gerado por `empacotar`; uma sala por setor operante
+  upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)
 tests/test_nucleo.py              parsing, isolamento, correção, dossiês, ciclo de vida, diário, versões, ATLAS, CLI
 ```

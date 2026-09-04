@@ -58,7 +58,7 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
          localizacao=f"atlas/{ARQUIVO_NUCLEO_ATLAS}, atlas/{ARQUIVO_INSTRUCOES_ATLAS}",
          ultima_alteracao=atlas.get("travado_em", NAO_INFORMADO),
          autorizacao_da_alteracao=atlas.get("ultima_autorizacao", NAO_INFORMADO))
-    comp("HARVEY", nome="Harvey Specter — interface estratégica", tipo="agente",
+    comp("HARVEY", nome="Harvey Specter — interface estratégica (sala própria)", tipo="agente",
          missao="Entender o objetivo real de Milan, encaminhar ao setor certo, confrontar recomendações "
                 "fracas, integrar e apresentar um único próximo movimento.",
          responsavel="prompt-base (sala principal)", autoridade="decide administrativamente dentro da "
@@ -107,7 +107,7 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
         camada1 = setor.camada1
         agentes = agentes_da_camada1(camada1)
         comp(id_setor, nome=entrada["nome"], tipo="setor", missao=_uma_linha(_secao(camada1, "Missão")),
-             responsavel="Harvey encaminha; agentes do setor executam a análise",
+             responsavel=f"sala própria ({id_setor}); trabalha por ordem de Harvey e entrega a ele",
              autoridade=_uma_linha(_secao(camada1, "Responsabilidade")),
              limites=_uma_linha(_secao(camada1, "Limites")), versao_atual=projeto.rotulo_de_versao(id_setor),
              estado_operacional=entrada["status"] + (f" ({entrada['motivo_do_status']})" if entrada.get("motivo_do_status") else ""),

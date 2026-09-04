@@ -3,17 +3,26 @@
 Este arquivo é lido pelo GPT dentro do Projeto e pelo Núcleo (o utilitário `nucleo` que
 Milan roda no computador). Ele define o único formato em que a memória cresce.
 
-## 1. Fluxo de evolução
+## 1. As três salas e o fluxo de evolução
 
 ```
-conversa no Projeto ──► bloco ```aprendizado``` ao fim da resposta
-        ▲                                  │
-        │                                  ▼
-reenvio dos arquivos  ◄── nucleo empacotar ◄── nucleo aplicar (valida, isola, numera)
+ sala de HARVEY ──ordem──► sala do SETOR ──entrega──► sala de HARVEY ──decisão──► Milan
+       ▲                        │
+       │                 bloco ```aprendizado```
+       │                        ▼
+ reenvio ◄── nucleo empacotar ◄── nucleo aplicar (valida, isola, numera, versiona)
+                    │
+                    └── nucleo atlas ──► sala de ATLAS ──bloco ```atlas```──► nucleo aplicar
 ```
 
-1. O GPT responde a Milan e, se algo mudou na memória de um setor, termina com um
-   bloco ```aprendizado```.
+- **Harvey** coordena e responde a Milan. Não fala como setor. Emite ordens.
+- **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
+  estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
+- **ATLAS** governa mapa, versões, alterações, custos e integridade.
+- Milan está acima dos três e carrega as mensagens entre as salas.
+
+1. O setor responde à ordem e, se algo mudou na sua memória, termina com um bloco
+   ```aprendizado```.
 2. Milan copia o bloco para um arquivo (ou cola direto) e executa `nucleo aplicar`.
    O Núcleo recusa qualquer bloco que tente escrever em outro setor, alterar a Camada
    1, apagar histórico ou apresentar hipótese como fato.
@@ -186,3 +195,16 @@ ATLAS devolve trabalho ao sistema com um bloco ```atlas``` (status, alerta, audi
 recomendação, quarentena, evento_recebido), aplicado pelo mesmo `nucleo aplicar`.
 Alertas abertos, quarentenas e recomendações aceitas por Milan chegam à sala principal
 em `03_AVISOS_DE_ATLAS.md`. São dados a considerar, não ordens acima de Milan.
+
+## 9. Ordem e entrega
+
+Harvey manda trabalho a um setor com um bloco ```ordem``` (handoff mínimo: de, para,
+agentes, objetivo, informação indispensável, origem da informação, confiança, limite de
+uso, entrega esperada, prazo, autorização aplicável). Milan cola a ordem na sala do
+setor. O setor trabalha só a partir de uma ordem ou de pergunta direta de Milan,
+atualiza o `## estado` no bloco de aprendizado e devolve um bloco ```entrega``` (de,
+para, ordem, agentes ativados, conclusão, fatos utilizados, hipóteses, principal
+risco, confiança, evidência necessária, recomendação, parecer do Contraditório,
+autorização necessária). Milan cola a entrega na sala de Harvey, que a confronta e
+consolida. A ordem não transfere identidade, memória integral nem propriedade da
+função; um setor nunca decide pelo outro nem por Harvey.

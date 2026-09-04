@@ -31,6 +31,15 @@
 > navegador com o cérebro vivo ao lado. `python cerebro.pyz registrar` acompanha
 > conversas feitas em outro app.
 >
+> **Utilitário adicional 6:** o [`Projeto Modular de Decisão e Reconstrução`](docs/PROJETO_MODULAR.md)
+> é um cérebro organizacional para rodar em um Projeto do ChatGPT: Harvey Specter como
+> interface, Núcleo Central de Coordenação, setores com cérebro próprio em cinco camadas
+> (núcleo travado, fatos, hipóteses, lições, estado) e o Setor 01 — Rota de Renda com
+> cinco agentes. Os arquivos prontos estão em [`gpt_projeto/upload/`](gpt_projeto/upload/);
+> o utilitário `python -m nucleo` aplica os blocos de aprendizado que o GPT emite,
+> preserva histórico nas correções, impede que um setor altere outro, gerencia dossiês
+> e o ciclo de vida de novos setores, e regenera os arquivos para reenvio.
+>
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia
 > telas de compra e permite apagar apenas o histórico local do script. Copie

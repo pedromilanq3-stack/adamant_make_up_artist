@@ -1,0 +1,23 @@
+{
+  "versao": 1,
+  "projeto": "Projeto Modular de Decisão e Reconstrução",
+  "autoridade": "Milan",
+  "setores": {
+    "S01": {
+      "nome": "Rota de Renda",
+      "pasta": "S01_rota_de_renda",
+      "status": "Ativo",
+      "aprovado_por": "Milan (documento fundador, 2026-09-04)",
+      "historico": [
+        {
+          "de": "Proposto",
+          "para": "Ativo",
+          "em": "2026-09-04",
+          "por": "Milan"
+        }
+      ],
+      "trava_camada1": "e100041c5166ac589352942b2d4576fff6069599a39ffaf5013755a56e7acbc7",
+      "camada1_travada_em": "2026-09-04"
+    }
+  }
+}

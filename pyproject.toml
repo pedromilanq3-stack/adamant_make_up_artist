@@ -11,9 +11,10 @@ requires-python = ">=3.11"
 [project.scripts]
 instagram-export-search = "instagram_archive.web:main"
 cerebro = "cerebro.__main__:main"
+nucleo = "nucleo.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["instagram_archive*", "cerebro*"]
+include = ["instagram_archive*", "cerebro*", "nucleo*"]
 
 [tool.setuptools.package-data]
 instagram_archive = ["templates/*.html", "static/*.css"]

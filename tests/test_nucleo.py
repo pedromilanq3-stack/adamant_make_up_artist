@@ -13,7 +13,8 @@ from nucleo import (
     parse_bloco, parse_registros, render_registros,
 )
 from nucleo.__main__ import main
-from nucleo.patch import extrair_blocos
+from nucleo.atlas import empacotar_atlas, integridade, registro_global
+from nucleo.patch import extrair_blocos, parse_bloco_atlas
 from nucleo.projeto import LIMITE_INSTRUCOES, SECOES_DA_CARTA
 from nucleo.setor import CAMADAS
 
@@ -36,16 +37,62 @@ ESTADO = (
     "## estado\n- tarefa_ativa: Calcular prazo\n- prazo: 2026-09-06\n- proxima_acao: Perguntar gasto\n"
     "- bloqueios: nenhum\n- autorizacoes_pendentes: nenhuma\n"
 )
-CARTA = "\n".join(
-    f"## {secao}\n{'Custos Fixos' if secao == 'Nome' else 'texto'}\n" for secao in SECOES_DA_CARTA
-)
+def _corpo_da_carta(secao: str) -> str:
+    if secao == "Nome":
+        return "Custos Fixos"
+    if secao == "Responsável pela criação":
+        return "Harvey"
+    if secao == "Agentes necessários":
+        return "### PODA — corte\nPensa por cortes."
+    return f"texto de {secao}"
+
+
+CARTA = "\n".join(f"## {secao}\n{_corpo_da_carta(secao)}\n" for secao in SECOES_DA_CARTA)
+BLOCO_ATLAS = """```atlas
+emitido_por: ATLAS
+data: 2026-09-05
+
+## status
+- status: ATENÇÃO
+- observado: S02 em piloto
+- problema: consumo não medido
+- impacto: créditos
+- recomendacao: registrar custos
+- custo: não medido
+- autorizacao: nenhuma
+- proximo_movimento: registrar o primeiro custo
+
+## evento_recebido E-001
+- parecer: recomenda ativação
+
+## alerta
+- componente: S02
+- problema: teste sem critério
+- impacto: qualidade
+- recomendacao: definir critério
+- evidencia: carta
+
+## recomendacao
+- conteudo: Registrar consumo semanal
+- impacto: medio
+- urgencia: media
+- confianca: alta
+- esforco: baixo
+- custo: baixo
+- risco: nenhum
+- reversibilidade: total
+
+## quarentena S02
+- motivo: tentou escrever no S01
+```
+"""
 
 
 class ProjetoTemporario(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload", "upload_atlas"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
@@ -79,7 +126,9 @@ class PatchTests(unittest.TestCase):
         resposta = "Harvey: ok.\n\n```aprendizado\nsetor: S01\nemitido_por: X\ndata: 2026-09-04\n\n" + FATO + "```\nfim"
         blocos = extrair_blocos(resposta)
         self.assertEqual(len(blocos), 1)
-        self.assertEqual(parse_bloco(blocos[0]).secoes[0].tipo, "fato")
+        self.assertEqual(blocos[0][0], "aprendizado")
+        self.assertEqual(parse_bloco(blocos[0][1]).secoes[0].tipo, "fato")
+        self.assertEqual(extrair_blocos("emitido_por: ATLAS\ndata: 2026-09-05\n\n## status\n- status: ÍNTEGRO\n")[0][0], "atlas")
 
     def test_cabecalho_obrigatorio_e_secao_desconhecida(self) -> None:
         with self.assertRaises(ErroDePatch):
@@ -300,7 +349,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
                        "hash camada 1"):
             self.assertIn(trecho, setor_md)
         manifesto = (self.raiz / "upload" / "02_MANIFESTO.md").read_text(encoding="utf-8")
-        self.assertIn("| S01 | Rota de Renda | Ativo |", manifesto)
+        self.assertIn("| S01 | Rota de Renda | Ativo | v001 |", manifesto)
         self.assertIn("Nenhuma pendência", manifesto)
 
     def test_empacotar_recusa_projeto_invalido(self) -> None:
@@ -319,6 +368,168 @@ class PendenciasEPacoteTests(ProjetoTemporario):
             esperado = [l for l in caminho.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower()]
             existente = [l for l in atual.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower()]
             self.assertEqual(existente, esperado, f"gpt_projeto/upload/{caminho.name} desatualizado: rode nucleo empacotar")
+
+
+class DiarioEVersoesTests(ProjetoTemporario):
+    def test_toda_mudanca_entra_no_diario_com_versoes(self) -> None:
+        self.aplicar(FATO)
+        alteracoes = self.projeto.diario.ler("alteracoes")
+        ultima = alteracoes[-1]
+        self.assertEqual(ultima.get("componente"), "S01")
+        self.assertEqual(ultima.get("operacao"), "aprendizado")
+        self.assertTrue(ultima.get("versao_anterior").startswith("v001"))
+        self.assertTrue(ultima.get("versao_proposta").startswith("v002"))
+        self.assertEqual(ultima.get("responsavel"), "RAIO-X")
+        self.assertIn("reverter S01 v001", ultima.get("plano_de_reversao"))
+        self.assertEqual([v.name for v in self.projeto.diario.versoes("S01")], ["v001", "v002"])
+
+    def test_reverter_restaura_baseline_e_registra(self) -> None:
+        self.aplicar(FATO)
+        with self.assertRaises(ErroDeAutorizacao):
+            self.projeto.reverter("S01", "v001", False, hoje=HOJE)
+        self.projeto.reverter("S01", "v001", True, motivo="teste", hoje=HOJE)
+        setor = self.recarregar().setor("S01")
+        self.assertEqual(len(setor.fatos), 6)
+        self.assertEqual(self.projeto.versao_de("S01"), 3)
+        self.assertEqual(self.projeto.diario.ler("alteracoes")[-1].get("operacao"), "reversao")
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_travar_registra_agente_novo_como_evento(self) -> None:
+        caminho = self.raiz / "setores" / "S01_rota_de_renda" / CAMADAS[1]
+        caminho.write_text(caminho.read_text(encoding="utf-8") + "\n### VIGIA — alerta\nPensa por sinais.\n",
+                           encoding="utf-8")
+        self.projeto.travar("S01", True, motivo="novo agente", hoje=HOJE)
+        evento = self.projeto.diario.ler("eventos")[-1]
+        self.assertEqual(evento.get("evento"), "MUDANCA_DE_NUCLEO")
+        self.assertIn("VIGIA", evento.get("diferenca"))
+        self.assertEqual(evento.get("status"), "pendente_para_atlas")
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_nucleo_de_atlas_e_travado(self) -> None:
+        caminho = self.raiz / "atlas" / "NUCLEO_ATLAS.md"
+        caminho.write_text(caminho.read_text(encoding="utf-8") + "\nregra nova\n", encoding="utf-8")
+        self.assertTrue(any("ATLAS: núcleo foi alterado" in p for p in self.projeto.validar()))
+        self.projeto.travar("ATLAS", True, hoje=HOJE)
+        self.assertEqual(self.projeto.validar(), [])
+        self.assertEqual(self.projeto.manifesto["atlas"]["versao"], 2)
+
+
+class AtlasTests(ProjetoTemporario):
+    def preparar_s02(self) -> None:
+        self.projeto.propor_setor("S02", CARTA, hoje=HOJE)
+        self.projeto.transicionar("S02", "aprovar", True, hoje=HOJE)
+        self.projeto.transicionar("S02", "piloto", True, hoje=HOJE)
+
+    def test_propor_gera_evento_novo_setor_completo(self) -> None:
+        self.projeto.propor_setor("S02", CARTA, hoje=HOJE)
+        evento = self.projeto.diario.ler("eventos")[-1]
+        self.assertEqual(evento.get("evento"), "NOVO_SETOR")
+        for campo in ("missao", "problema_que_resolve", "escopo_permitido", "atividades_proibidas",
+                      "cerebro_ou_metodo", "agentes_internos", "prompt_principal_e_versao",
+                      "ferramentas_solicitadas", "dados_de_entrada", "entregaveis", "metricas",
+                      "dependencias", "riscos", "orcamento_ou_limite", "condicao_de_parada",
+                      "responsavel_pela_criacao"):
+            self.assertTrue(evento.get(campo), campo)
+        self.assertEqual(evento.get("autorizacao_de_milan"), "pendente")
+        self.projeto.transicionar("S02", "aprovar", True, hoje=HOJE)
+        self.assertIn("concedida", self.projeto.diario.ler("eventos")[-1].get("autorizacao_de_milan"))
+
+    def test_registro_global_lista_todos_os_componentes(self) -> None:
+        self.preparar_s02()
+        ids = [r.id for r in registro_global(self.projeto, HOJE)]
+        for esperado in ("ATLAS", "HARVEY", "PROMPT-BASE", "PROMPT-ATLAS", "NUCLEO", "S01", "S01/RAIO-X",
+                         "S01/CONTRADITÓRIO", "S01/MEMORIA", "S02", "S02/PODA", "MANIFESTO", "DOSSIES", "DIARIO"):
+            self.assertIn(esperado, ids)
+        registro = next(r for r in registro_global(self.projeto, HOJE) if r.id == "S01")
+        for campo in ("nome", "tipo", "missao", "responsavel", "autoridade", "limites", "versao_atual",
+                      "estado_operacional", "dependencias", "dados_mantidos", "localizacao",
+                      "custo_operacional", "riscos_conhecidos", "ultima_alteracao", "autorizacao_da_alteracao"):
+            self.assertTrue(registro.get(campo), campo)
+        self.assertEqual(registro.get("custo_operacional"), "CONSUMO NÃO MEDIDO")
+        self.projeto.registrar_custo("S01", "12.5", "creditos", "teste", hoje=HOJE)
+        registro = next(r for r in registro_global(self.projeto, HOJE) if r.id == "S01")
+        self.assertIn("12.5 creditos", registro.get("custo_operacional"))
+
+    def test_bloco_atlas_registra_status_alerta_recomendacao_e_quarentena(self) -> None:
+        self.preparar_s02()
+        bloco = parse_bloco_atlas(extrair_blocos(BLOCO_ATLAS)[0][1])
+        relato = self.projeto.aplicar_atlas(bloco, hoje=HOJE)
+        self.assertEqual(len(relato), 5)
+        self.assertEqual(self.projeto.entrada("S02")["status"], "Quarentena")
+        self.assertEqual(self.projeto.diario.ler("eventos")[0].get("status"), "recebido_por_atlas")
+        self.assertEqual(self.projeto.manifesto["atlas"]["ultimo_status"]["status"], "ATENÇÃO")
+        with self.assertRaises(ErroDeAutorizacao):
+            self.aplicar(FATO, setor="S02")
+        status, evidencias = integridade(self.projeto, HOJE)
+        self.assertEqual(status, "BLOQUEADO")
+        self.assertTrue(any("Quarentena" in e for e in evidencias))
+        with self.assertRaises(ErroDeAutorizacao):
+            self.projeto.transicionar("S02", "reativar", False, hoje=HOJE)
+        self.projeto.transicionar("S02", "reativar", True, hoje=HOJE)
+        quarentenas = [a for a in self.projeto.diario.ler("alertas") if a.get("tipo") == "quarentena"]
+        self.assertEqual(quarentenas[0].get("status"), "fechado")
+        self.projeto.decidir_recomendacao("R-001", "aceitar", True, hoje=HOJE)
+        self.projeto.fechar_alerta("AL-002", True, "critério definido", hoje=HOJE)
+        self.assertNotEqual(integridade(self.projeto, HOJE)[0], "BLOQUEADO")
+
+    def test_quarentena_exige_motivo_e_so_atlas_ou_milan(self) -> None:
+        self.preparar_s02()
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.transicionar("S02", "quarentena", False, por="ATLAS", hoje=HOJE)
+        with self.assertRaises(ErroDeAutorizacao):
+            self.projeto.transicionar("S02", "quarentena", False, por="Harvey", motivo="x", hoje=HOJE)
+        with self.assertRaises(ErroDePatch):
+            parse_bloco_atlas("emitido_por: RAIO-X\ndata: 2026-09-05\n\n## status\n- status: ÍNTEGRO\n")
+        with self.assertRaises(ErroDePatch):
+            parse_bloco_atlas("emitido_por: ATLAS\ndata: 2026-09-05\n\n## fato\n- conteudo: x\n")
+
+    def test_limitado_opera_e_avisos_chegam_a_sala_principal(self) -> None:
+        self.preparar_s02()
+        self.projeto.transicionar("S02", "ativar", True, hoje=HOJE)
+        self.projeto.transicionar("S02", "limitar", True, motivo="só leitura de custos", hoje=HOJE)
+        self.aplicar(FATO, setor="S02")
+        self.projeto.empacotar(hoje=HOJE)
+        avisos = (self.raiz / "upload" / "03_AVISOS_DE_ATLAS.md").read_text(encoding="utf-8")
+        self.assertIn("S02 está em **Limitado**: só leitura de custos", avisos)
+        self.assertEqual(integridade(self.projeto, HOJE)[0], "ATENÇÃO")
+
+    def test_pacote_de_atlas_cumpre_o_contrato_de_integracao(self) -> None:
+        self.preparar_s02()
+        gerados = empacotar_atlas(self.projeto, hoje=HOJE, solicitacao="auditar S02")
+        nomes = [g.name for g in gerados]
+        self.assertEqual(nomes, ["00_INSTRUCOES_ATLAS.md", "01_NUCLEO_ATLAS.md", "02_PROMPT_BASE.md",
+                                 "03_REGISTRO_GLOBAL.md", "04_DIFERENCAS_DESDE_ULTIMA_EXECUCAO.md",
+                                 "05_VERSOES.md", "06_CUSTOS.md", "07_ALERTAS_E_SOLICITACAO.md", "08_EVENTOS.md"])
+        pasta = self.raiz / "upload_atlas"
+        self.assertIn("CONSUMO NÃO MEDIDO", (pasta / "06_CUSTOS.md").read_text(encoding="utf-8"))
+        alertas = (pasta / "07_ALERTAS_E_SOLICITACAO.md").read_text(encoding="utf-8")
+        self.assertIn("auditar S02", alertas)
+        self.assertIn("E-001: NOVO_SETOR de S02", alertas)
+        self.assertIn("| S02 |", (pasta / "05_VERSOES.md").read_text(encoding="utf-8"))
+        ultimo = self.projeto.manifesto["atlas"]["ultimo_registro_visto"]
+        self.assertEqual(ultimo, self.projeto.diario.ler("alteracoes")[-1].id)
+        self.aplicar(FATO)
+        empacotar_atlas(self.projeto, hoje=HOJE)
+        diferencas = (pasta / "04_DIFERENCAS_DESDE_ULTIMA_EXECUCAO.md").read_text(encoding="utf-8")
+        self.assertIn(f"Última alteração vista por ATLAS: {ultimo}", diferencas)
+        self.assertEqual(diferencas.count("## M-"), 1)
+
+    def test_instrucoes_de_atlas_cabem_e_tem_primeira_resposta(self) -> None:
+        texto = (GPT_PROJETO / "atlas" / "INSTRUCOES_ATLAS.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(texto), LIMITE_INSTRUCOES)
+        self.assertIn("ATLAS iniciado. Envie o prompt-base e o Registro Global dos Setores.", texto)
+        nucleo = (GPT_PROJETO / "atlas" / "NUCLEO_ATLAS.md").read_text(encoding="utf-8")
+        for secao in ("## 1. Identidade", "## 15. Contrato técnico de integração", "## 17. Inicialização"):
+            self.assertIn(secao, nucleo)
+
+    def test_pacote_atlas_versionado_esta_sincronizado(self) -> None:
+        empacotar_atlas(self.projeto, hoje=HOJE)
+        for caminho in sorted((self.raiz / "upload_atlas").glob("*.md")):
+            atual = GPT_PROJETO / "upload_atlas" / caminho.name
+            self.assertTrue(atual.exists(), f"falta gpt_projeto/upload_atlas/{caminho.name}: rode nucleo atlas")
+            esperado = [l for l in caminho.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower() and "em 2026" not in l]
+            existente = [l for l in atual.read_text(encoding="utf-8").splitlines() if "gerado em" not in l.lower() and "em 2026" not in l]
+            self.assertEqual(existente, esperado, f"gpt_projeto/upload_atlas/{caminho.name} desatualizado: rode nucleo atlas")
 
 
 class CliTests(ProjetoTemporario):
@@ -360,9 +571,26 @@ class CliTests(ProjetoTemporario):
         self.assertIn("Milan", erro)
         self.assertEqual(self.rodar("setor", "aprovar", "S02", "--autorizado-por-milan")[0], 0)
         self.assertIn("S02  Aprovado", self.rodar("setor", "listar")[1])
+        self.assertIn("E-001", self.rodar("diario", "eventos")[1])
         self.assertEqual(self.rodar("dossie", "listar")[1].strip(), "Nenhum dossiê.")
         self.assertEqual(self.rodar("empacotar")[0], 0)
         self.assertTrue((self.raiz / "upload" / "S02_CUSTOS_FIXOS.md").exists())
+
+    def test_atlas_integridade_e_versoes_na_cli(self) -> None:
+        self.assertEqual(self.rodar("integridade")[0], 0)
+        codigo, saida, _ = self.rodar("atlas", "--solicitacao", "rotina")
+        self.assertEqual(codigo, 0)
+        self.assertIn("03_REGISTRO_GLOBAL.md", saida)
+        codigo, saida, _ = self.rodar("aplicar", entrada="emitido_por: ATLAS\ndata: 2026-09-05\n\n## status\n- status: ÍNTEGRO\n- observado: tudo certo\n")
+        self.assertEqual(codigo, 0)
+        self.assertIn("status ÍNTEGRO", saida)
+        self.assertEqual(self.rodar("setor", "quarentena", "S01", "--por", "ATLAS")[0], 1)
+        self.assertEqual(self.rodar("setor", "quarentena", "S01", "--por", "ATLAS", "--motivo", "teste")[0], 0)
+        self.assertEqual(self.rodar("integridade")[0], 1)
+        self.assertEqual(self.rodar("setor", "reativar", "S01", "--autorizado-por-milan")[0], 0)
+        self.assertIn("baselines: v001, v002, v003", self.rodar("versoes", "listar", "S01")[1])
+        self.assertEqual(self.rodar("custo", "registrar", "S01", "3", "creditos")[0], 0)
+        self.assertIn("C-001", self.rodar("diario", "custos")[1])
 
     def test_modulo_executa_como_script(self) -> None:
         resultado = subprocess.run([sys.executable, "-m", "nucleo", "--pasta", str(self.raiz), "validar"],

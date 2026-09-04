@@ -64,7 +64,9 @@ from .registros import ErroDeFormato, Registro, parse_registros
 
 TIPOS_SIMPLES = {"fato", "hipotese", "licao", "estado", "dossie", "correcao"}
 TIPOS_COM_ALVO = {"supera", "resultado"}
-CERCA = re.compile(r"^\s*```\s*(aprendizado)?\s*$")
+TIPOS_ATLAS_SIMPLES = {"status", "alerta", "auditoria", "recomendacao"}
+TIPOS_ATLAS_COM_ALVO = {"quarentena", "evento_recebido"}
+CERCA = re.compile(r"^\s*```\s*(aprendizado|atlas)?\s*$")
 LINHA_CABECALHO = re.compile(r"^([a-z_]+)\s*:\s*(.*)$")
 
 
@@ -100,18 +102,96 @@ def _sem_cerca(texto: str) -> str:
     return "\n".join(linhas)
 
 
-def extrair_blocos(texto: str) -> list[str]:
-    """Encontra todos os blocos ```aprendizado ... ``` dentro de uma resposta inteira."""
-    blocos = re.findall(r"```aprendizado\s*\n(.*?)\n\s*```", texto, flags=re.DOTALL)
-    return blocos or [texto]
+@dataclass
+class BlocoDoAtlas:
+    """O que ATLAS devolve à sala principal: status, alertas, recomendações, quarentenas.
+
+        ```atlas
+        emitido_por: ATLAS
+        data: 2026-09-05
+
+        ## status
+        - status: ATENÇÃO
+        - observado: ...
+        - problema: ...
+        - impacto: ...
+        - recomendacao: ...
+        - custo: baixo
+        - autorizacao: ...
+        - proximo_movimento: ...
+
+        ## alerta
+        - componente: S01
+        - problema: ...
+        - impacto: ...
+        - recomendacao: ...
+        - evidencia: ...
+
+        ## recomendacao
+        - conteudo: ...
+        - impacto: alto | medio | baixo
+        - urgencia: alta | media | baixa
+        - confianca: alta | media | baixa
+        - esforco: alto | medio | baixo
+        - custo: baixo | medio | alto | nao_medido
+        - risco: ...
+        - reversibilidade: ...
+
+        ## quarentena S02
+        - motivo: ...
+
+        ## evento_recebido E-001
+        - parecer: recomenda ativação | ajustes | rejeição
+        ```
+    """
+    emitido_por: str
+    data: str
+    secoes: list[Secao] = field(default_factory=list)
 
 
-def parse_bloco(texto: str) -> BlocoDeAprendizado:
+def extrair_blocos(texto: str) -> list[tuple[str, str]]:
+    """Encontra os blocos ```aprendizado``` e ```atlas``` de uma resposta inteira.
+
+    Retorna pares (tipo, corpo). Sem cerca, o texto inteiro é tratado como um bloco
+    de aprendizado, ou como bloco atlas se o cabeçalho disser `emitido_por: ATLAS`.
+    """
+    blocos = re.findall(r"```(aprendizado|atlas)\s*\n(.*?)\n\s*```", texto, flags=re.DOTALL)
+    if blocos:
+        return [(tipo, corpo) for tipo, corpo in blocos]
+    tipo = "atlas" if re.search(r"^emitido_por\s*:\s*ATLAS\s*$", texto, re.MULTILINE) else "aprendizado"
+    return [(tipo, texto)]
+
+
+def parse_bloco_atlas(texto: str) -> BlocoDoAtlas:
     corpo = _sem_cerca(texto)
     try:
         preambulo, registros = parse_registros(corpo)
     except ErroDeFormato as erro:
         raise ErroDePatch(str(erro)) from erro
+    cabecalho = _cabecalho(preambulo)
+    if cabecalho.get("emitido_por", "").upper() != "ATLAS":
+        raise ErroDePatch("o bloco atlas precisa de 'emitido_por: ATLAS'")
+    if not cabecalho.get("data"):
+        raise ErroDePatch("o bloco atlas precisa da linha 'data:'")
+    bloco = BlocoDoAtlas("ATLAS", cabecalho["data"])
+    for registro in registros:
+        partes = registro.id.split()
+        tipo = partes[0].lower()
+        if tipo in TIPOS_ATLAS_SIMPLES and len(partes) == 1:
+            bloco.secoes.append(Secao(tipo, None, dict(registro.campos)))
+        elif tipo in TIPOS_ATLAS_COM_ALVO and len(partes) == 2:
+            bloco.secoes.append(Secao(tipo, partes[1], dict(registro.campos)))
+        else:
+            raise ErroDePatch(
+                f"seção desconhecida no bloco atlas '## {registro.id}'. Use: "
+                f"{sorted(TIPOS_ATLAS_SIMPLES)} ou {sorted(TIPOS_ATLAS_COM_ALVO)} com alvo"
+            )
+    if not bloco.secoes:
+        raise ErroDePatch("o bloco atlas não tem nenhuma seção")
+    return bloco
+
+
+def _cabecalho(preambulo: str) -> dict[str, str]:
     cabecalho: dict[str, str] = {}
     for linha in preambulo.splitlines():
         if not linha.strip():
@@ -120,6 +200,16 @@ def parse_bloco(texto: str) -> BlocoDeAprendizado:
         if not encontrado:
             raise ErroDePatch(f"cabeçalho inválido: {linha!r} (esperado 'chave: valor')")
         cabecalho[encontrado.group(1)] = encontrado.group(2).strip()
+    return cabecalho
+
+
+def parse_bloco(texto: str) -> BlocoDeAprendizado:
+    corpo = _sem_cerca(texto)
+    try:
+        preambulo, registros = parse_registros(corpo)
+    except ErroDeFormato as erro:
+        raise ErroDePatch(str(erro)) from erro
+    cabecalho = _cabecalho(preambulo)
     for chave in ("setor", "emitido_por", "data"):
         if not cabecalho.get(chave):
             raise ErroDePatch(f"o bloco precisa da linha '{chave}:' antes das seções")

@@ -1,4 +1,4 @@
-<!-- S01 · status: Ativo · hash camada 1: e100041c5166 · gerado em 2026-09-04 -->
+<!-- S01 · status: Ativo · versão v001 · hash camada 1: e100041c5166 · gerado em 2026-09-04 -->
 
 # S01 — Rota de Renda
 

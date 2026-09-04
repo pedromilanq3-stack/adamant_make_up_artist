@@ -6,13 +6,17 @@ impede que um setor altere a memória de outro e gera o pacote de arquivos que M
 envia ao Projeto no ChatGPT.
 """
 
-from .patch import BlocoDeAprendizado, ErroDePatch, parse_bloco
+from .atlas import integridade, registro_global
+from .diario import Diario
+from .patch import BlocoDeAprendizado, BlocoDoAtlas, ErroDePatch, parse_bloco, parse_bloco_atlas
 from .projeto import ESTADOS_DE_SETOR, TRANSICOES, ErroDeAutorizacao, ErroDeIsolamento, Projeto
 from .registros import ErroDeFormato, Registro, parse_registros, render_registros
 from .setor import CAMADAS, ErroDeValidacao, Setor
 
 __all__ = [
     "BlocoDeAprendizado",
+    "BlocoDoAtlas",
+    "Diario",
     "CAMADAS",
     "ESTADOS_DE_SETOR",
     "ErroDeAutorizacao",
@@ -24,6 +28,9 @@ __all__ = [
     "Registro",
     "Setor",
     "TRANSICOES",
+    "integridade",
+    "parse_bloco_atlas",
+    "registro_global",
     "parse_bloco",
     "parse_registros",
     "render_registros",

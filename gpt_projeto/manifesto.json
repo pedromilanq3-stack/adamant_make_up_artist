@@ -17,7 +17,18 @@
         }
       ],
       "trava_camada1": "e100041c5166ac589352942b2d4576fff6069599a39ffaf5013755a56e7acbc7",
-      "camada1_travada_em": "2026-09-04"
+      "camada1_travada_em": "2026-09-04",
+      "versao": 1,
+      "ultima_autorizacao": "Milan (documento fundador, 2026-09-04)",
+      "alterado_em": "2026-09-04"
     }
+  },
+  "atlas": {
+    "trava_nucleo": "efe3f10ca817f996009927a2a1e95edf9028a368fba206372c2488276ccce32a",
+    "versao": 1,
+    "travado_em": "2026-09-04",
+    "ultima_autorizacao": "Milan (--autorizado-por-milan)",
+    "ultimo_registro_visto": "M-001",
+    "ultimo_pacote_em": "2026-09-04"
   }
 }

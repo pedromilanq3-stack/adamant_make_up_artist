@@ -4,9 +4,13 @@ Gerado em 2026-09-04 pelo Núcleo. Se um arquivo de setor no Projeto tiver hash 
 
 ## Setores
 
-| Setor | Nome | Status | Hash da camada 1 | Fatos | Hipóteses | Lições |
-|---|---|---|---|---|---|---|
-| S01 | Rota de Renda | Ativo | e100041c5166 | 6 | 1 | 1 |
+| Setor | Nome | Status | Versão | Hash da camada 1 | Fatos | Hipóteses | Lições |
+|---|---|---|---|---|---|---|---|
+| S01 | Rota de Renda | Ativo | v001 | e100041c5166 | 6 | 1 | 1 |
+
+## ATLAS
+
+Último status de integridade emitido por ATLAS: nenhum ainda. ATLAS opera em sala separada; Harvey não faz o trabalho de ATLAS.
 
 ## Pendências de revisão
 
@@ -14,6 +18,7 @@ Nenhuma pendência.
 
 ## Regras de leitura
 
-- Setor Proposto, Pausado ou Encerrado não opera nem recebe aprendizado.
+- Setor Proposto, Quarentena, Pausado ou Encerrado não opera nem recebe aprendizado. Limitado opera com as restrições anotadas.
 - Cada setor lê somente o próprio arquivo. Outro setor entra apenas por dossiê autorizado (veja 90_DOSSIES.md, se existir).
 - A Camada 1 é travada: nunca proponha alterá-la dentro de um bloco de aprendizado.
+- Setor ou agente novo só existe depois do evento NOVO_SETOR registrado pelo Núcleo e da aprovação de Milan.

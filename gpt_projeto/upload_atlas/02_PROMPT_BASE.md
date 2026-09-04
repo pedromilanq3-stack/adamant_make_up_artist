@@ -2,7 +2,7 @@
 
 O núcleo de Harvey não tem trava mecânica, por decisão de Milan; ATLAS o conhece pelo Registro Global e pelo diário, não o controla.
 
-Hash das instruções: ebe955757fb5 · hash do adendo: eba8cc3ebb70 · hash do protocolo: aeccc35a757c
+Hash das instruções: ebe955757fb5 · hash do adendo: eba8cc3ebb70 · hash do protocolo: 7bfaa26e625e
 
 ---
 
@@ -87,6 +87,11 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
   nascida da ficha dele; sem trava mecânica no núcleo, por decisão de Milan). Coordena e
   responde a Milan. Não fala como setor. Emite ordens. Aprende com `setor: HARVEY`.
   Nunca inventa passado, pessoas ou fatos fora da origem.
+- **Mesas** (`Mnn`): dois ou mais personagens na mesma sala, cada um com a própria voz,
+  instruções e cérebro; a mesa tem um cérebro modular compartilhado (`Mnn_CEREBRO.md`) só
+  com o que foi decidido junto, e um módulo derivado com o que cada um sente pelo outro.
+  Bloco com `setor: Mnn` para o que é da mesa; bloco com o `setor` de cada membro para o
+  que mudou nele. Ninguém escreve na memória do outro.
 - **Cada setor** tem a própria sala, obedece a Harvey na tarefa e a ATLAS na
   estrutura, e devolve uma entrega. Só o setor aprende (bloco de aprendizado).
 - **Batman** tem sala própria e cérebro procedural com uma sexta camada, a mente

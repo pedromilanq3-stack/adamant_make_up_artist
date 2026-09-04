@@ -161,6 +161,22 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
              localizacao=f"setores/{entrada['pasta']}/camada[2-5]_*.md",
              ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
              autorizacao_da_alteracao=entrada.get("ultima_autorizacao", NAO_INFORMADO))
+    for id_mesa in projeto.mesas():
+        entrada = projeto.entrada(id_mesa)
+        mesa = projeto.setor(id_mesa)
+        membros = ", ".join(entrada.get("membros", []))
+        comp(id_mesa, nome=entrada["nome"], tipo="mesa", missao=_uma_linha(_secao(mesa.camada1, "Missão")),
+             responsavel=f"sala própria ({id_mesa}); membros: {membros}; fecha: {projeto.quem_fecha(id_mesa)}",
+             autoridade=_uma_linha(_secao(mesa.camada1, "Responsabilidade")),
+             limites=_uma_linha(_secao(mesa.camada1, "Limites")), versao_atual=projeto.rotulo_de_versao(id_mesa),
+             estado_operacional=entrada["status"] + (f" ({entrada['motivo_do_status']})" if entrada.get("motivo_do_status") else ""),
+             dependencias=f"cérebros de {membros} (cada um no próprio namespace); PROTOCOLO",
+             dados_mantidos=f"{len(mesa.fatos)} fatos, {len(mesa.hipoteses)} hipóteses, {len(mesa.licoes)} lições, "
+                            "1 estado; módulo derivado de relações (gerado, não editado)",
+             localizacao=f"mesas/{entrada['pasta']}/ (camadas 1–5, instruções); versoes/{id_mesa}/",
+             riscos_conhecidos="um membro tentar escrever na memória do outro (o Núcleo recusa: bloco só com o próprio setor)",
+             ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
+             autorizacao_da_alteracao=entrada.get("ultima_autorizacao", NAO_INFORMADO))
     comp("MANIFESTO", nome="manifesto.json", tipo="banco de dados", missao="Status, versão, travas e "
          "histórico de cada setor e de ATLAS.", responsavel="Núcleo", autoridade="fonte da verdade sobre "
          "estados operacionais", limites="alterado só pelo Núcleo com autorização", versao_atual=_hash_curto(projeto.raiz / "manifesto.json"),
@@ -217,6 +233,10 @@ def integridade(projeto: Projeto, hoje: date | None = None) -> tuple[str, list[s
             atencoes.append(f"{id_setor} Limitado: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
         elif entrada["status"] == "Proposto":
             atencoes.append(f"{id_setor} Proposto aguarda decisão de Milan (evento {entrada.get('evento', '?')})")
+    for id_mesa in projeto.mesas():
+        entrada = projeto.entrada(id_mesa)
+        if entrada["status"] == "Quarentena":
+            bloqueios.append(f"{id_mesa} em Quarentena: {entrada.get('motivo_do_status', NAO_INFORMADO)}")
     for id_p in projeto.personagens():
         entrada = projeto.entrada(id_p)
         if entrada["status"] == "Quarentena":
@@ -326,7 +346,7 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
     linhas += [f"- {r.id}: {r.get('conteudo')}" for r in recomendacoes] or ["Nenhuma."]
     linhas += ["", "## Componentes ativos relacionados", ""]
     linhas += [f"- {s}: {projeto.entrada(s)['status']} {projeto.rotulo_de_versao(s)}"
-               for s in (projeto.personagens() + projeto.setores_com_camadas())]
+               for s in (projeto.personagens() + projeto.mesas() + projeto.setores_com_camadas())]
     linhas += ["", "## Autorizações aplicáveis", "",
                "- Toda ação reservada a Milan exige `--autorizado-por-milan` no Núcleo; sem isso não aconteceu.",
                "- ATLAS pode colocar setor em Quarentena preventiva (`## quarentena Snn` com motivo); só Milan libera."]
@@ -346,7 +366,7 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
 def _versoes_md(projeto: Projeto) -> str:
     linhas = ["# Registro de versões", "", "| Componente | Versão atual | Baselines guardadas | Reversão |",
               "|---|---|---|---|"]
-    componentes = projeto.personagens() + projeto.setores_com_camadas() \
+    componentes = projeto.personagens() + projeto.mesas() + projeto.setores_com_camadas() \
         + (["ATLAS"] if projeto.manifesto["atlas"].get("versao") else [])
     for comp in componentes:
         versoes = [v.name for v in projeto.diario.versoes(comp)]

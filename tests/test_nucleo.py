@@ -65,7 +65,7 @@ data: 2026-09-05
 - autorizacao: nenhuma
 - proximo_movimento: registrar o primeiro custo
 
-## evento_recebido E-001
+## evento_recebido E-002
 - parecer: recomenda ativação
 
 ## alerta
@@ -97,14 +97,15 @@ class ProjetoTemporario(unittest.TestCase):
         psique_mod.semear(1234)
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house", "upload_lobo"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house", "upload_lobo", "upload_mesas"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def aplicar(self, corpo, setor="S01", autorizado=False):
-        emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX", "HOUSE", "LOBO") else "RAIO-X"
+    def aplicar(self, corpo, setor="S01", autorizado=False, emitido_por=None):
+        if emitido_por is None:
+            emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX", "HOUSE", "LOBO") else "RAIO-X"
         return self.projeto.aplicar(bloco(setor, emitido_por, corpo), autorizado_por_milan=autorizado, hoje=HOJE)
 
     def recarregar(self) -> Projeto:
@@ -528,7 +529,7 @@ class AtlasTests(ProjetoTemporario):
         relato = self.projeto.aplicar_atlas(bloco, hoje=HOJE)
         self.assertEqual(len(relato), 5)
         self.assertEqual(self.projeto.entrada("S02")["status"], "Quarentena")
-        self.assertEqual(self.projeto.diario.ler("eventos")[0].get("status"), "recebido_por_atlas")
+        self.assertEqual(self.projeto.diario.ler("eventos")[1].get("status"), "recebido_por_atlas")
         self.assertEqual(self.projeto.manifesto["atlas"]["ultimo_status"]["status"], "ATENÇÃO")
         with self.assertRaises(ErroDeAutorizacao):
             self.aplicar(FATO, setor="S02")
@@ -577,7 +578,7 @@ class AtlasTests(ProjetoTemporario):
         self.assertIn("CONSUMO NÃO MEDIDO", (pasta / "06_CUSTOS.md").read_text(encoding="utf-8"))
         alertas = (pasta / "07_ALERTAS_E_SOLICITACAO.md").read_text(encoding="utf-8")
         self.assertIn("auditar S02", alertas)
-        self.assertIn("E-001: NOVO_SETOR de S02", alertas)
+        self.assertIn("E-002: NOVO_SETOR de S02", alertas)  # E-001 é a abertura da mesa M01
         self.assertIn("| S02 |", (pasta / "05_VERSOES.md").read_text(encoding="utf-8"))
         ultimo = self.projeto.manifesto["atlas"]["ultimo_registro_visto"]
         self.assertEqual(ultimo, self.projeto.diario.ler("alteracoes")[-1].id)
@@ -1091,7 +1092,7 @@ class CliTests(ProjetoTemporario):
         self.assertIn("Milan", erro)
         self.assertEqual(self.rodar("setor", "aprovar", "S02", "--autorizado-por-milan")[0], 0)
         self.assertIn("S02  Aprovado", self.rodar("setor", "listar")[1])
-        self.assertIn("E-001", self.rodar("diario", "eventos")[1])
+        self.assertIn("NOVO_SETOR", self.rodar("diario", "eventos")[1])
         self.assertEqual(self.rodar("dossie", "listar")[1].strip(), "Nenhum dossiê.")
         self.assertEqual(self.rodar("empacotar")[0], 0)
         self.assertTrue((self.raiz / "upload_harvey" / "S02_CUSTOS_FIXOS.md").exists())
@@ -1146,3 +1147,87 @@ class CliTests(ProjetoTemporario):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MesaTests(ProjetoTemporario):
+    """Mesas: dois personagens sentados juntos, cada um com o próprio cérebro, e um cérebro modular compartilhado."""
+
+    def test_m01_existe_valida_e_apresenta_os_membros_um_ao_outro(self) -> None:
+        self.assertEqual(self.projeto.validar(), [])
+        self.assertEqual(self.projeto.mesas(), ["M01"])
+        self.assertEqual(self.projeto.membros_da_mesa("M01"), ["HARVEY", "LOBO"])
+        self.assertEqual(self.projeto.quem_fecha("M01"), "HARVEY")
+        harvey = self.projeto.psique_de("HARVEY")[1]
+        lobo = self.projeto.psique_de("LOBO")[1]
+        self.assertTrue(any(p.get("nome") == "Jordan Belfort, o Lobo" for p in harvey["pessoas"]))
+        self.assertTrue(any(p.get("nome") == "Harvey Specter" for p in lobo["pessoas"]))
+        instrucoes = (self.projeto.pasta_do_setor("M01") / "INSTRUCOES_MESA.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(instrucoes), 8000)
+        self.assertIn("**Harvey Specter:**", instrucoes)
+        self.assertIn("setor: M01", instrucoes)
+        self.assertIn("01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md", instrucoes)
+
+    def test_mesa_aceita_fato_de_membro_e_recusa_fato_de_estranho(self) -> None:
+        self.aplicar("## fato\n- conteudo: decidido junto\n- fonte: mesa\n- confianca: alta\n- setor_origem: LOBO\n",
+                     setor="M01", emitido_por="HARVEY")
+        self.assertIn("decidido junto", [f.get("conteudo") for f in self.projeto.setor("M01").fatos])
+        with self.assertRaises(ErroDeIsolamento):
+            self.aplicar("## fato\n- conteudo: de fora\n- fonte: x\n- confianca: alta\n- setor_origem: S01\n",
+                         setor="M01", emitido_por="S01")
+        with self.assertRaises(ErroDePatch):
+            self.aplicar("## psique\n- evento: elogio\n- intensidade: normal\n", setor="M01", emitido_por="HARVEY")
+
+    def test_relacao_entre_membros_evolui_na_camada6_de_cada_um(self) -> None:
+        antes = next(p for p in self.projeto.psique_de("LOBO")[1]["pessoas"] if p.get("nome") == "Harvey Specter")
+        self.aplicar("## psique\n- evento: elogio\n- intensidade: normal\n- pessoa: Harvey Specter\n- descricao: fechou a cláusula\n",
+                     setor="LOBO", emitido_por="LOBO")
+        depois = next(p for p in self.projeto.psique_de("LOBO")[1]["pessoas"] if p.get("nome") == "Harvey Specter")
+        self.assertGreater(float(depois.get("confianca")), float(antes.get("confianca")))
+        self.projeto.empacotar(hoje=HOJE)
+        cerebro = (self.raiz / "upload_mesas" / "M01" / "M01_CEREBRO.md").read_text(encoding="utf-8")
+        self.assertIn("## Módulo — Relações à mesa", cerebro)
+        self.assertIn("- sobre Harvey Specter: confiança", cerebro)
+        self.assertIn("- sobre Jordan Belfort, o Lobo: confiança", cerebro)
+
+    def test_sala_da_mesa_tem_instrucoes_nucleos_cerebros_e_bibliotecas(self) -> None:
+        gerados = self.projeto.empacotar(hoje=HOJE)
+        nomes = {str(p.relative_to(self.raiz)) for p in gerados}
+        for esperado in ("00_INSTRUCOES_DA_MESA.md", "01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md",
+                         "01_ADENDO_PARA_O_SEU_HARVEY.md", "01_NUCLEO_HARVEY.md", "01_ADENDO_PARA_O_SEU_LOBO.md",
+                         "01_NUCLEO_LOBO.md", "02_PROTOCOLO_DO_CEREBRO.md", "03_MANIFESTO.md", "M01_CEREBRO.md",
+                         "HARVEY_CEREBRO.md", "LOBO_CEREBRO.md", "S01_ROTA_DE_RENDA.md"):
+            self.assertIn(f"upload_mesas/M01/{esperado}", nomes)
+        self.assertEqual(sum(1 for n in nomes if n.startswith("upload_mesas/M01/BIB_L")), 6)
+        self.assertEqual(sum(1 for n in nomes if n.startswith("upload_mesas/M01/BIB_0") or n.startswith("upload_mesas/M01/BIB_1")), 10)
+        self.assertNotIn("upload_mesas/M01/NEX_CEREBRO.md", nomes)
+        manifesto = (self.raiz / "upload_mesas" / "M01" / "03_MANIFESTO.md").read_text(encoding="utf-8")
+        self.assertIn("mesa de HARVEY, LOBO", manifesto)
+
+    def test_mesa_nao_trava_e_aparece_para_atlas(self) -> None:
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.travar("M01", autorizado_por_milan=True)
+        registros = registro_global(self.projeto, hoje=HOJE)
+        mesa = next(r for r in registros if r.get("nome") == "A Mesa: Harvey e o Lobo")
+        self.assertEqual(mesa.get("tipo"), "mesa")
+        self.assertIn("HARVEY, LOBO", mesa.get("responsavel"))
+
+    def test_criar_outra_mesa_e_modular(self) -> None:
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.criar_mesa("M02", ["BATMAN"], hoje=HOJE)
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.criar_mesa("M02", ["BATMAN", "CORINGA"], hoje=HOJE)
+        with self.assertRaises(ErroDeValidacao):
+            self.projeto.criar_mesa("M01", ["BATMAN", "NEX"], hoje=HOJE)
+        pasta = self.projeto.criar_mesa("M02", ["BATMAN", "NEX"], hoje=HOJE)
+        self.assertTrue((pasta / "INSTRUCOES_MESA.md").exists())
+        self.assertEqual(self.projeto.quem_fecha("M02"), "BATMAN")
+        self.assertEqual(self.projeto.validar(), [])
+        nex = self.projeto.psique_de("NEX")[1]
+        self.assertTrue(any(p.get("nome") == "Batman" for p in nex["pessoas"]))
+        self.assertEqual(self.projeto.entrada("M02")["nome"], "A Mesa: Batman e NEXARION")
+        gerados = self.projeto.empacotar(hoje=HOJE)
+        nomes = {str(p.relative_to(self.raiz)) for p in gerados}
+        self.assertIn("upload_mesas/M02/01_INSTRUCOES_BATMAN.md", nomes)
+        self.assertIn("upload_mesas/M02/00_INSTRUCOES_DA_MESA.md", nomes)
+        eventos = [e for e in self.projeto.diario.ler("eventos") if e.get("evento") == "NOVA_MESA"]
+        self.assertEqual([e.get("componente") for e in eventos][-1], "M02")

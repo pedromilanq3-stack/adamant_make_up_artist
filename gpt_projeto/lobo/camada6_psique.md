@@ -131,3 +131,12 @@ O cérebro vivo do Lobo. Ninguém edita à mão: o Núcleo calcula tudo a partir
 - disciplina_pessoal_ultima_pratica: 2026-09-04
 - escuta_paciente: 24
 - escuta_paciente_ultima_pratica: 2026-09-04
+
+## P-001
+- nome: Harvey Specter
+- confianca: 30
+- afeto: 0
+- paixao: 0
+- influencia: 15
+- eventos: 0
+- ultimo_evento: sentou à mesa M01 em 2026-09-04; ainda não sei quem é

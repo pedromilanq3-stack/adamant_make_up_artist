@@ -8,6 +8,10 @@ Gerado em 2026-09-04 pelo Núcleo. Se um arquivo de setor no Projeto tiver hash 
 |---|---|---|---|---|---|---|---|
 | S01 | Rota de Renda | Ativo | v001 | e100041c5166 | 6 | 1 | 1 |
 
+## A Mesa: Harvey e o Lobo (M01, mesa de HARVEY, LOBO)
+
+Status **Ativo**, cérebro modular compartilhado (M01_CEREBRO.md), versão v001: 1 fatos, 1 hipóteses, 0 lições, 1 regras de convivência vigentes. Cada membro mantém o próprio cérebro.
+
 ## Harvey Specter (HARVEY)
 
 Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 6 fatos, 3 hipóteses, 4 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.

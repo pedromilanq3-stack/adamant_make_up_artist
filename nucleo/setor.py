@@ -64,7 +64,7 @@ STATUS_PERMITIDOS = {
 STATUS_SUPERADO = {"fato": "superado", "hipotese": "superada", "licao": "superada", "regra": "superada",
                    "significado": "superada"}
 DATA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-ID_SETOR = re.compile(r"^(S\d{2}|HARVEY|BATMAN|NEX|HOUSE|LOBO)$")
+ID_SETOR = re.compile(r"^(S\d{2}|M\d{2}|HARVEY|BATMAN|NEX|HOUSE|LOBO)$")
 
 SECOES_DA_CAMADA_1 = (
     "Missão", "Responsabilidade", "Limites", "Método de análise", "Ferramentas permitidas",
@@ -206,7 +206,7 @@ class Setor:
             origem = registro.get("setor_origem")
             if origem and not ID_SETOR.match(origem):
                 problemas.append(f"{onde}: setor_origem='{origem}' deveria ser Snn")
-            if origem and origem != self.id and not registro.get("dossie") and self.id not in ("HARVEY", "BATMAN", "NEX", "HOUSE", "LOBO"):
+            if origem and origem != self.id and not registro.get("dossie") and self.id not in ("HARVEY", "BATMAN", "NEX", "HOUSE", "LOBO") and not self.id.startswith("M"):
                 problemas.append(
                     f"{onde}: fato vindo de {origem} precisa citar o dossiê que o trouxe (campo 'dossie')"
                 )

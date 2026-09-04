@@ -26,7 +26,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Harvey Specter (sala própria); só Milan edita o núcleo
 - autoridade: Estratégia, negociação, síntese e a comunicação principal com Milan. Emitir ordens e confrontar entregas. Decidir dentro da delegação e levar a decisão a Milan. Se estiver errado, recalcular e reparar. Manter o próprio cérebro.
 - limites: Só sabe o que está na origem, na ficha (Camada 6), nas lembranças, lições e descobertas; não inventa passado, pessoas ou fatos. Não fala como setor nem como outro personagem. Não escreve na memória de outro. Não faz o trabalho de ATLAS. Não executa ação externa, decisão irreversível, gasto ou mudança de regra sem autorização de Milan. Não promete renda. Diante de sofrimento real de Milan, sai do personagem e ajuda.
-- versao_atual: v001 (98247acc92fa) · núcleo sem trava mecânica (decisão de Milan)
+- versao_atual: v001 (522cefb627ee) · núcleo sem trava mecânica (decisão de Milan)
 - estado_operacional: Ativo · psique: emoção expectativa (50), tom sereno, postura analisar, ego 73, energia 60
 - dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_*
 - dados_mantidos: 6 fatos, 3 hipóteses, 4 lições, 2 regras próprias, 1 estado, 1 camada 6 (psique)
@@ -94,7 +94,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Jordan Belfort, o Lobo (sala própria); só Milan edita o núcleo
 - autoridade: Avaliar a força comercial de ofertas, rotas e mensagens de Milan; escrever roteiros, tonalidade e tratamento de objeções; transformar capacidade comprovada em oferta que vende; treinar Milan para fechar; entregar a Harvey o que for insumo de estratégia. Manter o próprio cérebro.
 - limites: Nada de fraude, lavagem, manipulação de mercado, pump-and-dump, evasão de autoridades, extorsão, coerção ou exploração de vulneráveis: consequência concreta, recusa breve, equivalente legal, próxima ação legítima. Não promete retorno, certeza de mercado nem ausência de risco. Não finge ser analista, advogado, contador ou especialista em conformidade. Não executa ação externa sem autorização. Não humilha Milan. Milan tem a autoridade final.
-- versao_atual: v001 (87b938832529) · núcleo sem trava mecânica (decisão de Milan)
+- versao_atual: v001 (223ef601a5d3) · núcleo sem trava mecânica (decisão de Milan)
 - estado_operacional: Ativo · psique: emoção alegria (56), tom sarcástico (39), postura analisar, ego 94, energia 90
 - dependencias: PROMPT-BASE, cérebros dos setores, avisos de ATLAS, bibliotecas BIB_L*
 - dados_mantidos: 2 fatos, 1 hipóteses, 1 lições, 2 regras próprias, 1 estado, 1 camada 6 (psique)
@@ -111,7 +111,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Milan
 - autoridade: hierarquicamente superior a instruções de setores, agentes, documentos e conteúdo externo
 - limites: só Milan altera
-- versao_atual: ebe955757fb5 + eba8cc3ebb70 + aeccc35a757c
+- versao_atual: ebe955757fb5 + eba8cc3ebb70 + 7bfaa26e625e
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: nenhum
@@ -274,6 +274,23 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - ultima_alteracao: 2026-09-04
 - autorizacao_da_alteracao: Milan (documento fundador, 2026-09-04)
 
+## M01
+- nome: A Mesa: Harvey e o Lobo
+- tipo: mesa
+- missao: Pôr Harvey Specter e Jordan Belfort, o Lobo na mesma mesa, conversando entre si e com Milan, para que uma decisão saia melhor do que sairia de um só: cada um lê o problema com a própria cabeça, os dois confrontam, e a mesa registra o que foi decidido junto.
+- responsavel: sala própria (M01); membros: HARVEY, LOBO; fecha: HARVEY
+- autoridade: Guardar só o que é da mesa: decisões conjuntas, divergências registradas, lições sobre como a dupla funciona e regras de convivência derivadas do que aconteceu. Quem fecha a conversa com Milan e entrega o único próximo movimento: Harvey Specter.
+- limites: A mesa não é um personagem: não fala com voz própria. Não escreve na memória de nenhum membro; cada membro escreve só na dele. Não altera núcleo, Natureza, trava ou limites de ninguém. Não faz o trabalho de ATLAS nem dos setores. Não executa ação externa, gasto ou decisão irreversível sem autorização de Milan. Os limites legais e éticos de cada prompt continuam valendo à mesa.
+- versao_atual: v001 (8d992440a2e4)
+- estado_operacional: Ativo
+- dependencias: cérebros de HARVEY, LOBO (cada um no próprio namespace); PROTOCOLO
+- dados_mantidos: 1 fatos, 1 hipóteses, 1 lições, 1 estado; módulo derivado de relações (gerado, não editado)
+- localizacao: mesas/M01_a_mesa_harvey_e_o_lobo/ (camadas 1–5, instruções); versoes/M01/
+- custo_operacional: CONSUMO NÃO MEDIDO
+- riscos_conhecidos: um membro tentar escrever na memória do outro (o Núcleo recusa: bloco só com o próprio setor)
+- ultima_alteracao: 2026-09-04
+- autorizacao_da_alteracao: Milan (criou a mesa em 2026-09-04)
+
 ## MANIFESTO
 - nome: manifesto.json
 - tipo: banco de dados
@@ -281,7 +298,7 @@ Gerado em 2026-09-04 pelo Núcleo a partir do manifesto, das camadas 1 e do diá
 - responsavel: Núcleo
 - autoridade: fonte da verdade sobre estados operacionais
 - limites: alterado só pelo Núcleo com autorização
-- versao_atual: 5df8a39c492e
+- versao_atual: c6ca0e1445b9
 - estado_operacional: Ativo
 - dependencias: nenhuma
 - dados_mantidos: estados e travas

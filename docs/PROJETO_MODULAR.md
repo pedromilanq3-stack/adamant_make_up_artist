@@ -112,7 +112,7 @@ marca o que ATLAS já viu, e o arquivo de diferenças traz só o que mudou desde
 2. colar a ordem      na sala do setor; o setor trabalha com seus agentes
 3. entrega            o setor termina com ```entrega``` (para Harvey) e ```aprendizado``` (memória)
 4. aplicar            python -m nucleo aplicar resposta.md      (o Núcleo acha o bloco sozinho)
-5. empacotar          python -m nucleo empacotar   (salas de Harvey e dos setores)
+5. empacotar          python -m nucleo empacotar   (salas de Harvey, dos personagens, das mesas e dos setores)
                       python -m nucleo atlas       (sala de ATLAS, quando for auditar)
 6. reenviar           substitua em cada Projeto os arquivos que mudaram
 7. colar a entrega    na sala de Harvey; ele confronta, consolida e dá a Milan um próximo movimento
@@ -260,6 +260,35 @@ Tudo passa pelo mesmo `nucleo aplicar`, entra no diário com versão e baseline,
 aparece no Registro Global de ATLAS. `nucleo metricas` mostra regras vigentes e
 superadas: é o termômetro de que o método de Harvey está evoluindo.
 
+## 4a-bis-2. Mesas: dois personagens juntos, com cérebro modular compartilhado
+
+Uma **mesa** (`Mnn`) é uma sala onde dois ou mais personagens sentam juntos e conversam
+entre si e com Milan. Ninguém vira personagem novo: cada membro continua com as próprias
+instruções, o próprio núcleo, a própria Natureza e o próprio cérebro, no próprio namespace.
+A mesa acrescenta um módulo compartilhado, `Mnn_CEREBRO.md`, com cinco camadas próprias
+(núcleo da mesa sem trava, fatos decididos juntos, divergências como hipóteses de cada
+lado com teste, lições sobre como a dupla funciona e regras de convivência RG-nnn, estado)
+e um módulo derivado, **Relações à mesa**, gerado a cada `empacotar` a partir da Camada 6
+de cada membro: o que cada um sente pelo outro (confiança, afeto, paixão, influência).
+
+- `nucleo mesa criar M01 HARVEY LOBO --nome "A Mesa: Harvey e o Lobo"` abre a mesa: gera
+  as camadas, as instruções da sala (`INSTRUCOES_MESA.md`, até 8000 caracteres), guarda a
+  baseline v001, registra o evento NOVA_MESA para ATLAS e apresenta os membros uns aos
+  outros na Camada 6 de cada um (confiança inicial baixa: "ainda não sei quem é").
+- Qualquer combinação serve (`mesa criar M02 BATMAN NEX`): é modular. Quem fecha com Milan é
+  Harvey, se estiver à mesa; senão, o primeiro membro.
+- Aprendizado: um bloco com `setor: Mnn` (só o que é da mesa; fato de membro entra sem
+  dossiê; fato de quem não senta à mesa é recusado) e um bloco por membro com o `setor`
+  dele (o que mudou nele, inclusive `## psique` com `pessoa:` o outro). Um membro nunca
+  emite bloco com o `setor` do outro.
+- `mesa listar`, `estado Mnn`, `versoes listar` e o Registro Global de ATLAS mostram a mesa
+  como componente do tipo "mesa". `travar Mnn` é recusado: quem os membros são está no
+  núcleo de cada um.
+- A sala gerada (`upload_mesas/Mnn/`) leva `00_INSTRUCOES_DA_MESA.md` (Instruções do
+  Projeto), as instruções originais, adendos e núcleos de cada membro, o protocolo, o
+  manifesto, `Mnn_CEREBRO.md`, os cérebros e as bibliotecas dos membros, os setores e,
+  quando existirem, avisos de ATLAS e dossiês.
+
 ## 4a-ter. A mente de Batman: sanidade, fases e o Coringa
 
 Batman tem a Camada 6, `batman/camada6_mente.md`: seis variáveis de 0 a 100
@@ -395,6 +424,7 @@ gpt_projeto/
     original/                     origem.txt, ficha-inicial.md, regras.md, harvey-specter.json
     camada1..6_*.md               cérebro procedural (RG-nnn na camada 4; psique na camada 6)
     bibliotecas/BIB_01..10.md     habilidades e comunicação, só com o que a origem diz
+  mesas/Mnn_<nome>/               uma pasta por mesa: camada1..5 (cérebro compartilhado) e INSTRUCOES_MESA.md
   nex/
     NUCLEO_NEX.md                 Prompt Mestre v2.0 (texto de Milan), sem trava mecânica
     ADENDO_NEX.md                 adendo para o fim do prompt que já está no GPT

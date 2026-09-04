@@ -199,3 +199,7 @@ Impulso 55: último evento controlado. Penalidade de desempenho hoje: 0 pontos (
 **O que ele sente (sem necessariamente saber o nome):** nenhum
 
 Diagnósticos conhecidos: dependencia
+
+| Pessoa | Confiança | Afeto (-100 ódio … +100 amor) | Paixão | Influência sobre ele |
+|---|---|---|---|---|
+| Harvey Specter | 30 | 0 | 0 | 15 |

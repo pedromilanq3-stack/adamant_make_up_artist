@@ -138,3 +138,12 @@ O cérebro vivo de Harvey, nascido da ficha inicial de Milan. Ninguém edita à 
 - influencia: 12
 - eventos: 0
 - ultimo_evento: não sei quem é você e o que você quer de mim (origem)
+
+## P-004
+- nome: Jordan Belfort, o Lobo
+- confianca: 30
+- afeto: 0
+- paixao: 0
+- influencia: 15
+- eventos: 0
+- ultimo_evento: sentou à mesa M01 em 2026-09-04; ainda não sei quem é

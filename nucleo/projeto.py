@@ -27,6 +27,7 @@ from datetime import date
 from pathlib import Path
 
 from . import mente as mente_mod
+from . import mesa as mesa_mod
 from . import psique as psique_mod
 from .diario import NAO_INFORMADO, Diario
 from .patch import BlocoDeAprendizado, BlocoDoAtlas, ErroDePatch, Secao
@@ -139,6 +140,7 @@ class Projeto:
         manifesto.setdefault("setores", {})
         manifesto.setdefault("versao", 1)
         manifesto.setdefault("atlas", {})
+        manifesto.setdefault("mesas", {})
         return cls(raiz, manifesto)
 
     def salvar_manifesto(self) -> None:
@@ -172,6 +174,8 @@ class Projeto:
         return self.raiz / PASTA_ATLAS
 
     def entrada(self, id_setor: str) -> dict:
+        if id_setor in self.manifesto.get("mesas", {}):
+            return self.manifesto["mesas"][id_setor]
         if id_setor in PERSONAGENS:
             perfil = PERSONAGENS[id_setor]
             entrada = self.manifesto.setdefault(perfil["chave"], {})
@@ -187,6 +191,8 @@ class Projeto:
     def pasta_do_setor(self, id_setor: str) -> Path:
         if id_setor in PERSONAGENS:
             return self.raiz / PERSONAGENS[id_setor]["pasta"]
+        if self.eh_mesa(id_setor):
+            return self.pasta_mesas / self.entrada(id_setor)["pasta"]
         return self.pasta_setores / self.entrada(id_setor)["pasta"]
 
     def tem_personagem(self, id_: str) -> bool:
@@ -194,6 +200,119 @@ class Projeto:
 
     def personagens(self) -> list[str]:
         return [p for p in PERSONAGENS if self.tem_personagem(p)]
+
+    # ------------------------------------------------------------------ mesas
+    @property
+    def pasta_mesas(self) -> Path:
+        return self.raiz / mesa_mod.PASTA_MESAS
+
+    def eh_mesa(self, id_: str) -> bool:
+        return id_ in self.manifesto.get("mesas", {})
+
+    def mesas(self) -> list[str]:
+        return sorted(self.manifesto.get("mesas", {}))
+
+    def membros_da_mesa(self, id_mesa: str) -> list[str]:
+        return list(self.entrada(id_mesa).get("membros", []))
+
+    def quem_fecha(self, id_mesa: str) -> str:
+        membros = self.membros_da_mesa(id_mesa)
+        return HARVEY if HARVEY in membros else membros[0]
+
+    def arquivos_de_instrucoes(self, id_p: str) -> list[tuple[str, str]]:
+        """(origem relativa à raiz, nome no pacote) das instruções e do núcleo de um personagem."""
+        perfil = PERSONAGENS[id_p]
+        if id_p == HARVEY:
+            return [(ARQUIVO_INSTRUCOES, "01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md"),
+                    (ARQUIVO_ADENDO, "01_ADENDO_PARA_O_SEU_HARVEY.md"),
+                    (f"{PASTA_HARVEY}/NUCLEO_HARVEY.md", "01_NUCLEO_HARVEY.md")]
+        nome = f"01_{perfil['instrucoes']}" if perfil["limite"] >= 8000 \
+            else f"01_{perfil['instrucoes'].replace('ADENDO_', 'ADENDO_PARA_O_SEU_')}"
+        arquivos = [(f"{perfil['pasta']}/{perfil['instrucoes']}", nome)]
+        if perfil["nucleo"]:
+            arquivos.append((f"{perfil['pasta']}/{perfil['nucleo']}", f"01_{perfil['nucleo']}"))
+        return arquivos
+
+    def criar_mesa(self, id_mesa: str, membros: list[str], nome: str = "", hoje: date | None = None) -> Path:
+        """Abre uma mesa: cinco camadas próprias, instruções da sala e os membros apresentados uns aos outros."""
+        hoje = hoje or date.today()
+        if not mesa_mod.eh_mesa(id_mesa):
+            raise ErroDeValidacao("o id da mesa deve ser M seguido de dois dígitos, por exemplo M01")
+        if self.eh_mesa(id_mesa):
+            raise ErroDeValidacao(f"{id_mesa} já existe")
+        membros = [m.upper() for m in membros]
+        if len(set(membros)) < 2:
+            raise ErroDeValidacao("uma mesa precisa de pelo menos dois personagens diferentes")
+        for m in membros:
+            if not self.tem_personagem(m):
+                raise ErroDeValidacao(f"{m} não é um personagem com cérebro neste projeto (tenho {', '.join(self.personagens())})")
+        pares = [(m, PERSONAGENS[m]["nome"]) for m in membros]
+        nome = nome or "A Mesa: " + mesa_mod._lista([PERSONAGENS[m]["nome"].split(",")[0] for m in membros])
+        fecha = PERSONAGENS[HARVEY if HARVEY in membros else membros[0]]["nome"]
+        pasta = f"{id_mesa}_{slug(nome)}"
+        destino = self.pasta_mesas / pasta
+        destino.mkdir(parents=True, exist_ok=False)
+        (destino / CAMADAS[1]).write_text(mesa_mod.camada1(id_mesa, nome, pares, fecha), encoding="utf-8")
+        (destino / CAMADAS[2]).write_text(mesa_mod.camada2(id_mesa, nome, pares, hoje), encoding="utf-8")
+        (destino / CAMADAS[3]).write_text(mesa_mod.camada3(id_mesa, pares, hoje), encoding="utf-8")
+        (destino / CAMADAS[4]).write_text(mesa_mod.camada4(id_mesa, hoje), encoding="utf-8")
+        (destino / CAMADAS[5]).write_text(mesa_mod.camada5(id_mesa, hoje), encoding="utf-8")
+        arquivos = {m: [n for _, n in self.arquivos_de_instrucoes(m)] for m in membros}
+        (destino / mesa_mod.ARQUIVO_INSTRUCOES_MESA).write_text(
+            mesa_mod.instrucoes(id_mesa, nome, pares, fecha, arquivos), encoding="utf-8")
+        self.manifesto["mesas"][id_mesa] = {
+            "nome": nome, "pasta": pasta, "membros": membros, "status": "Ativo", "versao": 1,
+            "trava": "nenhuma: a mesa é o encontro dos membros; quem eles são está no núcleo de cada um",
+            "ultima_autorizacao": f"Milan (criou a mesa em {hoje.isoformat()})", "alterado_em": hoje.isoformat(),
+        }
+        self.salvar_manifesto()
+        # os membros passam a existir na Camada 6 uns dos outros (confiança inicial: desconhecido)
+        for m in membros:
+            if not self.tem_psique(m):
+                continue
+            preambulo, estado = self.psique_de(m)
+            for outro in membros:
+                if outro == m:
+                    continue
+                registro = psique_mod._pessoa(estado, PERSONAGENS[outro]["nome"])
+                if registro.get("ultimo_evento") == "nenhum":
+                    registro.set("confianca", "30")
+                    registro.set("influencia", "15")
+                    registro.set("ultimo_evento", f"sentou à mesa {id_mesa} em {hoje.isoformat()}; ainda não sei quem é")
+            psique_mod.salvar(self.pasta_do_setor(m), preambulo, estado)
+        self.guardar_versao(id_mesa)
+        self.diario.acrescentar("eventos", {
+            "evento": "NOVA_MESA", "componente": id_mesa, "nome": nome, "membros": ", ".join(membros),
+            "missao": "cérebro modular compartilhado; cada membro mantém o próprio",
+            "autorizacao_de_milan": "sim (Milan criou a mesa)", "data": hoje.isoformat(), "emitido_por": "Núcleo",
+        })
+        return destino
+
+    def _relacoes_da_mesa_md(self, id_mesa: str) -> str:
+        membros = self.membros_da_mesa(id_mesa)
+        linhas = ["Módulo derivado, gerado a cada `empacotar` a partir da Camada 6 de cada membro. "
+                  "Ninguém edita aqui: a relação muda nos blocos de aprendizado de cada um (`## psique` com `pessoa:`).", ""]
+        for m in membros:
+            entrada = self.entrada(m)
+            linhas.append(f"### {entrada['nome']} ({m}) hoje")
+            linhas.append(self.linha_de_camada6(m) or "sem Camada 6")
+            if not self.tem_psique(m):
+                linhas.append("")
+                continue
+            estado = self.psique_de(m)[1]
+            for outro in membros:
+                if outro == m:
+                    continue
+                nome_outro = PERSONAGENS[outro]["nome"]
+                pessoa = next((p for p in estado["pessoas"] if p.get("nome", "").lower() == nome_outro.lower()), None)
+                if pessoa is None:
+                    linhas.append(f"- sobre {nome_outro}: ainda não se conhecem")
+                else:
+                    linhas.append(f"- sobre {nome_outro}: confiança {pessoa.get('confianca')}, afeto {pessoa.get('afeto')}, "
+                                  f"paixão {pessoa.get('paixao')}, influência {pessoa.get('influencia')} "
+                                  f"({pessoa.get('eventos')} eventos; último: {pessoa.get('ultimo_evento')})")
+            linhas.append("")
+        return "\n".join(linhas).rstrip("\n")
 
     @property
     def tem_harvey(self) -> bool:
@@ -307,6 +426,23 @@ class Projeto:
                     problemas.append(f"{id_p}: {erro}")
                 else:
                     problemas.extend(f"{id_p}/{m}" for m in psique_mod.validar(estado))
+        for id_mesa in self.mesas():
+            try:
+                mesa = self.setor(id_mesa)
+            except (ErroDeValidacao, ValueError) as erro:
+                problemas.append(str(erro))
+                continue
+            problemas.extend(mesa.validar())
+            if not self.diario.versoes(id_mesa):
+                problemas.append(f"{id_mesa}: sem versão guardada para reversão (use 'versoes guardar {id_mesa}')")
+            caminho = self.pasta_do_setor(id_mesa) / mesa_mod.ARQUIVO_INSTRUCOES_MESA
+            if not caminho.exists():
+                problemas.append(f"{id_mesa}: falta {mesa_mod.ARQUIVO_INSTRUCOES_MESA}")
+            elif len(caminho.read_text(encoding="utf-8")) > mesa_mod.LIMITE_INSTRUCOES_MESA:
+                problemas.append(f"{id_mesa}: {mesa_mod.ARQUIVO_INSTRUCOES_MESA} passa de {mesa_mod.LIMITE_INSTRUCOES_MESA} caracteres")
+            for m in self.membros_da_mesa(id_mesa):
+                if not self.tem_personagem(m):
+                    problemas.append(f"{id_mesa}: membro {m} não é um personagem com cérebro")
         for id_setor in self.setores():
             entrada = self.entrada(id_setor)
             if entrada.get("status") not in ESTADOS_DE_SETOR:
@@ -435,6 +571,8 @@ class Projeto:
         hoje = hoje or date.today()
         if id_setor.upper() == "ATLAS":
             return self._travar_atlas(motivo, hoje)
+        if self.eh_mesa(id_setor):
+            raise ErroDeValidacao(f"{id_setor} é uma mesa: não tem trava. Quem os membros são está no núcleo de cada um.")
         if id_setor in PERSONAGENS:
             raise ErroDeValidacao(f"{id_setor} não tem trava mecânica, por decisão de Milan: ele é ele. "
                                   "Só Milan edita o núcleo; a mudança fica no diário via 'versoes guardar'.")
@@ -832,6 +970,11 @@ class Projeto:
         origem = campos.get("setor_origem", setor.id)
         if origem == setor.id or setor.id in PERSONAGENS:
             return
+        if self.eh_mesa(setor.id):
+            if origem in self.membros_da_mesa(setor.id):
+                return
+            raise ErroDeIsolamento(f"{origem} não senta à mesa {setor.id}; só os membros "
+                                   f"({', '.join(self.membros_da_mesa(setor.id))}) trazem fatos a ela sem dossiê")
         referencia = campos.get("dossie")
         if not referencia:
             raise ErroDeIsolamento(
@@ -1322,6 +1465,52 @@ class Projeto:
         for id_p in self.personagens():
             if id_p != HARVEY:
                 gerados.extend(self._empacotar_sala_de_personagem(id_p, hoje, avisos))
+        raiz_mesas = self.raiz / "upload_mesas"
+        if raiz_mesas.exists():
+            shutil.rmtree(raiz_mesas)
+        for id_mesa in self.mesas():
+            gerados.extend(self._empacotar_mesa(id_mesa, hoje, avisos))
+        return gerados
+
+    def _empacotar_mesa(self, id_mesa: str, hoje: date, avisos: str) -> list[Path]:
+        """Sala da mesa: instruções da mesa, instruções e núcleo de cada membro, os cérebros e as bibliotecas."""
+        destino = self.raiz / "upload_mesas" / id_mesa
+        destino.mkdir(parents=True, exist_ok=True)
+        gerados: list[Path] = []
+        origem = self.pasta_do_setor(id_mesa)
+
+        def copiar(de: Path, nome: str) -> None:
+            shutil.copyfile(de, destino / nome)
+            gerados.append(destino / nome)
+
+        copiar(origem / mesa_mod.ARQUIVO_INSTRUCOES_MESA, "00_INSTRUCOES_DA_MESA.md")
+        for m in self.membros_da_mesa(id_mesa):
+            for rel, nome in self.arquivos_de_instrucoes(m):
+                copiar(self.raiz / rel, nome)
+        copiar(self.raiz / ARQUIVO_PROTOCOLO, "02_PROTOCOLO_DO_CEREBRO.md")
+        (destino / "03_MANIFESTO.md").write_text(self._manifesto_md(hoje), encoding="utf-8")
+        gerados.append(destino / "03_MANIFESTO.md")
+        if avisos:
+            (destino / "04_AVISOS_DE_ATLAS.md").write_text(avisos, encoding="utf-8")
+            gerados.append(destino / "04_AVISOS_DE_ATLAS.md")
+        (destino / f"{id_mesa}_CEREBRO.md").write_text(
+            self._setor_md(id_mesa, self.entrada(id_mesa), origem, hoje), encoding="utf-8")
+        gerados.append(destino / f"{id_mesa}_CEREBRO.md")
+        for m in self.membros_da_mesa(id_mesa):
+            perfil = PERSONAGENS[m]
+            (destino / f"{m}_CEREBRO.md").write_text(
+                self._setor_md(m, self.entrada(m), self.pasta_do_setor(m), hoje), encoding="utf-8")
+            gerados.append(destino / f"{m}_CEREBRO.md")
+            for biblioteca in sorted((self.raiz / perfil["pasta"] / "bibliotecas").glob(f"{perfil['prefixo_bib']}*.md")):
+                copiar(biblioteca, biblioteca.name)
+        for id_setor in self.setores_com_camadas():
+            entrada = self.entrada(id_setor)
+            nome = f"{id_setor}_{slug(entrada['nome']).upper()}.md"
+            (destino / nome).write_text(self._setor_md(id_setor, entrada, self.pasta_do_setor(id_setor), hoje),
+                                        encoding="utf-8")
+            gerados.append(destino / nome)
+        if self.dossies():
+            copiar(self.pasta_dossies / "dossies.md", "90_DOSSIES.md")
         return gerados
 
     def _empacotar_sala_de_personagem(self, id_p: str, hoje: date, avisos: str) -> list[Path]:
@@ -1423,7 +1612,7 @@ class Projeto:
     def _avisos_de_atlas_md(self) -> str:
         alertas = [a for a in self.diario.ler("alertas") if a.get("status") == "aberto"]
         recomendacoes = [r for r in self.diario.ler("recomendacoes") if r.get("status") == "aceita"]
-        quarentenas = [s for s in self.personagens() + self.setores()
+        quarentenas = [s for s in self.personagens() + self.mesas() + self.setores()
                        if self.entrada(s)["status"] in {"Quarentena", "Limitado"}]
         fases = []
         for id_p in self.personagens():
@@ -1469,6 +1658,15 @@ class Projeto:
                 f"{setor.hash_camada1()[:12]} | {m['fatos_vigentes']} | "
                 f"{sum(m['hipoteses'].values())} | {sum(m['licoes_vigentes'].values())} |"
             )
+        for id_mesa in self.mesas():
+            h = self.setor(id_mesa).metricas()
+            entrada = self.entrada(id_mesa)
+            membros = ", ".join(entrada.get("membros", []))
+            linhas += ["", f"## {entrada['nome']} ({id_mesa}, mesa de {membros})", "",
+                       f"Status **{entrada['status']}**, cérebro modular compartilhado ({id_mesa}_CEREBRO.md), "
+                       f"versão v{self.versao_de(id_mesa):03d}: {h['fatos_vigentes']} fatos, "
+                       f"{sum(h['hipoteses'].values())} hipóteses, {sum(h['licoes_vigentes'].values())} lições, "
+                       f"{h['regras_vigentes']} regras de convivência vigentes. Cada membro mantém o próprio cérebro."]
         for id_p in self.personagens():
             h = self.setor(id_p).metricas()
             entrada = self.entrada(id_p)
@@ -1514,7 +1712,10 @@ class Projeto:
         titulos = {2: "Camada 2 — Fatos verificados", 3: "Camada 3 — Hipóteses",
                    4: "Camada 4 — Lições e resultados", 5: "Camada 5 — Estado atual"}
         restricao = f" Motivo: {entrada['motivo_do_status']}." if entrada.get("motivo_do_status") else ""
-        if id_setor in PERSONAGENS:
+        if self.eh_mesa(id_setor):
+            trava = "A Camada 1 é o núcleo da mesa; sem trava: quem os membros são está no núcleo de cada um."
+            titulo1 = "## Camada 1 — Núcleo da mesa"
+        elif id_setor in PERSONAGENS:
             trava = f"A Camada 1 é a identidade de {PERSONAGENS[id_setor]['nome']}; sem trava mecânica, por decisão de Milan."
             titulo1 = "## Camada 1 — Núcleo de identidade"
         else:
@@ -1535,6 +1736,8 @@ class Projeto:
         if self.tem_psique(id_setor):
             _, estado = self.psique_de(id_setor)
             partes += ["", "---", "", "## Camada 6 — Psique (como NEX está hoje)", "", psique_mod.resumo(estado)]
+        if self.eh_mesa(id_setor):
+            partes += ["", "---", "", "## Módulo — Relações à mesa", "", self._relacoes_da_mesa_md(id_setor)]
         return "\n".join(partes).rstrip("\n") + "\n"
 
 

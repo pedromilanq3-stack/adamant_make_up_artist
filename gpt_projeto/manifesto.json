@@ -78,5 +78,20 @@
     "ultima_autorizacao": "Milan (PROMPT-MESTRE — JORDAN BELFORT, 2026-09-04)",
     "alterado_em": "2026-09-04",
     "sala": "Projeto próprio do Lobo de Milan (adendo + arquivos; o prompt-mestre já está lá)"
+  },
+  "mesas": {
+    "M01": {
+      "nome": "A Mesa: Harvey e o Lobo",
+      "pasta": "M01_a_mesa_harvey_e_o_lobo",
+      "membros": [
+        "HARVEY",
+        "LOBO"
+      ],
+      "status": "Ativo",
+      "versao": 1,
+      "trava": "nenhuma: a mesa é o encontro dos membros; quem eles são está no núcleo de cada um",
+      "ultima_autorizacao": "Milan (criou a mesa em 2026-09-04)",
+      "alterado_em": "2026-09-04"
+    }
   }
 }

@@ -16,6 +16,7 @@
     mente pratica NEX --habilidade redes_e_protocolos --resultado sucesso --dificuldade dificil
     mente acaso NEX [--quantos 3] [--semente 42]     (o acaso age; atalhos de clique em gpt_projeto/atalhos/)
     testar HOUSE [--quantos 5]                       (estímulos dos testes cegos em ordem aleatória; chave à parte)
+    mesa listar | criar M01 HARVEY LOBO [--nome "..."]   (mesa: dois ou mais personagens, cérebro modular compartilhado)
     setor listar | propor | aprovar | piloto | ativar | limitar | liberar | pausar | reativar | encerrar
     setor quarentena S02 --por ATLAS --motivo "..."   (preventiva; só Milan libera)
     dossie listar | autorizar D-001 | recusar D-001
@@ -63,7 +64,7 @@ def cmd_validar(args: argparse.Namespace) -> int:
 
 def cmd_estado(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
-    ids = [args.setor] if args.setor else projeto.setores()
+    ids = [args.setor] if args.setor else projeto.setores() + projeto.mesas()
     for id_setor in ids:
         entrada = projeto.entrada(id_setor)
         print(f"{id_setor} — {entrada['nome']} [{entrada['status']}] {projeto.rotulo_de_versao(id_setor) if entrada['status'] != 'Proposto' else ''}")
@@ -186,7 +187,7 @@ def cmd_versoes(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     try:
         if args.acao == "listar":
-            todos = projeto.personagens() + projeto.setores_com_camadas()
+            todos = projeto.personagens() + projeto.mesas() + projeto.setores_com_camadas()
             for comp in ([args.setor] if args.setor else todos):
                 versoes = [v.name for v in projeto.diario.versoes(comp)]
                 print(f"{comp}  atual {projeto.rotulo_de_versao(comp)}  baselines: {', '.join(versoes) or 'nenhuma'}")
@@ -392,6 +393,29 @@ def cmd_testar(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mesa(args: argparse.Namespace) -> int:
+    projeto = Projeto.abrir(_raiz(args))
+    try:
+        if args.acao == "listar":
+            for id_mesa in projeto.mesas():
+                entrada = projeto.entrada(id_mesa)
+                print(f"{id_mesa}  {entrada['status']:<10} {entrada['nome']}  membros: {', '.join(entrada.get('membros', []))}  "
+                      f"fecha: {projeto.quem_fecha(id_mesa)}")
+            if not projeto.mesas():
+                print("Nenhuma mesa. Crie uma com: mesa criar M01 HARVEY LOBO")
+            return 0
+        if not args.mesa or len(args.membros) < 2:
+            print("uso: mesa criar M01 HARVEY LOBO [--nome \"A Mesa: Harvey e o Lobo\"]", file=sys.stderr)
+            return 2
+        pasta = projeto.criar_mesa(args.mesa, args.membros, nome=args.nome or "")
+        print(f"{args.mesa} aberta em {pasta}: {', '.join(m.upper() for m in args.membros)} sentados juntos. "
+              f"Rode 'empacotar' e suba upload_mesas/{args.mesa}/ no Projeto da mesa.")
+        return 0
+    except ERROS as erro:
+        print(erro, file=sys.stderr)
+        return 1
+
+
 def cmd_custo(args: argparse.Namespace) -> int:
     projeto = Projeto.abrir(_raiz(args))
     try:
@@ -430,6 +454,10 @@ def construir_parser() -> argparse.ArgumentParser:
     p.add_argument("acao", choices=["listar", "guardar", "reverter"])
     p.add_argument("setor", nargs="?"); p.add_argument("versao", nargs="?"); p.add_argument("--motivo")
     p.set_defaults(func=cmd_versoes)
+    p = sub.add_parser("mesa")
+    p.add_argument("acao", choices=["listar", "criar"])
+    p.add_argument("mesa", nargs="?"); p.add_argument("membros", nargs="*"); p.add_argument("--nome")
+    p.set_defaults(func=cmd_mesa)
     p = milan(sub.add_parser("setor"))
     p.add_argument("acao", choices=["listar", "propor", "aprovar", "piloto", "ativar", "limitar", "liberar",
                                     "quarentena", "pausar", "reativar", "encerrar"])

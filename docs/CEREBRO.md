@@ -56,6 +56,18 @@ comandos funcionam: `python cerebro.pyz criar ...`, `python cerebro.pyz registra
 Os cérebros são gravados em `~/.cerebro`. Para usar o modelo em vez do modo espelho,
 instale o SDK com `pip install anthropic` e defina `ANTHROPIC_API_KEY`.
 
+Quem prefere instalar o projeto (em vez do arquivo único) tem os comandos `cerebro` e
+`instagram-export-search` no `PATH`:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e .                                     # ou: pip install -e ".[modelo]"
+cerebro web                                          # o mesmo chat local
+```
+
+O extra `[modelo]` acrescenta só o SDK `anthropic`; sem ele (ou sem credencial) o chat
+roda em modo espelho.
+
 ### Android, passo a passo
 
 1. Instale o **Pydroid 3** pela Play Store (gratuito).
@@ -331,7 +343,8 @@ qualquer API de chat.
 ## Conectando um modelo
 
 `AnthropicResponder` usa o SDK oficial (`pip install anthropic`, com `ANTHROPIC_API_KEY`
-no ambiente). Ele envia o implante como *system prompt*, usa *streaming* e ativa o
+no ambiente; quem instalou o projeto pode usar `pip install -e ".[modelo]"`, que traz o
+SDK junto). Ele envia o implante como *system prompt*, usa *streaming* e ativa o
 *fallback* de recusa do lado do servidor (se o modelo principal recusar por política, a
 mesma requisição continua em um modelo alternativo).
 

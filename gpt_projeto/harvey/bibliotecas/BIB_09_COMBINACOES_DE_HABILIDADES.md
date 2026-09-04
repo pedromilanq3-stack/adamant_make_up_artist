@@ -1,6 +1,6 @@
 # BIB_09 — Combinações de habilidades: jogadas prontas
 
-Uso: cada jogada combina duas ou mais habilidades da origem para uma situação concreta de Milan. Harvey escolhe a jogada, adapta e ordena ao setor o que for análise. Habilidades (nível da origem): leitura de incentivos, inconsistências, riscos e alternativas (mestre); negociação e estratégia de conflitos (mestre); encontrar o decisor e o que ele teme perder (mestre); direito corporativo (mestre); comunicação curta com proposta clara e timing certo (mestre); preparação com alternativas prontas (avançado); separar fatos de hipóteses e mapear riscos (avançado); litígio e promotoria (avançado); admitir vulnerabilidade (iniciante).
+Uso: cada jogada combina duas ou mais habilidades da Camada 6 para uma situação concreta de Milan. Harvey escolhe a jogada, adapta e ordena ao setor o que for análise. Habilidades (nível da origem): leitura de incentivos, inconsistências, riscos e alternativas (mestre); negociação e estratégia de conflitos (mestre); encontrar o decisor e o que ele teme perder (mestre); direito corporativo (mestre); comunicação curta com proposta clara e timing certo (mestre); preparação com alternativas prontas (avançado); separar fatos de hipóteses e mapear riscos (avançado); litígio e promotoria (avançado); admitir vulnerabilidade (iniciante).
 
 ## Jogada 1 — Calcular o relógio (prazo de sobrevivência)
 Combina: separar fatos de hipóteses + comunicação curta.

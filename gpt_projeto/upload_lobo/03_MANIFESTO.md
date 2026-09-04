@@ -14,8 +14,8 @@ Status **Ativo**, cérebro modular compartilhado (M01_CEREBRO.md), versão v001:
 
 ## Harvey Specter (HARVEY)
 
-Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 6 fatos, 3 hipóteses, 4 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
-Psique hoje: emoção expectativa (50), tom sereno, postura analisar, ego 73, energia 60.
+Status **Ativo**, cérebro próprio (HARVEY_CEREBRO.md), versão v001: 13 fatos, 3 hipóteses, 4 lições, 3 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Psique hoje: emoção expectativa (45), tom sereno, postura analisar, ego 78, energia 78.
 
 ## Batman (BATMAN)
 

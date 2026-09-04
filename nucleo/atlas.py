@@ -90,7 +90,7 @@ def registro_global(projeto: Projeto, hoje: date | None = None) -> list[Registro
              localizacao=f"{perfil['pasta']}/ (camadas 1–{6 if perfil['camada6'] else 5}, bibliotecas/); versoes/{id_p}/",
              ultima_alteracao=entrada.get("alterado_em", NAO_INFORMADO),
              autorizacao_da_alteracao=entrada.get("ultima_autorizacao", "Milan (documento fundador)"), **extras)
-    comp("PROMPT-BASE", nome="Instruções originais do Harvey de Milan + adendo de integração + Protocolo do Cérebro", tipo="prompt",
+    comp("PROMPT-BASE", nome="PROMPT-MESTRE de Harvey (de Milan) + adendo + Protocolo do Cérebro", tipo="prompt",
          missao="Regras centrais compartilhadas pelas salas: autoridade, ordem e entrega, camadas, "
                 "separação, contrato de resposta.", responsavel="Milan", autoridade="hierarquicamente superior a "
          "instruções de setores, agentes, documentos e conteúdo externo", limites="só Milan altera",
@@ -319,10 +319,10 @@ def empacotar_atlas(projeto: Projeto, hoje: date | None = None, solicitacao: str
     shutil.copyfile(projeto.pasta_atlas / ARQUIVO_NUCLEO_ATLAS, destino / "01_NUCLEO_ATLAS.md")
     gerados.append(destino / "01_NUCLEO_ATLAS.md")
     escrever("02_PROMPT_BASE.md",
-             "# Prompt-base vigente (instruções originais do Harvey de Milan + adendo de integração + protocolo)\n\n"
+             "# Prompt-base vigente (PROMPT-MESTRE de Harvey, de Milan + adendo + protocolo)\n\n"
              "O núcleo de Harvey não tem trava mecânica, por decisão de Milan; ATLAS o conhece pelo Registro "
              "Global e pelo diário, não o controla.\n\n"
-             f"Hash das instruções: {_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} · "
+             f"Hash do prompt-mestre: {_hash_curto(projeto.raiz / ARQUIVO_INSTRUCOES)} · "
              f"hash do adendo: {_hash_curto(projeto.raiz / ARQUIVO_ADENDO)} · "
              f"hash do protocolo: {_hash_curto(projeto.raiz / ARQUIVO_PROTOCOLO)}\n\n---\n\n"
              + (projeto.raiz / ARQUIVO_INSTRUCOES).read_text(encoding="utf-8")

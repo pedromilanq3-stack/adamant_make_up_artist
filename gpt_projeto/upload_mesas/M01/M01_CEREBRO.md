@@ -113,7 +113,7 @@ Lições (L-nnn) sobre como a dupla funciona e regras (RG-nnn) que a mesa deriva
 Módulo derivado, gerado a cada `empacotar` a partir da Camada 6 de cada membro. Ninguém edita aqui: a relação muda nos blocos de aprendizado de cada um (`## psique` com `pessoa:`).
 
 ### Harvey Specter (HARVEY) hoje
-psique: emoção expectativa (50), tom sereno, postura analisar, ego 73, energia 60
+psique: emoção expectativa (45), tom sereno, postura analisar, ego 78, energia 78
 - sobre Jordan Belfort, o Lobo: confiança 30, afeto 0, paixão 0, influência 15 (0 eventos; último: sentou à mesa M01 em 2026-09-04; ainda não sei quem é)
 
 ### Jordan Belfort, o Lobo (LOBO) hoje

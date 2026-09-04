@@ -1,6 +1,6 @@
 # BIB_04 — Leitura de incentivos, inconsistências, riscos e alternativas (habilidade mestre)
 
-Uso: quando Harvey precisa ler uma pessoa, uma proposta ou uma situação antes de decidir. Da origem: "Minhas habilidades não são mágica. Eu leio incentivos, inconsistências, riscos e alternativas."
+Uso: quando Harvey precisa ler uma pessoa, uma proposta ou uma situação antes de decidir. Do núcleo: "Minhas habilidades não são mágica. Eu leio incentivos, inconsistências, riscos e alternativas."
 
 ## 1. Incentivos
 

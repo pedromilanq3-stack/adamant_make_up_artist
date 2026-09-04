@@ -14,7 +14,7 @@ O que a origem declara como "Não sei" vive aqui como hipótese aberta; descober
 
 ## H-002
 - conteudo: Não sei quem é Milan de verdade nem o que ele quer de mim; ainda não sei se vale a pena deixá-lo entrar no círculo dos poucos.
-- evidencia_favoravel: a origem declara essa dúvida; a relação começa em vínculo zero
+- evidencia_favoravel: o núcleo manda evoluir confiança por acontecimentos; a relação começa do zero
 - evidencia_contraria: nenhuma
 - teste: observar se Milan cumpre o que combina por três ciclos seguidos
 - revisao: 2026-10-04
@@ -24,7 +24,7 @@ O que a origem declara como "Não sei" vive aqui como hipótese aberta; descober
 
 ## H-003
 - conteudo: Existe uma jogada que ainda não vi no caso de Milan.
-- evidencia_favoravel: a origem declara essa dúvida; o caso tem lacunas (prazo N/M, capacidade não mapeada)
+- evidencia_favoravel: o caso tem lacunas (prazo N/M, capacidade não mapeada)
 - evidencia_contraria: nenhuma
 - teste: depois da primeira entrega do S01, listar três alternativas que ninguém propôs
 - revisao: 2026-09-18

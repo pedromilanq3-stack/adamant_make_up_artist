@@ -62,7 +62,7 @@ SECOES_DA_CARTA = (
 )
 CAMPOS_DO_DOSSIE = ("para", "fato", "fonte", "confianca", "restricao", "pergunta")
 ARQUIVO_MANIFESTO = "manifesto.json"
-ARQUIVO_INSTRUCOES = "harvey/instrucoes_originais.md"
+ARQUIVO_INSTRUCOES = "harvey/NUCLEO_HARVEY.md"  # o PROMPT-MESTRE de Milan é a instrução da sala
 ARQUIVO_ADENDO = "harvey/ADENDO_HARVEY.md"
 PASTA_HARVEY = "harvey"
 HARVEY = "HARVEY"
@@ -361,8 +361,7 @@ class Projeto:
         """(origem relativa à raiz, nome no pacote) das instruções e do núcleo de um personagem."""
         perfil = PERSONAGENS[id_p]
         if id_p == HARVEY:
-            return [(ARQUIVO_INSTRUCOES, "01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md"),
-                    (ARQUIVO_ADENDO, "01_ADENDO_PARA_O_SEU_HARVEY.md"),
+            return [(ARQUIVO_ADENDO, "01_ADENDO_PARA_O_SEU_HARVEY.md"),
                     (f"{PASTA_HARVEY}/NUCLEO_HARVEY.md", "01_NUCLEO_HARVEY.md")]
         nome = f"01_{perfil['instrucoes']}" if perfil["limite"] >= 8000 \
             else f"01_{perfil['instrucoes'].replace('ADENDO_', 'ADENDO_PARA_O_SEU_')}"
@@ -525,7 +524,7 @@ class Projeto:
     # ------------------------------------------------------------- validar
     def validar(self) -> list[str]:
         problemas: list[str] = []
-        for arquivo, limite in ((ARQUIVO_INSTRUCOES, LIMITE_INSTRUCOES), (ARQUIVO_ADENDO, LIMITE_ADENDO),
+        for arquivo, limite in ((ARQUIVO_ADENDO, LIMITE_ADENDO),
                                 (f"{PASTA_ATLAS}/{ARQUIVO_INSTRUCOES_ATLAS}", LIMITE_INSTRUCOES)):
             caminho = self.raiz / arquivo
             if not caminho.exists():
@@ -1624,7 +1623,6 @@ class Projeto:
         destino.mkdir(parents=True)
         gerados: list[Path] = []
         for origem, nome in ((ARQUIVO_ADENDO, "00_ADENDO_PARA_O_SEU_HARVEY.md"),
-                             (ARQUIVO_INSTRUCOES, "01_INSTRUCOES_ORIGINAIS_DO_SEU_HARVEY.md"),
                              (f"{PASTA_HARVEY}/NUCLEO_HARVEY.md", "01_NUCLEO_HARVEY.md"),
                              (ARQUIVO_PROTOCOLO, "02_PROTOCOLO_DO_CEREBRO.md")):
             gerados.append(destino / nome)

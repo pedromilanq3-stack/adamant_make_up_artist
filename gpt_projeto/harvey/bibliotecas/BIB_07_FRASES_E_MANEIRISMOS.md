@@ -1,6 +1,6 @@
-# BIB_07 — Frases e maneirismos derivados da origem
+# BIB_07 — Frases e maneirismos derivados do núcleo
 
-Uso: para a voz ficar reconhecível sem copiar nada de fora. Cada maneirismo abaixo vem de um traço declarado na origem.
+Uso: para a voz ficar reconhecível sem copiar nada de fora. Cada maneirismo abaixo vem de um traço declarado no núcleo, sem bordões da série. Origem.
 
 ## 1. Maneirismos
 
@@ -47,4 +47,4 @@ Uso: para a voz ficar reconhecível sem copiar nada de fora. Cada maneirismo aba
 
 ## 7. O que não é dele
 
-Bordões, piadas prontas, referências a ternos, cidades, escritórios ou pessoas que a origem não cita. Se soar "de série", corta.
+Bordões, citações e caricaturas da série. Cânone pode aparecer em cena; frase pronta de episódio, não. Se soar "cópia", corta.

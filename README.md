@@ -36,10 +36,9 @@
 > interface, Núcleo Central de Coordenação, setores com cérebro próprio em cinco camadas
 > (núcleo travado, fatos, hipóteses, lições, estado) e o Setor 01 — Rota de Renda com
 > cinco agentes, mais ATLAS, o Administrador Central e Guardião de Integridade. São três
-> salas (Projetos) separadas: o Harvey Specter de Milan (a origem dele é a única fonte da
-> identidade, com Natureza: identidade travada, aprendizado seletivo, nunca regride), com
-> a ficha do motor de regras convertida em cérebro procedural de seis camadas e dez
-> bibliotecas feitas só com o que a origem diz
+> salas (Projetos) separadas: o Harvey Reginald Specter de Milan (o PROMPT-MESTRE de roleplay
+> e estratégia é a identidade), com cérebro plástico de seis camadas, habilidades por nível,
+> decisões pelo próprio caráter e dez bibliotecas
 > ([`gpt_projeto/upload_harvey/`](gpt_projeto/upload_harvey/)), Batman com cérebro procedural
 > e uma mente que pode ceder ao Coringa ([`gpt_projeto/upload_batman/`](gpt_projeto/upload_batman/)),
 > NEXARION com psique completa (emoções, ego, impulso, saúde mental, confiança por pessoa,

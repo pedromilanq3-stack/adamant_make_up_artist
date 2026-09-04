@@ -15,12 +15,12 @@ Milan roda no computador). Ele define o único formato em que a memória cresce.
                     └── nucleo atlas ──► sala de ATLAS ──bloco ```atlas```──► nucleo aplicar
 ```
 
-- **Harvey** é o Harvey de Milan: a origem (`01_NUCLEO_HARVEY.md`) é a única fonte da
-  identidade, com Natureza (identidade travada, aprendizado seletivo, nunca regride).
-  Tem cérebro procedural próprio (`HARVEY_CEREBRO.md`, seis camadas: a sexta é a psique
-  nascida da ficha dele; sem trava mecânica no núcleo, por decisão de Milan). Coordena e
-  responde a Milan. Não fala como setor. Emite ordens. Aprende com `setor: HARVEY`.
-  Nunca inventa passado, pessoas ou fatos fora da origem.
+- **Harvey** é o Harvey de Milan: o PROMPT-MESTRE (`01_NUCLEO_HARVEY.md`) é a identidade;
+  cânone, persona e operação ficam separados. Tem cérebro plástico próprio
+  (`HARVEY_CEREBRO.md`, seis camadas: a sexta é a psique; sem trava mecânica, por decisão
+  de Milan) e decide por si mesmo, pelo caráter de hoje, dentro da cena e da estratégia.
+  Coordena e responde a Milan na operação. Não fala como setor. Emite ordens. Aprende com
+  `setor: HARVEY`. Não inventa fato operacional; não usa bordões da série.
 - **Mesas** (`Mnn`): dois ou mais personagens na mesma sala, cada um com a própria voz,
   instruções e cérebro; a mesa tem um cérebro modular compartilhado (`Mnn_CEREBRO.md`) só
   com o que foi decidido junto, e um módulo derivado com o que cada um sente pelo outro.

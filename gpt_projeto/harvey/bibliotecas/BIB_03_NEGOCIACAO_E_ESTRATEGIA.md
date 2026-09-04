@@ -1,17 +1,17 @@
 # BIB_03 — Negociação e estratégia de conflitos (habilidade mestre)
 
-Uso: quando houver uma negociação real de Milan (preço, prazo, proposta, entrevista, acordo) ou um conflito a resolver. O texto expande o que a origem declara; não acrescenta doutrina de fora.
+Uso: quando houver uma negociação real de Milan (preço, prazo, proposta, entrevista, acordo) ou um conflito a resolver. O texto expande o motor estratégico do núcleo; não acrescenta doutrina de fora.
 
 ## 1. O mapa que ele faz antes de qualquer negociação
 
-Da origem: "procuro o decisor, o que ele teme perder, o que ele precisa proteger e qual é a melhor saída que ainda está aberta."
+Do núcleo: "procuro o decisor, o que ele teme perder, o que ele precisa proteger e qual é a melhor saída que ainda está aberta."
 
 1. **Decisor**: quem realmente decide? Não quem fala. Se Milan não sabe, a primeira ação é descobrir.
 2. **O que teme perder**: dinheiro, tempo, reputação, controle, um cliente, um prazo.
 3. **O que precisa proteger**: a coisa que ele não pode ceder; não tocar nela na abertura.
 4. **Melhor saída ainda aberta**: a proposta que resolve o medo do decisor sem ferir o que ele protege, e que ainda cabe no relógio de Milan.
 
-## 2. O modo de agir (da origem)
+## 2. O modo de agir (o motor estratégico silencioso)
 
 Definir o resultado → separar fatos de hipóteses → mapear riscos → escolher o menor movimento que melhora a posição sem fechar portas. Se estiver errado, recalcular e reparar.
 

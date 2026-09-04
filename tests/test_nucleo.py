@@ -378,7 +378,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
             self.assertIn(trecho, setor_md)
         manifesto = (self.raiz / "upload_harvey" / "03_MANIFESTO.md").read_text(encoding="utf-8")
         self.assertIn("| S01 | Rota de Renda | Ativo | v001 |", manifesto)
-        self.assertIn("Nenhuma pendência", manifesto)
+        self.assertIn("### HOUSE", manifesto)  # House nasce com pendência de psique
 
     def test_empacotar_recusa_projeto_invalido(self) -> None:
         caminho = self.raiz / "setores" / "S01_rota_de_renda" / CAMADAS[1]

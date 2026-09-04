@@ -18,6 +18,7 @@ Duas partes trabalham juntas:
 | `gpt_projeto/upload_batman/` | sala de Batman (Projeto próprio) | Batman compósito com cérebro procedural e uma sexta camada, a mente, que pode ceder à sanidade do Coringa; dez bibliotecas com tudo o que ele conhece |
 | `gpt_projeto/upload_nex/` | o NEX que Milan já tem (Projeto "investimento") | adendo para colar no fim do Prompt Mestre v2.0, mais o cérebro com psique completa e três bibliotecas |
 | `gpt_projeto/upload_house/` | o Dr. House que Milan já tem (v4.0) | adendo para colar no fim do v4.0, mais o cérebro com psique (dor crônica, dependência) e seis bibliotecas |
+| `gpt_projeto/upload_lobo/` | o Jordan Belfort que Milan já tem | adendo para colar no fim do prompt-mestre, cérebro com psique (impulso, ego, dependência em remissão) e seis bibliotecas |
 | `gpt_projeto/upload_atlas/` | sala de ATLAS (Projeto próprio) | Registro Global, diário, versões, custos, alertas e eventos que ATLAS audita |
 | `nucleo/` | no computador de Milan (`python -m nucleo`) | o guardião que aplica o aprendizado, valida, isola, versiona, registra alterações e regenera as três salas |
 
@@ -72,6 +73,11 @@ RELATIONSHIP_LEDGER, CALIBRATION_LEDGER, OPEN_LOOPS) e mantém todas as fronteir
 (somente leitura, S02, S03, CAEL, modo pessoa real). Os testes cegos de aceitação ficam
 em `gpt_projeto/house/testes_de_aceitacao.md`, fora da sala; `nucleo testar HOUSE` imprime
 só os estímulos em ordem aleatória e grava a chave à parte, para Milan aplicar às cegas.
+
+**Lobo** (`gpt_projeto/upload_lobo/`): o PROMPT-MESTRE — JORDAN BELFORT de Milan é o
+núcleo, intacto. Cole `00_ADENDO_PARA_O_SEU_LOBO.md` no fim dele e envie `LOBO_CEREBRO.md`,
+`BIB_L01` a `BIB_L06` e `02_PROTOCOLO_DO_CEREBRO.md` nos Arquivos. A linha da fraude do
+prompt-mestre continua intacta; a psique só muda como ele está.
 
 **Sala de ATLAS**: seção 1b.
 
@@ -379,6 +385,11 @@ gpt_projeto/
     ADENDO_NEX.md                 adendo para o fim do prompt que já está no GPT
     camada1..6_*.md               cérebro procedural; camada 6 é a psique (PSIQUE, SAUDE, HABILIDADES, P-nnn, PH-nnn)
     bibliotecas/BIB_N01..03.md    psique e comportamento, saúde mental e sintomas, aprender com significado
+  lobo/
+    NUCLEO_LOBO.md                prompt-mestre de Milan (texto intacto), sem trava mecânica
+    ADENDO_LOBO.md                adendo para o fim do prompt-mestre
+    camada1..6_*.md               cérebro procedural; camada 6 é a psique
+    bibliotecas/BIB_L01..06.md    perfil e filme, sistema de vendas, voz, motivadores, psique sob pressão, operação
   house/
     NUCLEO_HOUSE.md               v4.0 de Milan (texto intacto), sem trava mecânica
     ADENDO_HOUSE.md               adendo para o fim do v4.0
@@ -410,6 +421,7 @@ gpt_projeto/
   upload_batman/                  gerado por `empacotar`; sala de Batman
   upload_nex/                     gerado por `empacotar`; adendo e arquivos para o NEX de Milan
   upload_house/                   gerado por `empacotar`; adendo e arquivos para o House de Milan
+  upload_lobo/                    gerado por `empacotar`; adendo e arquivos para o Lobo de Milan
   upload_atlas/                   gerado por `atlas`; sala de ATLAS
 nucleo/                           o utilitário (Python 3.11+, sem dependências)
 tests/test_nucleo.py              parsing, isolamento, correção, dossiês, ciclo de vida, diário, versões, ATLAS, CLI

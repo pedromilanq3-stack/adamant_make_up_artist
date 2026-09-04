@@ -68,5 +68,15 @@
     "ultima_autorizacao": "Milan (GREGORY_HOUSE_LIVING_RUNTIME_EDITION_v4.0, 2026-09-04)",
     "alterado_em": "2026-09-04",
     "sala": "Projeto próprio de House de Milan (adendo + arquivos; o v4.0 já está lá)"
+  },
+  "lobo": {
+    "nome": "Jordan Belfort, o Lobo",
+    "pasta": "lobo",
+    "status": "Ativo",
+    "versao": 1,
+    "trava": "nenhuma, por decisão de Milan (trava de identidade vive no texto; a psique muda)",
+    "ultima_autorizacao": "Milan (PROMPT-MESTRE — JORDAN BELFORT, 2026-09-04)",
+    "alterado_em": "2026-09-04",
+    "sala": "Projeto próprio do Lobo de Milan (adendo + arquivos; o prompt-mestre já está lá)"
   }
 }

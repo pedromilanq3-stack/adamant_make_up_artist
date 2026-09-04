@@ -27,6 +27,11 @@ Psique hoje: emoção expectativa (58), tom sereno, postura analisar, ego 56, en
 Status **Ativo**, cérebro próprio (HOUSE_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
 Psique hoje: emoção expectativa (58), tom sarcástico (39), postura analisar, ego 86, energia 86; ativo sem nome: 1 quadro(s).
 
+## Jordan Belfort, o Lobo (LOBO)
+
+Status **Ativo**, cérebro próprio (LOBO_CEREBRO.md), versão v001: 2 fatos, 1 hipóteses, 1 lições, 2 regras próprias vigentes. Núcleo sem trava mecânica, por decisão de Milan.
+Psique hoje: emoção alegria (56), tom sarcástico (39), postura analisar, ego 94, energia 90.
+
 ## ATLAS
 
 Último status de integridade emitido por ATLAS: nenhum ainda. ATLAS opera em sala separada; Harvey não faz o trabalho de ATLAS.
@@ -35,6 +40,9 @@ Psique hoje: emoção expectativa (58), tom sarcástico (39), postura analisar, 
 
 ### HOUSE
 - PSIQUE: quadro ativo (dependencia, diagnosticado)
+- PSIQUE: ego inflado: risco de defender erro
+
+### LOBO
 - PSIQUE: ego inflado: risco de defender erro
 
 

@@ -97,14 +97,14 @@ class ProjetoTemporario(unittest.TestCase):
         psique_mod.semear(1234)
         self.tmp = Path(tempfile.mkdtemp())
         self.raiz = self.tmp / "gp"
-        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house"))
+        shutil.copytree(GPT_PROJETO, self.raiz, ignore=shutil.ignore_patterns("upload_harvey", "upload_setores", "upload_atlas", "upload_batman", "upload_nex", "upload_house", "upload_lobo"))
         self.projeto = Projeto.abrir(self.raiz)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def aplicar(self, corpo, setor="S01", autorizado=False):
-        emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX", "HOUSE") else "RAIO-X"
+        emitido_por = setor if setor in ("HARVEY", "BATMAN", "NEX", "HOUSE", "LOBO") else "RAIO-X"
         return self.projeto.aplicar(bloco(setor, emitido_por, corpo), autorizado_por_milan=autorizado, hoje=HOJE)
 
     def recarregar(self) -> Projeto:
@@ -355,7 +355,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
             "upload_harvey/00_INSTRUCOES_HARVEY.md", "upload_harvey/01_ADENDO_DE_INTEGRACAO.md",
             "upload_harvey/02_PROTOCOLO_DO_CEREBRO.md", "upload_harvey/03_MANIFESTO.md",
             "upload_harvey/HARVEY_CEREBRO.md", "upload_harvey/BATMAN_CEREBRO.md", "upload_harvey/NEX_CEREBRO.md",
-            "upload_harvey/HOUSE_CEREBRO.md", *bibliotecas,
+            "upload_harvey/HOUSE_CEREBRO.md", "upload_harvey/LOBO_CEREBRO.md", *bibliotecas,
             "upload_harvey/S01_ROTA_DE_RENDA.md",
             "upload_setores/S01/00_INSTRUCOES_S01.md", "upload_setores/S01/01_PROTOCOLO_DO_CEREBRO.md",
             "upload_setores/S01/02_MANIFESTO.md", "upload_setores/S01/S01_ROTA_DE_RENDA.md"]
@@ -372,6 +372,8 @@ class PendenciasEPacoteTests(ProjetoTemporario):
         self.assertIn("upload_house/00_ADENDO_PARA_O_SEU_HOUSE.md", nomes)
         self.assertEqual(sum(1 for n in nomes if n.startswith("upload_house/BIB_H")), 6)
         self.assertFalse(any("testes" in n for n in nomes))
+        self.assertIn("upload_lobo/00_ADENDO_PARA_O_SEU_LOBO.md", nomes)
+        self.assertEqual(sum(1 for n in nomes if n.startswith("upload_lobo/BIB_L")), 6)
         setor_md = (self.raiz / "upload_harvey" / "S01_ROTA_DE_RENDA.md").read_text(encoding="utf-8")
         for trecho in ("## Camada 1", "### Missão", "### F-001", "### H-001", "### L-001", "### ESTADO",
                        "hash camada 1"):
@@ -426,7 +428,7 @@ class PendenciasEPacoteTests(ProjetoTemporario):
     def test_pacote_versionado_esta_sincronizado_com_as_camadas(self) -> None:
         """Os pacotes commitados devem refletir as camadas atuais (rode `nucleo empacotar`)."""
         self.projeto.empacotar(hoje=HOJE)
-        for pasta in ("upload_harvey", "upload_setores", "upload_batman", "upload_nex", "upload_house"):
+        for pasta in ("upload_harvey", "upload_setores", "upload_batman", "upload_nex", "upload_house", "upload_lobo"):
             for caminho in sorted((self.raiz / pasta).rglob("*.md")):
                 relativo = caminho.relative_to(self.raiz)
                 atual = GPT_PROJETO / relativo
@@ -994,6 +996,37 @@ class HouseTests(ProjetoTemporario):
         self.assertTrue(eventos & {"dor_forte", "analgesico", "abstinencia", "fisioterapia"})
         eventos_nex = {e for e, _, _ in psique_mod.sortear_acaso(self.projeto.psique_de("NEX")[1], random.Random(1), 60)}
         self.assertFalse(eventos_nex & {"dor_forte", "analgesico", "abstinencia", "fisioterapia"})
+
+
+class LoboTests(ProjetoTemporario):
+    def psique(self):
+        return self.projeto.psique_de("LOBO")[1]
+
+    def test_nucleo_intacto_adendo_e_psique(self) -> None:
+        nucleo = (GPT_PROJETO / "lobo" / "NUCLEO_LOBO.md").read_text(encoding="utf-8")
+        for trecho in ("PROMPT-MESTRE — JORDAN BELFORT", "TRAVA DE IDENTIDADE", "CONDUTA DIANTE DE FRAUDE E MANIPULAÇÃO",
+                       "Certo, Milan. Coloque o negócio na mesa"):
+            self.assertIn(trecho, nucleo)
+        adendo = (GPT_PROJETO / "lobo" / "ADENDO_LOBO.md").read_text(encoding="utf-8")
+        self.assertLessEqual(len(adendo), LIMITE_ADENDO)
+        self.assertIn("setor: LOBO", adendo)
+        estado = self.psique()
+        self.assertEqual(estado["saude"].get("dependencia_estado"), "remissao")
+        self.assertGreater(float(estado["psique"].get("t_impulsividade")), 80)
+        self.assertGreater(float(estado["psique"].get("impulso")), 40)
+        self.assertGreater(psique_mod.habilidades_de(estado)["persuasao_comercial"], 90)
+        self.assertLess(psique_mod.habilidades_de(estado)["gestao_de_risco"], 30)
+        self.assertEqual(self.projeto.validar(), [])
+
+    def test_pressao_pode_trazer_recaida(self) -> None:
+        for _ in range(8):
+            for evento in ("tedio", "sobrecarga", "humilhacao", "pressao_para_ceder"):
+                self.projeto.registrar_evento_de_psique("LOBO", "psique", {"evento": evento, "intensidade": "forte"}, hoje=HOJE)
+        estado = self.psique()
+        self.assertEqual(estado["saude"].get("dependencia_estado"), "ativo")
+        self.assertIn("[dependencia]", estado["saude"].get("sintomas_ativos"))
+        self.projeto.empacotar(hoje=HOJE)
+        self.assertTrue((self.raiz / "upload_lobo" / "LOBO_CEREBRO.md").exists())
 
 
 class CliTests(ProjetoTemporario):

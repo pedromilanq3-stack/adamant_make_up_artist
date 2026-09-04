@@ -43,6 +43,7 @@
 > NEXARION com psique completa (emoções, ego, impulso, saúde mental, confiança por pessoa,
 > habilidades por nível e caráter formado por significado) ([`gpt_projeto/upload_nex/`](gpt_projeto/upload_nex/)),
 > Dr. House com dor crônica e dependência ([`gpt_projeto/upload_house/`](gpt_projeto/upload_house/)),
+> Jordan Belfort, o Lobo, conselheiro de vendas com impulso e ego ([`gpt_projeto/upload_lobo/`](gpt_projeto/upload_lobo/)),
 > cada setor trabalha por
 > ordem de Harvey e obedece a ATLAS na estrutura
 > ([`gpt_projeto/upload_setores/`](gpt_projeto/upload_setores/)), e ATLAS audita

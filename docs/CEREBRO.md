@@ -371,6 +371,9 @@ O arquivo JSON é regravado a cada turno, então o personagem continua de onde p
 
 ## Como a descrição de si vira um ponto de partida
 
+Um exemplo pronto, com a descrição já escrita nas palavras que o cérebro lê e o
+resultado que ela produz: [`PROMPT_BRUCE_WAYNE.md`](PROMPT_BRUCE_WAYNE.md).
+
 Palavras da descrição puxam traços e caráter (`curiosa` → abertura; `tímida` →
 extroversão baixa; `ajudar` → moralidade positiva; `vingativo`, `manipulador` →
 moralidade negativa e honestidade baixa; `não confio` → confiança baixa, e assim por

@@ -31,6 +31,10 @@
 > navegador com o cérebro vivo ao lado. `python cerebro.pyz registrar` acompanha
 > conversas feitas em outro app.
 >
+> Personagem pronto para começar: o **prompt do Bruce Wayne** em
+> [`docs/PROMPT_BRUCE_WAYNE.md`](docs/PROMPT_BRUCE_WAYNE.md), que serve tanto colado
+> direto em qualquer chat quanto como descrição de si para o cérebro.
+>
 > **Utilitário adicional 4:** o [`Tinder Boost Helper`](docs/TINDER_BOOST_HELPER.md)
 > detecta e ativa somente Boosts já disponibilizados pelo fluxo oficial, bloqueia
 > telas de compra e permite apagar apenas o histórico local do script. Copie
